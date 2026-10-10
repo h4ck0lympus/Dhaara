@@ -11,7 +11,7 @@ export const adapter: DemoBridge = window.noemaDemo || {
   async info() { return {host, engine:host === 'A' ? 'System WebKit' : 'Browser preview',version:navigator.userAgent}; }
 };
 export async function loadDemo(): Promise<Demo> { const saved=await adapter.load(); return saved == null ? fixture(fixtureName) : DemoSchema.parse(saved); }
-export async function companionRequest(route:'state'|'snapshot'|'settings',payload?:unknown){
+export async function companionRequest(route:'state'|'snapshot'|'settings'|'window',payload?:unknown){
  const response=await fetch('/api/companion/'+route,{method:payload===undefined?'GET':'POST',headers:{'X-Noema-UI':'1','Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});
  if(!response.ok)throw Error('Desktop companion is not connected');
  return CompanionStateSchema.parse(await response.json());

@@ -2,16 +2,19 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile,writeFile,rename,mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { DemoSchema,CompanionStateSchema,type Demo } from '../../frontend/src/model.js';
+import { DemoSchema,CompanionStateSchema,WindowPresenceSchema,type Demo } from '../../frontend/src/model.js';
 import { matchTask,providerFor,type ActivityContext,type ActivityProvider } from './platform.mjs';
 const Settings=z.object({observing:z.boolean().optional(),mode:z.enum(['Cat','Dot','Hidden']).optional()}).strict();
-export type CompanionState={connected:boolean;observing:boolean;mode:'Cat'|'Dot'|'Hidden';provider:string;status:string;context:ActivityContext|null;taskId:string|null;activity:Record<string,{app:string;title:string;monitor:string;workspace:string;observedAt:string;seconds:number}>};
+export type CompanionState={size:number;connected:boolean;observing:boolean;mode:'Cat'|'Dot'|'Hidden';provider:string;status:string;context:ActivityContext|null;taskId:string|null;activity:Record<string,{app:string;title:string;monitor:string;workspace:string;observedAt:string;seconds:number}>};
 export class CompanionHub {
+ hostWindow:z.infer<typeof WindowPresenceSchema>|null=null;appearanceWrites=Promise.resolve();
  demo:Demo|null=null;state:CompanionState;candidate='';previous='';lastSample=0;busy=false;
  constructor(public profile:string,public provider:ActivityProvider=providerFor(),public onChange:()=>void=()=>{}){
-  this.state={connected:true,observing:false,mode:'Cat',provider:provider.id,status:'Observation paused',context:null,taskId:null,activity:{}};
+  this.state={size:96,connected:true,observing:false,mode:'Cat',provider:provider.id,status:'Observation paused',context:null,taskId:null,activity:{}};
  }
- async load(){try{const saved=JSON.parse(await readFile(join(this.profile,'activity.json'),'utf8'));this.state.activity=CompanionStateSchema.shape.activity.parse(saved.activity);}catch{} }
+ window(value:unknown){this.hostWindow=WindowPresenceSchema.parse(value);this.onChange();return this.state;}
+ async resize(value:unknown){const size=z.number().int().min(56).max(192).parse(value);this.state.size=size;this.onChange();const next=this.appearanceWrites.catch(()=>{}).then(async()=>{await mkdir(this.profile,{recursive:true,mode:0o700});await writeFile(join(this.profile,'appearance.json.tmp'),JSON.stringify({size}),{mode:0o600});await rename(join(this.profile,'appearance.json.tmp'),join(this.profile,'appearance.json'));});this.appearanceWrites=next;await next;return this.state;}
+ async load(){try{const saved=JSON.parse(await readFile(join(this.profile,'appearance.json'),'utf8'));this.state.size=CompanionStateSchema.shape.size.parse(saved.size);}catch{}try{const saved=JSON.parse(await readFile(join(this.profile,'activity.json'),'utf8'));this.state.activity=CompanionStateSchema.shape.activity.parse(saved.activity);}catch{} }
  async persist(){await mkdir(this.profile,{recursive:true,mode:0o700});await writeFile(join(this.profile,'activity.json.tmp'),JSON.stringify({activity:this.state.activity}),{mode:0o600});await rename(join(this.profile,'activity.json.tmp'),join(this.profile,'activity.json'));}
  snapshot(value:unknown){const next=DemoSchema.parse(value);if(!this.demo||this.demo.cat!==next.cat)this.state.mode=next.cat;this.demo=next;this.onChange();return this.state;}
  settings(value:unknown){const changes=Settings.parse(value);Object.assign(this.state,changes);if(!this.state.observing){this.state.context=null;this.state.taskId=null;this.state.status='Observation paused';this.candidate='';this.previous='';this.lastSample=0;}this.onChange();return this.state;}
@@ -43,10 +46,10 @@ export function hubServer(hub:CompanionHub,port:number,secret:string){
   if(req.headers.host!==`127.0.0.1:${port}`||req.headers['x-noema-companion']!==secret){res.writeHead(403).end('{}');return;}
   try{
    if(req.method==='GET'&&req.url==='/state'){res.end(JSON.stringify(hub.state));return;}
-   if(req.method!=='POST'||!['/snapshot','/settings'].includes(req.url||'')){res.writeHead(404).end('{}');return;}
+   if(req.method!=='POST'||!['/snapshot','/settings','/window'].includes(req.url||'')){res.writeHead(404).end('{}');return;}
    let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>12_000_000)throw Error('Payload too large');}
    const data=JSON.parse(raw);
-   res.end(JSON.stringify(req.url==='/snapshot'?hub.snapshot(data):hub.settings(data)));
+   res.end(JSON.stringify(req.url==='/snapshot'?hub.snapshot(data):req.url==='/window'?hub.window(data):hub.settings(data)));
   }catch{res.writeHead(400).end(JSON.stringify({error:'Invalid companion request'}));}
  });
 }

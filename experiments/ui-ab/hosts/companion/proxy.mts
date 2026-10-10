@@ -5,7 +5,7 @@ export async function proxyCompanion(req:IncomingMessage,res:ServerResponse,orig
  const route=path.slice('/api/companion'.length);
  const secret=process.env.NOEMA_COMPANION_SECRET;
  if(!secret){res.writeHead(503,{'Content-Type':'application/json'}).end('{"error":"Desktop companion is not connected"}');return true;}
- if(req.headers['x-noema-ui']!=='1'||(req.headers.origin&&req.headers.origin!==origin)||!['/state','/snapshot','/settings'].includes(route)){
+ if(req.headers['x-noema-ui']!=='1'||(req.headers.origin&&req.headers.origin!==origin)||!['/state','/snapshot','/settings','/window'].includes(route)){
   res.writeHead(403).end('{}');return true;
  }
  if(req.method!=='GET'&&req.method!=='POST'){res.writeHead(405).end('{}');return true;}

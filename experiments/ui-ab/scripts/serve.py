@@ -17,7 +17,7 @@ class Assets(SimpleHTTPRequestHandler):
         origin=f'http://127.0.0.1:{self.server.server_port}'
         if (self.headers.get('Host')!=f'127.0.0.1:{self.server.server_port}' or
                 self.headers.get('X-Noema-UI')!='1' or self.headers.get('Origin',origin)!=origin or
-                route not in ('/state','/snapshot','/settings')):
+                route not in ('/state','/snapshot','/settings','/window')):
             self.send_error(403);return True
         secret=os.environ.get('NOEMA_COMPANION_SECRET')
         if not secret:
