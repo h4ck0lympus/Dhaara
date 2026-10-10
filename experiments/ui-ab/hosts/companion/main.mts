@@ -87,7 +87,7 @@ app.whenReady().then(async()=>{
  secure(pet);pet.setVisibleOnAllWorkspaces(true,{visibleOnFullScreen:true});
  ipcMain.handle('companion:drag-start',event=>{trusted(event);beginDrag();});
  ipcMain.handle('companion:drag-end',event=>{trusted(event);return endDrag();});
- ipcMain.handle('companion:resize',async(event,value)=>{trusted(event);const state=await hub.resize(value);target=null;pet.setSize(state.size,state.size);place();positionPopover();return state;});
+ ipcMain.handle('companion:resize',async(event,value)=>{trusted(event);const state=await hub.resize(value);target=null;pet.setSize(state.size,state.size);place();return state;});
  ipcMain.handle('companion:follow',event=>{trusted(event);manual=false;target=null;popover?.close();place();});
  ipcMain.handle('companion:motion',(event,value)=>{trusted(event);if(typeof value!=='boolean')throw Error('Invalid motion preference');reduced=value;if(reduced&&target){clearInterval(motion);pet.setBounds(target);}});
  ipcMain.handle('companion:state',event=>{trusted(event);return hub.state;});
@@ -98,7 +98,7 @@ app.whenReady().then(async()=>{
  await pet.loadFile(join(root,'dist/companion.html'));moveTo(corner(display().workArea,hub.state.size),false);place();pet.showInactive();
  const timer=setInterval(()=>{void hub.step();},2500);
  let placementBusy=false;
- const placementTimer=setInterval(async()=>{if(placementBusy||drag||popover)return;placementBusy=true;try{if(!hub.hostWindow?.focused||!hub.hostWindow.visible)await provider.read();place();}catch{place();}finally{placementBusy=false;}},750);
+ const placementTimer=setInterval(async()=>{if(placementBusy||drag||popover||hub.state.mode==='Hidden')return;placementBusy=true;try{if(!hub.hostWindow?.focused||!hub.hostWindow.visible)await provider.read();place();}catch{place();}finally{placementBusy=false;}},750);
  screen.on('display-metrics-changed',place);screen.on('display-removed',place);
  app.on('before-quit',()=>{stopping=true;clearInterval(timer);clearInterval(placementTimer);clearInterval(motion);endDrag();hub.provider.dispose?.();server.close();});
  pet.on('closed',()=>{if(!stopping)app.quit();});

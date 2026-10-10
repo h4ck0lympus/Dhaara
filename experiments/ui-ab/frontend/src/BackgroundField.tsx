@@ -15,7 +15,7 @@ export function BackgroundField(){
    context!.clearRect(0,0,width,height);
    for(let i=0;i<buckets.length;i++)buckets[i]=new Path2D();
    const small=width<700||(navigator.hardwareConcurrency||4)<=4;
-   const columns=Math.round((small?76:154)*quality),rows=Math.round((small?24:44)*quality);
+   const columns=Math.round((small?64:108)*quality),rows=Math.round((small?22:36)*quality);
    parallax.x+=(pointer.x-parallax.x)*.035;parallax.y+=(pointer.y-parallax.y)*.035;
    function surface(originX:number,originY:number,scale:number,strength:number,offset:number){
     for(let r=0;r<rows;r++){
@@ -34,7 +34,7 @@ export function BackgroundField(){
       const level=Math.min(6,Math.floor(alpha*11));
       if(level===0){previousPoint={x,y};continue;}
       const radius=(.42+depth*.42)*(small?.85:1);
-      buckets[level].moveTo(x+radius,y);buckets[level].arc(x,y,radius,0,Math.PI*2);
+      buckets[level].rect(x-radius*.5,y-radius*.5,radius,radius);
       if(r%5===0&&previousPoint){buckets[Math.max(1,level-1)].moveTo(previousPoint.x,previousPoint.y);buckets[Math.max(1,level-1)].lineTo(x,y);}
       previousPoint={x,y};
      }
@@ -48,13 +48,13 @@ export function BackgroundField(){
    }
   }
   function tick(now:number){
-   if(document.hidden||motion.matches){frame=0;return;}
+   if(document.hidden||motion.matches){canvas.dataset.state=document.hidden?'paused':'static';if(motion.matches){parallax={x:0,y:0};paint(0);}frame=0;return;}
    frame=requestAnimationFrame(tick);
-   if(now-last<(width<700?66:33))return;
+   if(now-last<(width<700?66:40))return;
    if(previous)phase+=Math.min(now-previous,100)*.000085;
    previous=now;last=now;
    const start=performance.now();paint(phase);
-   if(performance.now()-start>19){if(++slowFrames>12){quality=Math.max(.55,quality-.15);slowFrames=0;}}
+   if(performance.now()-start>12){if(++slowFrames>6){quality=Math.max(.55,quality-.15);slowFrames=0;}}
    else slowFrames=Math.max(0,slowFrames-1);
   }
   function start(){
