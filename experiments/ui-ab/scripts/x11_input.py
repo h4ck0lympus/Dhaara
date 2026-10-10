@@ -21,6 +21,11 @@ class Input:
     def click(self,x,y):
         self.test.XTestFakeMotionEvent(self.d,-1,self.left+x,self.top+y,0)
         self.test.XTestFakeButtonEvent(self.d,1,1,0);self.test.XTestFakeButtonEvent(self.d,1,0,0);self.x.XFlush(self.d);time.sleep(.7)
+    def drag(self,x,y,dx,dy):
+        self.move(x,y);self.test.XTestFakeButtonEvent(self.d,1,1,0);self.x.XFlush(self.d);time.sleep(.15)
+        for step in range(1,13):
+            self.test.XTestFakeMotionEvent(self.d,-1,round(self.left+x+dx*step/12),round(self.top+y+dy*step/12),0);self.x.XFlush(self.d);time.sleep(.04)
+        self.test.XTestFakeButtonEvent(self.d,1,0,0);self.x.XFlush(self.d);time.sleep(.4)
     def scroll(self,steps=5):
         for _ in range(steps):
             self.test.XTestFakeButtonEvent(self.d,5,1,0);self.test.XTestFakeButtonEvent(self.d,5,0,0)
@@ -29,9 +34,9 @@ class Input:
         code=self.x.XKeysymToKeycode(self.d,self.x.XStringToKeysym(name.encode()))
         modifier=self.x.XKeysymToKeycode(self.d,self.x.XStringToKeysym(mod.encode())) if mod else None
         if modifier:self.test.XTestFakeKeyEvent(self.d,modifier,1,0)
-        self.test.XTestFakeKeyEvent(self.d,code,1,0);self.test.XTestFakeKeyEvent(self.d,code,0,0)
+        self.test.XTestFakeKeyEvent(self.d,code,1,0);self.x.XFlush(self.d);time.sleep(.03);self.test.XTestFakeKeyEvent(self.d,code,0,0)
         if modifier:self.test.XTestFakeKeyEvent(self.d,modifier,0,0)
-        self.x.XFlush(self.d);time.sleep(.02)
+        self.x.XFlush(self.d);time.sleep(.04)
     def type(self,text):
         for char in text:
             if char==' ':self.key('space')

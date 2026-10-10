@@ -62,12 +62,34 @@ def main():
                     pointer.click(1020,552);time.sleep(.5);pointer.click(80,247);capture('note');pointer.click(80,146)
                     # Companion controls toggle observation through the restricted native preload.
                     subprocess.run(['import','-display',display,'-window','root',str(out/f'{host}-desktop-before-controls.png')],check=True,timeout=15)
+                    def pet_bounds():
+                        info=subprocess.check_output(['xwininfo','-display',display,'-id',pet],text=True)
+                        return {name:int(re.search(pattern,info)[1]) for name,pattern in [('x',r'Absolute upper-left X:\s+(-?\d+)'),('y',r'Absolute upper-left Y:\s+(-?\d+)'),('width',r'Width:\s+(\d+)'),('height',r'Height:\s+(\d+)')]}
+                    pointer.click(600,100);time.sleep(2)
+                    docked=pet_bounds();assert abs(docked['x']-(pointer.left+args.width-112))<=3,docked
+                    assert abs(docked['y']-(pointer.top+args.height-112))<=3,docked
+                    cat=Input(display,pet);cat.drag(48,48,-220,-150);cat.close();dragged=pet_bounds()
+                    assert abs(dragged['x']-(docked['x']-220))<=3,(docked,dragged)
+                    assert abs(dragged['y']-(docked['y']-150))<=3,(docked,dragged)
+                    time.sleep(1);assert pet_bounds()==dragged,'Manual placement must survive background updates'
                     cat=Input(display,pet);cat.click(48,48);cat.close();time.sleep(.4)
                     tree=subprocess.check_output(['xwininfo','-display',display,'-root','-tree'],text=True)
                     pop=re.search(r'(0x[0-9a-fA-F]+) "Noema companion controls"',tree);assert pop,tree
-                    controls=Input(display,pop[1]);controls.click(120,149);controls.close()
-                    activity=subprocess.Popen(['xmessage','-title','LeetCode · controlled activity','-buttons','Close:0','Private fixture window'],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);processes.append(activity)
-                    time.sleep(11)
+                    subprocess.run(['import','-display',display,'-window',pop[1],str(out/f'{host}-companion-controls.png')],check=True,timeout=15)
+                    controls=Input(display,pop[1]);controls.click(150,168);time.sleep(.4)
+                    appearance=ROOT/'.demo/evidence'/out.name/host/'companion/appearance.json'
+                    assert appearance.exists(),'Resize must persist separately'
+                    resized=json.loads(appearance.read_text())['size'];assert resized!=96,resized
+                    assert pet_bounds()['width']==resized,pet_bounds()
+                    controls.click(120,255);controls.click(270,28);controls.close();time.sleep(.4)
+                    pointer.click(600,100);time.sleep(2)
+                    activity=subprocess.Popen(['xmessage','-title','LeetCode · controlled activity','-buttons','Close:0','Private fixture window'],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True);processes.append(activity)
+                    positions=[]
+                    for _ in range(35):positions.append(pet_bounds());time.sleep(.1)
+                    assert len({(p['x'],p['y']) for p in positions})>=3,(positions,subprocess.check_output(['xprop','-display',display,'-root','_NET_ACTIVE_WINDOW'],text=True),subprocess.check_output(['xwininfo','-display',display,'-root','-tree'],text=True,errors='replace'))
+                    assert abs(positions[-1]['x']-(1600-resized-16))<=3,positions[-1]
+                    assert abs(positions[-1]['y']-(950-resized-16))<=3,positions[-1]
+                    time.sleep(8)
                     pointer.minimize(found)
                     info=subprocess.check_output(['xwininfo','-display',display,'-id',found],text=True);assert 'IsUnMapped' in info
                     pet_info=subprocess.check_output(['xwininfo','-display',display,'-id',pet],text=True);assert 'IsViewable' in pet_info
@@ -75,14 +97,22 @@ def main():
                     activity_file=ROOT/'.demo/evidence'/out.name/host/'companion/activity.json'
                     saved=json.loads(activity_file.read_text());assert saved['activity']['practice']['app']=='Xmessage';assert saved['activity']['practice']['seconds']>0
                     activity.terminate();activity.wait(timeout=5)
-                    pointer.restore(found);time.sleep(3.5);capture('observed-task');pointer.close()
-                    if host=='b':
+                    pointer.restore(found);pointer.click(600,100);time.sleep(3.5);capture('observed-task');subprocess.run(['import','-display',display,'-window','root',str(out/f'{host}-desktop-restored.png')],check=True,timeout=15);pointer.close()
+                    if host=='a':
+                        import sqlite3
+                        source=ROOT/'.demo/evidence'/out.name/'a/localstorage/http_127.0.0.1_8791.localstorage'
+                        with sqlite3.connect('file:'+str(source)+'?mode=ro',uri=True) as db:
+                            raw=db.execute('SELECT value FROM ItemTable WHERE key=?',('noema-ui-ab-v1-A-populated',)).fetchone()[0]
+                        saved=json.loads(raw.decode('utf-16-le') if isinstance(raw,bytes) else raw)
+                    else:
                         saved=json.loads((ROOT/'.demo/evidence'/out.name/'b/demo-populated.json').read_text())
+                    if host in ['a','b']:
                         assert any(t['raw']=='leetcode by tonight' for t in saved['tasks'])
+                        assert any(n['raw']=='A private learning note' for n in saved['notes']),saved['notes']
                         assert saved['pin']=='allocator';assert saved['tasks'][4]['status']=='ready'
                         assert saved['tasks'][4].get('activity',{}).get('seconds',0)>0
                         report['storage_check']={'task_saved':True,'pin_preserved':True,'matched_activity_synced':True,'completion_not_inferred':True}
-                    report['companion_checks']={'own_window':True,'main_minimized':True,'pet_still_viewable':True,'active_window_observed':'Controlled Xmessage on private X11','activity_recorded':True,'compositing':'Private xcompmgr; inspect transparent silhouette against plain desktop'}
+                    report['companion_checks']={'dragged':True,'size_persisted':resized,'app_corner':docked,'smooth_transition_samples':positions,'own_window':True,'main_minimized':True,'pet_still_viewable':True,'active_window_observed':'Controlled Xmessage on private X11','activity_recorded':True,'compositing':'Private xcompmgr; inspect transparent silhouette against plain desktop'}
                 report['screenshots']=screenshots;reports.append(report)
             else: reports.append({'host':host,'launch':'failed','log':f'{host}-{args.screen}-{args.panel}.log'})
             # Normal native close checkpoints demo state; only our private window is addressed.
@@ -105,7 +135,10 @@ def main():
     finally:
         import signal
         for proc in processes:
-            if proc.poll() is None:os.killpg(proc.pid,signal.SIGTERM);proc.wait(timeout=15)
+            if proc.poll() is None:
+                try:os.killpg(proc.pid,signal.SIGTERM)
+                except ProcessLookupError:pass
+                proc.wait(timeout=15)
         for proc in desktop:
             if proc.poll() is None:proc.terminate();proc.wait(timeout=5)
         xvfb.terminate();xvfb.wait(timeout=5)
