@@ -38,6 +38,17 @@ window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
 window.webContents.on('will-navigate',(event,url)=>{if(new URL(url).origin!==origin||new URL(url).username||new URL(url).password)event.preventDefault();});
 window.webContents.on('will-attach-webview',event=>event.preventDefault());
 session.defaultSession.on('will-download',event=>event.preventDefault());
+let reporting=false;
+async function reportWindow(){if(reporting||window.isDestroyed()||!process.env.NOEMA_COMPANION_SECRET)return;reporting=true;try{await fetch('http://127.0.0.1:8795/window',{method:'POST',headers:{'X-Noema-Companion':process.env.NOEMA_COMPANION_SECRET,'Content-Type':'application/json'},body:JSON.stringify({focused:window.isFocused(),visible:window.isVisible()&&!window.isMinimized(),bounds:window.getContentBounds()}),signal:AbortSignal.timeout(1000)});}catch{}finally{reporting=false;}}
+window.on('focus',()=>void reportWindow());
+window.on('blur',()=>void reportWindow());
+window.on('move',()=>void reportWindow());
+window.on('resize',()=>void reportWindow());
+window.on('minimize',()=>void reportWindow());
+window.on('restore',()=>void reportWindow());
+window.on('show',()=>void reportWindow());
+window.on('hide',()=>void reportWindow());
+const presenceTimer=setInterval(()=>void reportWindow(),2000);window.on('closed',()=>clearInterval(presenceTimer));
 let approved=false;
 window.on('close',event=>{if(approved)return;event.preventDefault();window.webContents.executeJavaScript('window.noemaNativeClose ? window.noemaNativeClose() : false').then(ok=>{if(ok){approved=true;window.close();}}).catch(()=>console.error('Demo checkpoint failed; window retained.'));});
 window.webContents.on('did-finish-load',()=>console.log(JSON.stringify({host:'B',electron:process.versions.electron,chromium:process.versions.chrome,node:process.versions.node,viewport:window.getContentSize(),scale:window.webContents.getZoomFactor(),sandbox:true,fixture:params.get('fixture')})));

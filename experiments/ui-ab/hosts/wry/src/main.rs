@@ -9,6 +9,7 @@ use wry::{WebContext, WebViewBuilder};
 #[derive(Debug)]
 enum Message {
     Close,
+    Ready,
 }
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -63,7 +64,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_new_window_req_handler(|_,_|wry::NewWindowResponse::Deny)
         .with_download_started_handler(|_,_|false)
         .with_initialization_script("document.addEventListener('DOMContentLoaded',()=>{const report=()=>{if(window.noemaExperimentReady){window.ipc.postMessage('demo:ready:'+JSON.stringify({ua:navigator.userAgent,width:innerWidth,height:innerHeight,scale:devicePixelRatio}));}else setTimeout(report,100);};report();});")
-        .with_ipc_handler(move|request|{if noema_desktop::same_origin(&ipc_origin,&request.uri().to_string()){if request.body()=="demo:close" {let _=proxy.send_event(Message::Close);}else if request.body().starts_with("demo:ready:"){println!("{}",request.body());}}});
+        .with_ipc_handler(move|request|{if noema_desktop::same_origin(&ipc_origin,&request.uri().to_string()){if request.body()=="demo:close" {let _=proxy.send_event(Message::Close);}else if request.body().starts_with("demo:ready:"){println!("{}",request.body());let _=proxy.send_event(Message::Ready);}}});
     #[cfg(target_os = "linux")]
     let builder = builder.with_permission_handler(|_| wry::PermissionResponse::Deny);
     #[cfg(target_os = "linux")]
@@ -74,9 +75,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     #[cfg(not(target_os = "linux"))]
     let webview = builder.build(&window)?;
-    event_loop.run(move|event,_,flow|{*flow=ControlFlow::Wait;match event {
-        Event::UserEvent(Message::Close)=>*flow=ControlFlow::Exit,
-        Event::WindowEvent{event:WindowEvent::CloseRequested,..}=>{let _=webview.evaluate_script("(async()=>{if(window.noemaNativeClose && await window.noemaNativeClose()) window.ipc.postMessage('demo:close');})()");},
-        _=>{}
-    }});
+    let mut ready=false;
+    let mut previous=String::new();
+    event_loop.run(move|event,_,flow|{
+        *flow=ControlFlow::WaitUntil(std::time::Instant::now()+std::time::Duration::from_secs(2));
+        let heartbeat=matches!(&event,Event::NewEvents(tao::event::StartCause::ResumeTimeReached{..}));
+        match event {
+            Event::UserEvent(Message::Close)=>*flow=ControlFlow::Exit,
+            Event::UserEvent(Message::Ready)=>ready=true,
+            Event::WindowEvent{event:WindowEvent::CloseRequested,..}=>{let _=webview.evaluate_script("(async()=>{if(window.noemaNativeClose && await window.noemaNativeClose()) window.ipc.postMessage('demo:close');})()");},
+            _=>{}
+        }
+        if ready {
+            let scale=window.scale_factor();
+            let size=window.inner_size().to_logical::<f64>(scale);
+            let bounds=window.inner_position().ok().map(|position|{
+                let p=position.to_logical::<f64>(scale);
+                format!("{{\"x\":{},\"y\":{},\"width\":{},\"height\":{}}}",p.x,p.y,size.width,size.height)
+            }).unwrap_or("null".into());
+            let state=format!("{{\"focused\":{},\"visible\":{},\"bounds\":{}}}",window.is_focused(),window.is_visible()&&!window.is_minimized(),bounds);
+            if state!=previous || heartbeat {
+                let _=webview.evaluate_script(&format!("window.dispatchEvent(new CustomEvent('noema:window',{{detail:{}}}));",state));
+                previous=state;
+            }
+        }
+    });
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { adapter, loadDemo, fixtureName, host,companionRequest,publishCompanion } from './storage';
-import { DemoSchema, fixtureInterpreter, DEMO_CLOCK, type Demo, type DemoTask, type DemoAttachment,type CompanionState } from './model';
+import { DemoSchema, WindowPresenceSchema, fixtureInterpreter, DEMO_CLOCK, type Demo, type DemoTask, type DemoAttachment,type CompanionState } from './model';
 import { Icon } from './icons';
 import './style.css';
 import './theme.css';
@@ -9,6 +9,7 @@ import {BackgroundField} from './BackgroundField';
 type Screen='Now'|'Capture'|'Notes'|'Plan';
 const params=new URLSearchParams(location.search);
 function App(){
+ useEffect(()=>{const report=(event:Event)=>{const parsed=WindowPresenceSchema.safeParse((event as CustomEvent).detail);if(parsed.success)void companionRequest('window',parsed.data).catch(()=>{});};window.addEventListener('noema:window',report);return()=>window.removeEventListener('noema:window',report);},[]);
  const [nativeCompanion,setNativeCompanion]=useState<CompanionState|null>(null);
  const [data,setData]=useState<Demo|null>(null), dataRef=useRef<Demo|null>(null), queue=useRef(Promise.resolve());
  const [error,setError]=useState(''), [screen,setScreen]=useState<Screen>((['Now','Capture','Notes','Plan'].includes(params.get('screen')||'')?params.get('screen'):'Now') as Screen);
