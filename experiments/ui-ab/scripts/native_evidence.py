@@ -56,10 +56,24 @@ def main():
                     assert match,'Independent companion window missing'
                     pet=match[1]
                     pointer=Input(display,found)
+                    def saved_demo():
+                        if host=='b':return json.loads((ROOT/'.demo/evidence'/out.name/'b/demo-populated.json').read_text())
+                        import sqlite3
+                        source=ROOT/'.demo/evidence'/out.name/'a/localstorage/http_127.0.0.1_8791.localstorage'
+                        with sqlite3.connect('file:'+str(source)+'?mode=ro',uri=True) as db:
+                            raw=db.execute('SELECT value FROM ItemTable WHERE key=?',('noema-ui-ab-v1-A-populated',)).fetchone()[0]
+                        return json.loads(raw.decode('utf-16-le') if isinstance(raw,bytes) else raw)
+                    def wait_saved(predicate):
+                        for _ in range(60):
+                            try:
+                                if predicate(saved_demo()):return
+                            except (OSError,ValueError,TypeError):pass
+                            time.sleep(.1)
+                        raise AssertionError('Native input did not reach isolated storage')
                     # Real multiline task input, keyboard submission and isolated persistence.
-                    pointer.click(974,530);time.sleep(.2);pointer.type('leetcode by tonight');pointer.key('Return','Control_L');time.sleep(.6);capture('task-added')
-                    pointer.key('Escape');pointer.click(80,295);capture('plan');pointer.click(80,196);capture('capture');pointer.click(440,315);pointer.type('A private learning note');capture('capture-typed')
-                    pointer.click(1020,552);time.sleep(.5);pointer.click(80,247);capture('note');pointer.click(80,146)
+                    pointer.click(894,530);time.sleep(.2);pointer.type('leetcode by tonight');wait_saved(lambda d:d['draft']['raw']=='leetcode by tonight');pointer.key('Return','Control_L');wait_saved(lambda d:any(t['raw']=='leetcode by tonight' for t in d['tasks']));capture('task-added')
+                    pointer.key('Escape');pointer.click(80,295);capture('plan');pointer.click(80,196);capture('capture');pointer.click(440,315);pointer.type('A private learning note');wait_saved(lambda d:d['capture']['raw']=='A private learning note');capture('capture-typed')
+                    pointer.click(940,552);wait_saved(lambda d:any(n['raw']=='A private learning note' for n in d['notes']));pointer.click(80,247);capture('note');pointer.click(80,146)
                     # Companion controls toggle observation through the restricted native preload.
                     subprocess.run(['import','-display',display,'-window','root',str(out/f'{host}-desktop-before-controls.png')],check=True,timeout=15)
                     def pet_bounds():
@@ -98,14 +112,7 @@ def main():
                     saved=json.loads(activity_file.read_text());assert saved['activity']['practice']['app']=='Xmessage';assert saved['activity']['practice']['seconds']>0
                     activity.terminate();activity.wait(timeout=5)
                     pointer.restore(found);pointer.click(600,100);time.sleep(3.5);capture('observed-task');subprocess.run(['import','-display',display,'-window','root',str(out/f'{host}-desktop-restored.png')],check=True,timeout=15);pointer.close()
-                    if host=='a':
-                        import sqlite3
-                        source=ROOT/'.demo/evidence'/out.name/'a/localstorage/http_127.0.0.1_8791.localstorage'
-                        with sqlite3.connect('file:'+str(source)+'?mode=ro',uri=True) as db:
-                            raw=db.execute('SELECT value FROM ItemTable WHERE key=?',('noema-ui-ab-v1-A-populated',)).fetchone()[0]
-                        saved=json.loads(raw.decode('utf-16-le') if isinstance(raw,bytes) else raw)
-                    else:
-                        saved=json.loads((ROOT/'.demo/evidence'/out.name/'b/demo-populated.json').read_text())
+                    saved=saved_demo()
                     if host in ['a','b']:
                         assert any(t['raw']=='leetcode by tonight' for t in saved['tasks'])
                         assert any(n['raw']=='A private learning note' for n in saved['notes']),saved['notes']

@@ -43,4 +43,5 @@ button:not(:disabled):hover{filter:brightness(1.07)}button:not(:disabled):active
 @media(max-width:700px){.sidebar{background:#11141c;border-top-color:#333a48}.nav-item{font-size:11px}.nav-item.active{background:#ffffff0c}.nav-item.active::before{display:none}.page-heading h1{font-size:29px;letter-spacing:-.8px}.page-heading>p{font-size:15px}.task-when{font-size:10px}.background-field{opacity:.7}.note-page h2{font-size:26px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.background-field{opacity:.65}}
 
-@media(min-width:701px){.app[data-companion=Cat] .quick-capture{margin-right:var(--companion-clearance)}}
+@media(min-width:701px){.app[data-companion=Cat] .content{padding-right:calc(var(--companion-clearance) + 16px)}}
+@media(min-width:1380px){.app[data-companion=Cat] .content.with-panel{padding-right:516px}}
