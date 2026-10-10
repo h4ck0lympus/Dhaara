@@ -8,7 +8,7 @@
     "preview": "python3 scripts/serve.py --port 8793",
     "a": "python3 scripts/launch.py a",
     "b": "python3 scripts/launch.py b",
-    "check": "node --test scripts/bridge.test.mjs scripts/companion.test.mjs",
+    "check": "node --test scripts/bridge.test.mjs scripts/companion.test.mjs scripts/field.test.mjs",
     "start": "python3 scripts/launch.py b"
   },
   "dependencies": {
