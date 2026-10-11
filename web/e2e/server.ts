@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 export const E2E_TOKEN = 'e2e-admin-token-0123456789abcdef';
 export const REPO = fileURLToPath(new URL('../../', import.meta.url));
 export const WEB_DIST = join(REPO, 'web', 'dist');
-const PYTHON = join(REPO, '.venv', 'bin', 'python');
+export const PYTHON = join(REPO, '.venv', 'bin', 'python');
 const STARTUP_MS = 15_000;
 // run.py always serves web/dist; an injected dist goes through create_app(dist_dir=…) directly.
 const SERVE_DIST = [
