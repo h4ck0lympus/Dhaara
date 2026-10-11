@@ -22,7 +22,12 @@ describe('schemas', () => {
     const settings = makeSnapshot().settings;
     expect(SettingsSchema.safeParse({ ...settings, companion_size: 73 }).success).toBe(false);
     expect(SettingsSchema.safeParse({ ...settings, display_name: 'x'.repeat(61) }).success).toBe(false);
-    expect(SettingsSchema.safeParse({ ...settings, display_name: undefined }).success).toBe(false);
+    expect(SettingsSchema.safeParse({ ...settings, display_name: 5 }).success).toBe(false);
+  });
+
+  it('defaults a missing display_name to empty so a v1-written snapshot still parses', () => {
+    const { display_name: _omit, ...v1Settings } = makeSnapshot().settings;
+    expect(SettingsSchema.parse(v1Settings).display_name).toBe('');
   });
 
   it('accept the note shape store.note returns', () => {

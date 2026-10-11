@@ -126,7 +126,7 @@ describe('S', () => {
   });
 
   it('keeps draft, queued and saved-on-server labels distinct (handbook §20)', () => {
-    const labels = [S.draftMemory, S.draftSaved, S.draftPending, S.captureSavedOffline, S.captureSavedSending, S.outboxCount(1), S.savedTo('Inbox', '')];
+    const labels = [S.draftMemory, S.draftSaved, S.draftPending, S.captureSavedOffline, S.captureSavedSending, S.outboxCount(1), S.savedTo('Inbox', ''), S.taskDraftSaved, S.taskDraftMemory, S.taskDraftUnconfirmed];
     expect(new Set(labels).size).toBe(labels.length);
     for (const local of [S.draftMemory, S.draftSaved]) expect(local).toContain('not uploaded');
     expect(S.savedTo('Inbox', '')).not.toContain('device');

@@ -46,6 +46,7 @@ export async function flushOutbox(): Promise<FlushResult> {
       try {
         note = await call('capture', NoteSchema, { body: captureForm(item) });
       } catch (error) {
+        if (error instanceof ApiError && error.kind === 'parse') toast(S.unexpectedResponse, { tone: 'error' }); // 2xx the item is kept unmarked: replay is idempotent
         if (!(error instanceof ApiError) || error.kind !== 'http' || error.status === null) return { sent, stop: 'network' };
         if (error.status === 401) return { sent, stop: 'unauthorized' };
         if (error.status >= 500) return { sent, stop: 'server' };

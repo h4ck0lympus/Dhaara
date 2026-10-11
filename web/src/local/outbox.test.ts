@@ -42,6 +42,14 @@ const payloads = () => fetchMock.mock.calls.map(([, init]) => JSON.parse(String(
 const ids = async () => (await m.db.outboxAll()).map((stored) => (stored as { id: string }).id);
 
 describe('flushOutbox', () => {
+  it('a malformed 2xx body toasts, keeps the item unmarked and stops', async () => {
+    await m.db.outboxPut(item(1));
+    fetchMock.mockImplementation(async () => new Response('{"nope":1}', { status: 201, headers: { 'content-type': 'application/json' } }));
+    expect(await m.outbox.flushOutbox()).toEqual({ sent: 0, stop: 'network' });
+    expect(m.toast).toHaveBeenCalledWith(S.unexpectedResponse, { tone: 'error' });
+    expect(await m.db.outboxAll()).toEqual([expect.not.objectContaining({ error: expect.anything() })]);
+  });
+
   it('sends in IndexedDB key order with the v1 multipart payload and deletes each item only after a 2xx', async () => {
     const png = new Blob(['png-bytes'], { type: 'image/png' });
     await m.db.outboxPut(item(3));

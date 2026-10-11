@@ -122,7 +122,7 @@ export const SettingsSchema = z.object({
   motion: z.boolean(),
   companion: z.enum(['cat', 'dot', 'hidden']),
   companion_size: int().min(24).max(72),
-  display_name: z.string().max(60),
+  display_name: z.string().max(60).default(''), // a v1-written snapshot has no key; mirrors the server's DEFAULT_SETTINGS merge
 });
 export const CapabilitiesSchema = z.object({
   organizer: z.boolean(),

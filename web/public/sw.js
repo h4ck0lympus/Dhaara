@@ -26,7 +26,13 @@ async function asset(request) {
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) await cache.put(request, response.clone());
+  if (response.ok) {
+    try {
+      await cache.put(request, response.clone());
+    } catch {
+      // Quota or storage failure: the network response is still good.
+    }
+  }
   return response;
 }
 
