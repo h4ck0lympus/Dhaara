@@ -1,7 +1,7 @@
 // web/src/ui/Dialog.test.tsx
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { StrictMode, useState } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Dialog } from './Dialog';
 import { polyfillDialog } from './testing';
@@ -62,6 +62,25 @@ describe('Dialog', () => {
     dialog.dispatchEvent(new Event('close'));
     expect(dialog.hasAttribute('open')).toBe(true);
     expect(onRequestClose).toHaveBeenCalledOnce();
+  });
+
+  it('does not close itself on open under StrictMode (stale queued close event)', async () => {
+    const nativeClose = HTMLDialogElement.prototype.close;
+    // Real browsers queue the close event as a task; model that so it lands after the re-mount.
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      if (!this.hasAttribute('open')) return;
+      this.removeAttribute('open');
+      queueMicrotask(() => this.dispatchEvent(new Event('close')));
+    };
+    try {
+      const onRequestClose = vi.fn();
+      render(<StrictMode><Dialog title="Edit task" onRequestClose={onRequestClose}><p>Body</p></Dialog></StrictMode>);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(onRequestClose).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog').hasAttribute('open')).toBe(true);
+    } finally {
+      HTMLDialogElement.prototype.close = nativeClose;
+    }
   });
 
   it('restores focus to the opener when it unmounts', () => {

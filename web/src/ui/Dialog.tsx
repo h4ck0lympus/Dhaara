@@ -19,8 +19,9 @@ export function Dialog({ title, onRequestClose, children, closeLabel = 'Close di
     if (!dialog.hasAttribute('open')) dialog.showModal();
     dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     const onCancel = (event: Event) => { event.preventDefault(); request.current(); };
+    // A stale close event queued by the StrictMode cleanup arrives after re-open: dialog.open skips it.
     // Chromium may close on a repeated Escape without 'cancel'; React stays the only authority.
-    const onClose = () => { if (mounted) { dialog.showModal(); request.current(); } };
+    const onClose = () => { if (mounted && !dialog.open) { dialog.showModal(); request.current(); } };
     dialog.addEventListener('cancel', onCancel);
     dialog.addEventListener('close', onClose);
     return () => {
