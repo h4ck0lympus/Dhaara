@@ -36,10 +36,9 @@ function serialise<T>(operation: () => Promise<T>): Promise<T> {
 async function persist(): Promise<void> {
   clearTimeout(debounce);
   const version = ++writeVersion;
-  const snapshot = structuredClone(state.draft);
   update({ saveState: 'pending' });
   try {
-    await serialise(() => kvPut('draft', snapshot));
+    await serialise(() => kvPut('draft', structuredClone(state.draft))) // cloned when the write runs, so a queued persist never writes a pre-save draft;
     if (version === writeVersion) update({ saveState: 'saved' });
   } catch {
     if (version === writeVersion) {

@@ -195,6 +195,19 @@ describe('captureDraftStore.save', () => {
   });
 });
 
+describe('persist racing an in-flight save', () => {
+  it('writes the post-save draft, not the pre-save one', async () => {
+    await store().setRaw('queue me');
+    const queuedId = store().getSnapshot().draft.id;
+    const saving = store().save();
+    const persisting = store().persist(); // enqueued behind the save's transaction
+    await Promise.all([saving, persisting]);
+    const stored = (await m.db.kvGet('draft')) as { id: string };
+    expect(stored.id).toBe(store().getSnapshot().draft.id);
+    expect(stored.id).not.toBe(queuedId);
+  });
+});
+
 describe('markSaveError', () => {
   it('labels the draft as not saved', () => {
     store().markSaveError();
