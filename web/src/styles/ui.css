@@ -45,7 +45,7 @@ details > summary { display: flex; align-items: center; gap: 8px; min-height: 36
   .heading-with-action .primary { margin-top: 16px; }
   .dialog { padding: 22px 18px; }
   .shortcut-help { display: none; }
-  /* Touch targets ≥ 44 × 44 px at phone widths (spec §4.7). */
-  button, a, select, summary { min-width: 44px; min-height: 44px; }
+  /* Touch targets ≥ 44 × 44 px at phone widths (spec §4.7). !important: an accessibility floor that component classes must not undercut. */
+  button, a[href], select, summary, input:not([type='hidden']) { min-width: 44px !important; min-height: 44px !important; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

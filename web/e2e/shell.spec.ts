@@ -72,3 +72,39 @@ test('the avatar shows the display-name initial and is hidden without a name', a
   await expect(page.locator('.profile-button .avatar')).toHaveText('V');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good (morning|afternoon|evening), vishal\.$/);
 });
+
+test('Every control is keyboard reachable with a visible focus ring', async ({ page, noema }) => {
+  await noema.api('POST', '/api/tasks', { title: 'Read the ownership chapter' });
+  await gotoApp(page, noema);
+  const seen = new Set<string>();
+  for (let i = 0; i < 20; i += 1) {
+    await page.keyboard.press('Tab');
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el || el === document.body) return null;
+      const style = getComputedStyle(el);
+      return { name: el.getAttribute('aria-label') || el.textContent?.trim() || el.tagName, ring: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 2 };
+    });
+    if (!focused) continue;
+    expect(focused.ring, `visible focus ring on ${focused.name}`).toBe(true);
+    seen.add(focused.name);
+  }
+  for (const name of ['Collapse sidebar', 'Overview', 'Capture', 'Notes', 'Tasks', 'Settings', 'Available time', 'Start']) expect(seen.has(name), name).toBe(true);
+});
+
+test('Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes', async ({ page, noema }) => {
+  await page.setViewportSize({ width: 1546, height: 835 });
+  await gotoApp(page, noema, '#/plan');
+  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add task' });
+  expect(await dialog.evaluate(d => d.matches(':modal'))).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await dialog.evaluate(d => d.matches(':modal'))).toBe(true);
+  for (let i = 0; i < 14; i += 1) {
+    await page.keyboard.press('Tab');
+    // The background is inert: focus is inside the dialog or nowhere (headless has no browser chrome), never behind it.
+    expect(await dialog.evaluate(d => document.activeElement === document.body || d.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
