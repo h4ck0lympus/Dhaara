@@ -1,5 +1,6 @@
 // Response schemas (contract §3.3). z.object strips unknown keys; nothing is coerced. Shapes: noema/store.py, noema/server.py.
 import { z } from '../zod';
+import type { TASK_EDIT_FIELDS } from '../domain/tasks';
 
 const int = () => z.number().int();
 
@@ -167,10 +168,7 @@ export type TokenSummary = z.infer<typeof TokenSummarySchema>;
 export type TokenCreated = z.infer<typeof TokenCreatedSchema>;
 
 // Request bodies.
-export type TaskEditable = Pick<
-  Task,
-  'title' | 'project' | 'detail' | 'next_action' | 'status' | 'priority' | 'due_at' | 'not_before' | 'planned_on' | 'estimate_minutes' | 'dependencies' | 'session_url'
->;
+export type TaskEditable = Pick<Task, (typeof TASK_EDIT_FIELDS)[number]>;
 export type TaskUpdateBody = TaskEditable & { expected_version: number };
 export type TaskCaptureBody = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };
 export type CapturePayload = { capture_id: string; raw: string; project: ''; task_id: string | null; organize: true };
