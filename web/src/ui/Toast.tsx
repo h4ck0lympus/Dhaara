@@ -1,20 +1,61 @@
-// Phase-1 stand-in so the data layer can report outcomes (contract §4.3–4.4 call toast()). 02-screens-core Task 4
-// overwrites this whole file with the ToastHost component; toast(message, options) keeps this signature.
-export type ToastOptions = { tone?: 'status' | 'error' };
+import { useEffect, useRef, useSyncExternalStore, type JSX } from 'react';
+import { createStore } from '../state/store';
+import { Icon } from './Icon';
 
+export type ToastOptions = { action?: { label: string; onClick: () => void }; tone?: 'status' | 'error' };
+type Current = { id: number; message: string; options: ToastOptions };
+
+export const TOAST_MS = 5500; // public/app.js:15
+
+const store = createStore<Current | null>(null);
+let seq = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
+// Popover API is feature-detected: engines without it get a plain fixed layer.
+const hasPopover = () => typeof HTMLElement !== 'undefined' && typeof HTMLElement.prototype.showPopover === 'function';
 
 export function toast(message: string, options: ToastOptions = {}): void {
-  document.getElementById('noema-toast')?.remove();
-  const node = document.createElement('div');
-  node.id = 'noema-toast';
-  if (options.tone === 'error') node.setAttribute('role', 'alert');
-  else {
-    node.setAttribute('role', 'status');
-    node.setAttribute('aria-live', 'polite');
-  }
-  node.textContent = message;
-  document.body.append(node);
   clearTimeout(timer);
-  timer = setTimeout(() => node.remove(), 5500); // app.js:15
+  store.set({ id: ++seq, message, options });
+  timer = setTimeout(dismissToast, TOAST_MS);
+}
+
+export function dismissToast(): void {
+  clearTimeout(timer);
+  store.set(null);
+}
+
+export function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function toastError(error: unknown): void {
+  toast(messageOf(error), { tone: 'error' });
+}
+
+export function ToastHost(): JSX.Element {
+  const active = useSyncExternalStore(store.subscribe, store.get);
+  const layer = useRef<HTMLDivElement>(null);
+  const popover = hasPopover();
+  useEffect(() => {
+    const el = layer.current;
+    if (!popover || !el) return;
+    // Re-showing puts the toast above any modal dialog opened since (top-layer order).
+    if (el.matches(':popover-open')) el.hidePopover();
+    el.showPopover();
+  }, [active, popover]);
+  const action = active?.options.action;
+  const body = active && (
+    <div className="toast" key={active.id}>
+      <span>{active.message}</span>
+      {action && <button type="button" className="text-button" onClick={() => { dismissToast(); action.onClick(); }}>{action.label}</button>}
+      <button type="button" className="icon-button" aria-label="Dismiss" onClick={dismissToast}><Icon name="close" size={16} /></button>
+    </div>
+  );
+  const isError = active?.options.tone === 'error';
+  return (
+    <div ref={layer} {...(popover ? { popover: 'manual' } : {})} className="toast-layer">
+      <div role="status" aria-live="polite">{!isError && body}</div>
+      <div role="alert">{isError && body}</div>
+    </div>
+  );
 }
