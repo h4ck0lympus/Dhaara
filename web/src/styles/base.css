@@ -1,0 +1,23 @@
+/* Fonts, tokens and reset. Component styles live in shell.css/ui.css (P3) and screens.css (P4). */
+@font-face{font-family:Inter;src:url('../assets/fonts/Inter-Regular.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:Inter;src:url('../assets/fonts/Inter-Medium.otf') format('opentype');font-weight:500 800;font-display:swap}
+@font-face{font-family:Display;src:url('../assets/fonts/TeXGyreTermes-Regular.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:Display;src:url('../assets/fonts/TeXGyreTermes-Italic.otf') format('opentype');font-weight:400;font-style:italic;font-display:swap}
+
+:root{color-scheme:dark;--sidebar:190px;--reading:866px;font-family:Inter,sans-serif;font-size:16px;color:var(--text);background:var(--bg)}
+/* Monochrome graphite with a single cool silver accent; color is reserved for priority. */
+:root{
+ --bg:#08090b;--bg-raised:#0d0e11;
+ --text:#eceef2;--text-dim:#b4b9c3;--muted:#9097a3;--faint:#6f7682;
+ --accent:#cdd5e3;--sage:var(--accent);--accent-soft:#cdd5e31a;
+ --line:#ffffff14;--line-strong:#ffffff26;--line-hover:#ffffff38;--border:var(--line);
+ --surface:#0e0f13d9;--surface-solid:#111216;--surface-raised:#15171cf0;--surface-hover:#ffffff08;--surface-active:#ffffff0e;--panel:var(--surface-raised);
+ --highlight:inset 0 1px 0 #ffffff0d;--shadow:0 12px 40px #00000059;--shadow-modal:0 30px 90px #000000b3;
+ --font-label:ui-monospace,'SFMono-Regular','JetBrains Mono','Liberation Mono',monospace;
+ --radius:10px;--radius-small:7px;
+ --ease:cubic-bezier(.2,.8,.2,1);--fast:120ms var(--ease);--transition:180ms var(--ease);--arrive:260ms var(--ease);
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
