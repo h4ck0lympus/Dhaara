@@ -51,7 +51,7 @@ export async function gotoApp(page: Page, noema: NoemaServer, hash = '#/overview
 
 // The one place that opens noema-local-v1; the same upgrade as public/app.js:30-43 (and web/src/local/db.ts),
 // so seeded records are exactly what the v1 UI stored.
-function openLocalDb(): Promise<IDBDatabase> {
+export function openLocalDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('noema-local-v1', 1);
     request.onupgradeneeded = () => {
