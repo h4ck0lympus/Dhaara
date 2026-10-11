@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { runSql } from './db';
 import { failFetch, loseAck } from './faults';
 import { expect, gotoApp, readLocalDb, test } from './fixtures';
+import { TASK_EDIT_FIELDS } from '../src/domain/tasks';
 import { E2E_TOKEN, type NoemaServer } from './server';
 
 type Task = { id: string; title: string; project: string; priority: string; status: string; version: number; planned_on: string | null; due_at: string | null;
@@ -431,4 +432,65 @@ test('Confirmation Edit opens the saved task even when post-save snapshot failed
   await page.locator('.toast-layer').getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByRole('dialog', { name: 'Edit the acknowledged task despite failed refresh' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Add task' })).toHaveCount(0);
+});
+
+// Parity rows task_capture_check.py:118,124,126; handbook trace R2.
+// qa/task_capture_check.py:104-112: a captured task with every field populated through the real API, seconds precision included.
+async function fullyPopulated(noema: NoemaServer) {
+  const saved = await noema.api<Task>('POST', '/api/task-captures', { capture_id: crypto.randomUUID(), raw: 'Review the cleanup path', local_day: '2026-10-10', details: {} });
+  const dependency = await noema.api<Task>('POST', '/api/tasks', { title: 'Fixture prerequisite' });
+  const changed = await noema.api<Record<string, unknown>>('PUT', `/api/tasks/${saved.id}`, {
+    title: saved.title, project: saved.project, detail: 'Retain context', next_action: 'Read saved release order', status: 'todo', priority: 'low',
+    due_at: '2026-11-20T17:22:33+00:00', not_before: '2026-10-01T11:23:45+00:00', planned_on: '2026-11-18', estimate_minutes: 25,
+    dependencies: [dependency.id], session_url: 'https://example.test/task', expected_version: saved.version,
+  });
+  return { saved, changed };
+}
+async function openEditor(page: Page, title: string) {
+  await page.locator('.plan-list').getByRole('button', { name: new RegExp('^' + title) }).click();
+  await page.getByRole('dialog', { name: title }).getByRole('button', { name: 'Edit', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit task' });
+  await expect(editor).toBeVisible();
+  return editor;
+}
+
+test('Existing task Details starts collapsed', async ({ page, noema }) => {
+  await fullyPopulated(noema);
+  await gotoApp(page, noema, '#/plan');
+  const editor = await openEditor(page, 'Review the cleanup path');
+  await expect(editor.locator('#task-details')).not.toHaveAttribute('open', '');
+  await expect(editor.getByLabel('Title', { exact: true })).toBeFocused();
+});
+
+test('Collapsed editor preserves every hidden field, exact timestamps and original', async ({ page, noema }) => {
+  const { saved, changed } = await fullyPopulated(noema);
+  await gotoApp(page, noema, '#/plan');
+  const editor = await openEditor(page, 'Review the cleanup path');
+  await editor.getByLabel('Title', { exact: true }).fill('Manual correction, not an inference');
+  await editor.locator('#task-details summary').click();
+  await editor.locator('#task-details summary').click();
+  await editor.getByRole('button', { name: 'Save task' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task saved.');
+  const updated = await noema.api<Record<string, unknown>>('GET', `/api/tasks/${saved.id}`);
+  for (const key of TASK_EDIT_FIELDS.filter(k => k !== 'title')) expect(updated[key], key).toEqual(changed[key]);
+  expect(updated.title).toBe('Manual correction, not an inference');
+  expect(updated.original_input).toBe(saved.original_input);
+});
+
+test('Task save never replaces pinned focus', async ({ page, noema }) => {
+  const { saved } = await fullyPopulated(noema);
+  await noema.api('POST', '/api/focus', { task_id: saved.id, pinned: true });
+  const pin = (await state(noema)).focus;
+  await gotoApp(page, noema, '#/plan');
+  const editor = await openEditor(page, 'Review the cleanup path');
+  await editor.getByLabel('Title', { exact: true }).fill('Renamed while pinned');
+  await editor.getByRole('button', { name: 'Save task' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task saved.');
+  expect((await state(noema)).focus).toEqual(pin);
+  await page.keyboard.press('Escape');
+  await openAddTask(page);
+  await rawInput(page).fill('A new task while pinned');
+  await rawInput(page).press('Control+Enter');
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect((await state(noema)).focus).toEqual(pin);
 });

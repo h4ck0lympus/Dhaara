@@ -14,14 +14,15 @@ import { useCreateReminder, useDismissReminder, useEndTracking, usePatchTask, us
 import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { messageOf, toast, toastError } from '../ui/Toast';
+import { TaskEditForm } from './TaskEdit';
 
 function SessionLink({ url }: { url: string }): JSX.Element | null {
   if (!isSessionUrl(url)) return null; // app.js:27 — http(s) only
   return <a className="text-button" href={url} target="_blank" rel="noopener noreferrer">Open session ↗</a>;
 }
 
-function TaskView({ task, snapTask, snapshot, onClose }: {
-  task: Task; snapTask: SnapshotTask | undefined; snapshot: Snapshot | undefined; onClose: () => void;
+function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
+  task: Task; snapTask: SnapshotTask | undefined; snapshot: Snapshot | undefined; onClose: () => void; onEdit: () => void;
 }): JSX.Element {
   const navigate = useNavigate();
   const setFocus = useSetFocus();
@@ -117,6 +118,7 @@ function TaskView({ task, snapTask, snapshot, onClose }: {
       <div className="inline-actions">
         {focusable && <button type="button" className="primary" onClick={() => void focusThis()}>Focus on this</button>}
         <SessionLink url={task.session_url} />
+        <button type="button" className="quiet-button" onClick={onEdit}>{S.editAction}</button>
         {!done && (
           <button type="button" className="quiet-button" onClick={() => void setStatus(parked ? 'todo' : 'parked', parked ? 'Task unparked.' : 'Task parked.')}>
             {parked ? 'Unpark' : 'Park'}
@@ -183,6 +185,7 @@ function TaskView({ task, snapTask, snapshot, onClose }: {
 }
 
 export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => void }): JSX.Element {
+  const [editing, setEditing] = useState(false);
   const snapshot = useSnapshot().data;
   const snapTask = snapshot?.tasks.find(t => t.id === id);
   // A just-acknowledged task may be missing from a failed post-save refresh.
@@ -196,8 +199,10 @@ export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => v
     );
   }
   return (
-    <Dialog title={task.title} onRequestClose={onClose}>
-      <TaskView task={task} snapTask={snapTask} snapshot={snapshot} onClose={onClose} />
+    <Dialog title={editing ? 'Edit task' : task.title} onRequestClose={onClose}>
+      {editing
+        ? <TaskEditForm task={task} tasks={snapshot?.tasks ?? []} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} />
+        : <TaskView task={task} snapTask={snapTask} snapshot={snapshot} onClose={onClose} onEdit={() => setEditing(true)} />}
     </Dialog>
   );
 }

@@ -1,6 +1,7 @@
 // web/e2e/plan.spec.ts
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
+import { TASK_EDIT_FIELDS } from '../src/domain/tasks';
 import { agentRun, serverState, task } from './nowSeed';
 import type { NoemaServer } from './server';
 
@@ -267,4 +268,28 @@ test('Missing task has truthful error, no fake action', async ({ page, noema }) 
   await page.goto(`${noema.origin}/#/task/missing-synthetic-task`);
   await expect(page.locator('.toast-layer')).toHaveText(/Task unavailable\./);
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+async function changeElsewhere(noema: NoemaServer, id: string, changes: Record<string, unknown>) {
+  const fresh = await noema.api<Record<string, unknown>>('GET', `/api/tasks/${id}`);
+  await noema.api('PUT', `/api/tasks/${id}`, { ...Object.fromEntries(TASK_EDIT_FIELDS.map(k => [k, fresh[k]])), ...changes, expected_version: fresh.version });
+}
+
+test('a 409 conflict shows Reopen and never overwrites', async ({ page, noema }) => {
+  const t = await task(noema, 'Shared task');
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Shared task/ }).click();
+  await page.getByRole('dialog', { name: 'Shared task' }).getByRole('button', { name: 'Edit', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit task' });
+  await editor.getByLabel('Title', { exact: true }).fill('My stale edit');
+  await changeElsewhere(noema, t.id, { title: 'Changed elsewhere' });
+  await editor.getByRole('button', { name: 'Save task' }).click();
+  await expect(editor.getByRole('alert')).toHaveText('This task changed. Reopen it before saving.');
+  expect((await getTask(noema, t.id)).title).toBe('Changed elsewhere');
+  await editor.getByRole('button', { name: 'Reopen' }).click();
+  await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Changed elsewhere');
+  await editor.getByLabel('Title', { exact: true }).fill('Merged by hand');
+  await editor.getByRole('button', { name: 'Save task' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task saved.');
+  expect((await getTask(noema, t.id)).title).toBe('Merged by hand');
 });
