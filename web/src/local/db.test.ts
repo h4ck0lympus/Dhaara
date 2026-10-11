@@ -121,6 +121,19 @@ describe('transaction', () => {
   });
 });
 
+describe('outbox listeners', () => {
+  it('a throwing listener does not stop later listeners or fail the write', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const later = vi.fn();
+    db.onOutboxWrite(() => {
+      throw new Error('boom');
+    });
+    db.onOutboxWrite(later);
+    await db.outboxPut({ id: 'x', raw: '', task_id: '', files: [] });
+    expect(later).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('record guards', () => {
   it('accept the shapes public/app.js stores, including v1 items without error', () => {
     const file = { name: 'heap.png', blob: blob('png') };

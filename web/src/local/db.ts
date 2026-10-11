@@ -75,7 +75,13 @@ export async function transaction<T>(
     const fail = (error: unknown) => reject(error ?? new LocalStoreError('aborted', 'Local save failed'));
     tx.oncomplete = () => {
       resolve(result);
-      if (mode === 'readwrite' && names.includes('outbox')) for (const listener of [...outboxWriteListeners]) listener();
+      if (mode === 'readwrite' && names.includes('outbox')) for (const listener of [...outboxWriteListeners]) {
+          try {
+            listener();
+          } catch (error) {
+            console.error('outbox listener failed', error); // one bad listener must not skip the rest
+          }
+        }
     };
     // A request error reaches tx.onerror before tx.error is set, so prefer the failing request's own error.
     tx.onerror = (event) => fail((event.target as IDBRequest | null)?.error ?? tx.error);
