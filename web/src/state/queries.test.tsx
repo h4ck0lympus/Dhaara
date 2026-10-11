@@ -60,11 +60,13 @@ describe('useSnapshot', () => {
     await vi.waitFor(() => expect(calls('GET', '/state')).toBe(3));
   });
 
-  it('flushes the outbox after each visible snapshot', async () => {
-    renderHook(() => useSnapshot(), { wrapper });
+  it('flushes the outbox after each visible snapshot, once per client however many consumers mount', async () => {
+    const uninstall = installRefetchTriggers(qc);
+    renderHook(() => { useSnapshot(); useSnapshot(); }, { wrapper });
     await vi.waitFor(() => expect(flushOutbox).toHaveBeenCalledTimes(1));
     await act(() => vi.advanceTimersByTimeAsync(15_000));
     await vi.waitFor(() => expect(flushOutbox).toHaveBeenCalledTimes(2));
+    uninstall();
   });
 
   it('reports disconnected on a failed state fetch and keeps the last snapshot', async () => {

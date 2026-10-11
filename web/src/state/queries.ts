@@ -1,7 +1,7 @@
 // Queries and mutation hooks (spec §4.3, contract §4.6). Refetches update the cache only: screens copy server data into
 // form state when they open, so a refetch never replaces in-progress input.
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { ApiError, call } from '../api/client';
 import {
   ContextRuleSchema,
@@ -83,7 +83,6 @@ export async function runFlush(qc: QueryClient): Promise<FlushResult> {
 
 export function useSnapshot(): UseQueryResult<Snapshot, ApiError> {
   const [minutes] = useTimeBudget();
-  const qc = useQueryClient();
   const query = useQuery<Snapshot, ApiError>({
     queryKey: queryKeys.snapshot(minutes),
     queryFn: async () => {
@@ -103,10 +102,6 @@ export function useSnapshot(): UseQueryResult<Snapshot, ApiError> {
     refetchOnReconnect: true, // the window 'online' event
     placeholderData: keepPreviousData,
   });
-  // Flush trigger: each visible snapshot tick (and the refetches on becoming visible and online).
-  useEffect(() => {
-    if (query.dataUpdatedAt > 0 && document.visibilityState === 'visible') void runFlush(qc);
-  }, [query.dataUpdatedAt, qc]);
   return query;
 }
 
@@ -119,7 +114,11 @@ export async function readCachedSnapshot(): Promise<Snapshot | null> {
 export function installRefetchTriggers(qc: QueryClient): () => void {
   const serviceUp = () => void qc.refetchQueries({ queryKey: ['snapshot'] });
   window.addEventListener(SERVICE_UP, serviceUp);
-  return () => window.removeEventListener(SERVICE_UP, serviceUp);
+  // Flush trigger, once per QueryClient: each visible snapshot success (ticks, refetch on becoming visible and online).
+  const unsubscribe = qc.getQueryCache().subscribe(event => {
+    if (event.type === 'updated' && event.action.type === 'success' && event.query.queryKey[0] === 'snapshot' && document.visibilityState === 'visible') void runFlush(qc);
+  });
+  return () => { window.removeEventListener(SERVICE_UP, serviceUp); unsubscribe(); };
 }
 
 export function useNote(id: string): UseQueryResult<Note, ApiError> {

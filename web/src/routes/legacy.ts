@@ -15,8 +15,17 @@ export function installLegacyHashRewrite(navigate: (to: string) => void): () => 
     const rewritten = rewriteLegacyHash(location.hash);
     if (rewritten) navigate(rewritten.slice(1));
   };
+  // The router's popstate handler maps '#plan' to '#/overview' before hashchange fires: rewrite first, in the capture phase.
+  const onPopState = () => {
+    const rewritten = rewriteLegacyHash(location.hash);
+    if (rewritten) history.replaceState(history.state, '', rewritten);
+  };
   window.addEventListener('hashchange', onHashChange);
-  return () => window.removeEventListener('hashchange', onHashChange);
+  window.addEventListener('popstate', onPopState, true);
+  return () => {
+    window.removeEventListener('hashchange', onHashChange);
+    window.removeEventListener('popstate', onPopState, true);
+  };
 }
 
 function decode(value: string): string {

@@ -28,6 +28,13 @@ describe('installLegacyHashRewrite', () => {
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
+  it('rewrites the hash in place on popstate, before the router reads it', () => {
+    cleanups.push(installLegacyHashRewrite(vi.fn()));
+    history.replaceState(null, '', '#plan');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(location.hash).toBe('#/plan');
+  });
+
   it('stops listening after uninstall', () => {
     const navigate = vi.fn();
     installLegacyHashRewrite(navigate)();
