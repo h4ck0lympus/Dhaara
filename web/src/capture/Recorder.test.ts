@@ -3,7 +3,11 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../local/drafts', () => ({
-  captureDraftStore: { addFiles: vi.fn(async () => []), getSnapshot: vi.fn(() => ({ saving: false })) },
+  captureDraftStore: {
+    addFiles: vi.fn(async () => []),
+    getSnapshot: vi.fn(() => ({ saving: false })),
+    subscribe: vi.fn((_listener: () => void) => () => {}),
+  },
 }));
 vi.mock('../ui/Toast', async importOriginal => ({ ...(await importOriginal<typeof import('../ui/Toast')>()), toast: vi.fn() }));
 
@@ -211,5 +215,47 @@ describe('useRecorder', () => {
     unmount();
     expect(FakeRecorder.instances[0].state).toBe('inactive');
     await waitFor(() => expect(captureDraftStore.addFiles).toHaveBeenCalledTimes(1));
+  });
+
+  it('flushes a staged recording when the in-flight save ends', async () => {
+    const { result } = renderHook(() => useRecorder());
+    vi.mocked(captureDraftStore.getSnapshot).mockReturnValue({ saving: true } as never);
+    await act(() => result.current.start());
+    FakeRecorder.instances[0].emit(new Blob(['abc'], { type: 'audio/webm' }));
+    act(() => result.current.stop());
+    await waitFor(() => expect(result.current.status).toBe(S.finishingLocalSave));
+    expect(captureDraftStore.addFiles).not.toHaveBeenCalled();
+    vi.mocked(captureDraftStore.getSnapshot).mockReturnValue({ saving: false } as never);
+    const listener = vi.mocked(captureDraftStore.subscribe).mock.calls[0][0];
+    act(() => listener());
+    await waitFor(() => expect(result.current.status).toBe(RECORDER_TEXT.added));
+    expect(captureDraftStore.addFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('unmounting with a staged recording still delivers it once the save ends', async () => {
+    const { result, unmount } = renderHook(() => useRecorder());
+    vi.mocked(captureDraftStore.getSnapshot).mockReturnValue({ saving: true } as never);
+    await act(() => result.current.start());
+    FakeRecorder.instances[0].emit(new Blob(['abc'], { type: 'audio/webm' }));
+    act(() => result.current.stop());
+    await waitFor(() => expect(result.current.status).toBe(S.finishingLocalSave));
+    unmount();
+    expect(captureDraftStore.addFiles).not.toHaveBeenCalled();
+    vi.mocked(captureDraftStore.getSnapshot).mockReturnValue({ saving: false } as never);
+    const listeners = vi.mocked(captureDraftStore.subscribe).mock.calls.map(call => call[0]);
+    listeners.forEach(listener => listener());
+    await waitFor(() => expect(captureDraftStore.addFiles).toHaveBeenCalledTimes(1));
+  });
+
+  it('a recorder error stops the microphone, returns to idle and says so', async () => {
+    const { result } = renderHook(() => useRecorder());
+    await act(() => result.current.start());
+    track.stop.mockClear();
+    act(() => FakeRecorder.instances[0].onerror?.());
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.elapsedMs).toBe(0);
+    expect(result.current.status).toBe(RECORDER_TEXT.failed);
+    expect(track.stop).toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(RECORDER_TEXT.failed, { tone: 'error' });
   });
 });

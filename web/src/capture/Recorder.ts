@@ -79,8 +79,13 @@ export function useRecorder(): RecorderState {
 
   useEffect(() => {
     mounted.current = true;
+    const unsubscribe = captureDraftStore.subscribe(() => {
+      if (staged.current && !captureDraftStore.getSnapshot().saving) void flushStaged();
+    });
     return () => {
+      unsubscribe();
       mounted.current = false;
+      if (staged.current) void flushStaged();
       // Navigation away is blocked while recording; if Capture unmounts anyway, Stop still delivers the audio to the draft store.
       const current = session.current;
       if (current && current.recorder.state !== 'inactive') current.recorder.stop();
@@ -102,12 +107,19 @@ export function useRecorder(): RecorderState {
     await flushStaged();
   }
 
-  // addFiles silently accepts nothing while a save is in flight, so keep the file and retry on the next start().
+  // addFiles silently accepts nothing while a save is in flight, so keep the file; retried when the save ends (store subscription) and on start().
   async function flushStaged(): Promise<void> {
     const file = staged.current;
     if (!file) return;
     if (captureDraftStore.getSnapshot().saving) {
       setStatus(S.finishingLocalSave);
+      if (!mounted.current) {   // no hook subscription any more: wait for the save, then deliver
+        const off = captureDraftStore.subscribe(() => {
+          if (captureDraftStore.getSnapshot().saving) return;
+          off();
+          void flushStaged();
+        });
+      }
       return;
     }
     staged.current = null;
@@ -167,6 +179,10 @@ export function useRecorder(): RecorderState {
     recorder.onerror = () => {
       toast(RECORDER_TEXT.failed, { tone: 'error' });
       stopTracks(stream);
+      if (session.current === current) session.current = null;   // phase 'idle' also clears the elapsed timer
+      setElapsedMs(0);
+      setPhase('idle');
+      setStatus(RECORDER_TEXT.failed);
     };
     recorder.start(RECORD_TIMESLICE_MS);
     session.current = current;
