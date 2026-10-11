@@ -16,6 +16,7 @@ import { installRefetchTriggers, queryKeys, readCachedSnapshot } from './state/q
 import './styles/base.css';
 import './styles/shell.css';
 import './styles/ui.css';
+import './styles/screens.css';
 
 function latestSnapshot(qc: QueryClient): Snapshot | undefined {
   return qc.getQueriesData<Snapshot>({ queryKey: ['snapshot'] }).map(([, data]) => data).find(data => data !== undefined);
