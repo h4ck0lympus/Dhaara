@@ -101,6 +101,23 @@ export async function seedLocalDb(page: Page, origin: string, seed: Seed): Promi
   );
 }
 
+export async function putOutboxItem(page: Page, item: SeedDraft): Promise<void> {
+  await inLocalDb(
+    page,
+    async (open, item: SeedDraft) => {
+      const db = await open();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction('outbox', 'readwrite');
+        tx.objectStore('outbox').put({ id: item.id, raw: item.raw, task_id: item.task_id, files: [] });
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error);
+      });
+      db.close();
+    },
+    item,
+  );
+}
+
 export async function readLocalDb(page: Page): Promise<LocalDbSnapshot> {
   return inLocalDb(
     page,

@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { S } from '../src/strings';
 import { loseAck } from './faults';
-import { expect, openLocalDb, PNG_1PX, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
+import { expect, PNG_1PX, putOutboxItem, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
 import { E2E_TOKEN, type NoemaServer } from './server';
 
 // public/app.js wrote these shapes; v1 outbox items carry no `error` key until a rejection.
@@ -39,18 +39,7 @@ test('Reconnect flushes queued capture to real server', async ({ page, noema }) 
   await noema.kill();
   await page.reload();
   await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
-  await page.evaluate(
-    `(async (open, item) => {
-      const db = await open();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction('outbox', 'readwrite');
-        tx.objectStore('outbox').put({ id: item.id, raw: item.raw, task_id: '', files: [] });
-        tx.oncomplete = () => resolve();
-        tx.onabort = () => reject(tx.error);
-      });
-      db.close();
-    })(${openLocalDb}, ${JSON.stringify(QUEUED)})`,
-  );
+  await putOutboxItem(page, QUEUED);
   await noema.restart();
   await page.reload();
   await expect.poll(async () => (await notes(noema)).map((note) => note.id)).toEqual([QUEUED.id]);

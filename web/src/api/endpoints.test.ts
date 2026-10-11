@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { listSourceFiles } from '../test/sourceFiles';
 import { ENDPOINTS, endpointPath, type Replay } from './endpoints';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
@@ -22,12 +23,6 @@ function routes(replay: Replay): string[] {
     .sort();
 }
 
-function sources(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory() ? sources(join(dir, entry.name)) : /\.tsx?$/.test(entry.name) ? [join(dir, entry.name)] : [],
-  );
-}
-
 describe('replay policy (spec §4.3)', () => {
   it('sends exactly the spec list once per user action', () => {
     expect(routes('once-per-action')).toEqual(SPEC_ONCE_PER_ACTION.map(normalise).sort());
@@ -38,7 +33,7 @@ describe('replay policy (spec §4.3)', () => {
   });
 
   it('calls fetch( only from api/client.ts (tests excluded)', () => {
-    const offenders = sources(SRC)
+    const offenders = listSourceFiles(SRC)
       .map((file) => relative(SRC, file))
       .filter((file) => file !== join('api', 'client.ts') && !/\.test\.tsx?$/.test(file) && !file.startsWith('test/'))
       .filter((file) => /\bfetch\(/.test(readFileSync(join(SRC, file), 'utf8')));

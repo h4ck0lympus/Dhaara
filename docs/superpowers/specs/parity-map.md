@@ -10,7 +10,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
   - `webview_check.py:143`: both branch strings are titles. `webview_check.py:170`: `stage` ∈ the managed stages of `webview_check.py:87-91`. `webview_check.py:175`: `expected_notes` = 2 (managed run).
 - **Phase** is the contract phase id (`00-contract.md` §10); **Target** is the test file from contract §9.4 / §1.2. A phase whose test covers several labels under one title rewrites the Target cell to `<file> › "<title>"` (several joined with `; `); `06-cutover.md` Task 11 checks every cited title, and otherwise the label itself, exists verbatim in the file. Plan files in `docs/superpowers/plans/2026-10-10-react-electron/`: P1 and P2 → `01-foundation.md` (except P2 rows targeting `web/src/domain/nowState.test.ts`, created by `02-screens-core.md` Task 2); P3 → `02-screens-core.md` (`checkpoint.spec.ts` → `03-screens-capture-notes.md`); P4 → `02-screens-core.md` or `03-screens-capture-notes.md`, whichever creates the target file (`03-screens-capture-notes.md` Task 15 retargets the rows it moves); P5 → `04-terrain.md`; P6 → `05-electron.md` (Electron and lifecycle rows) and `06-cutover.md`. A phase that must move a row records the move in its own plan.
 - **Status:** `planned` → `green` (set by `06-cutover.md` Task 11 after the full gate) · `drop (proposed): <reason>` → `drop (approved): <reason>` (owner only; the value `06-cutover.md` Task 11 writes and checks).
-- "No uncaught … JavaScript errors" rows are satisfied by the P1 auto fixture `pageErrors` (`web/e2e/fixtures.ts`), which fails every E2E test that sees a page error.
+- "No uncaught … JavaScript errors" rows are satisfied by the P1 auto fixture `guards` (`web/e2e/fixtures.ts`, built on `guardContext`), which fails every E2E test that sees an uncaught page error or CSP violation.
 - Section B lists every prose string in `public/app.js` (generator in Task 1). A string either lives in `S` (`web/src/strings.ts`, pinned by `web/src/strings.test.ts`), is a verbatim literal in the named component (asserted by the named spec), or is recorded as replaced/removed with the spec or owner decision that replaced it.
 
 ## A. Check labels
@@ -85,7 +85,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 66 | qa/browser_check.py:147 | Phone layout has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
 | 67 | qa/browser_check.py:150 | Phone capture has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
 | 68 | qa/browser_check.py:152 | Tablet layout has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
-| 69 | qa/browser_check.py:154 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `pageErrors` (runs in every spec) | planned |
+| 69 | qa/browser_check.py:154 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 70 | qa/native_storage_check.py:156 | Real loopback navigation and native service worker control | P1 | web/e2e/sw.spec.ts | planned |
 | 71 | qa/native_storage_check.py:160 | Older committed draft cannot label newer input as saved | P2 | web/src/local/drafts.test.ts | planned |
 | 72 | qa/native_storage_check.py:166 | Unsaved draft never ingested into server notebook | P4 | web/e2e/capture.spec.ts | planned |
@@ -107,7 +107,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 88 | qa/native_storage_check.py:274 | Immediate Save cancels draft debounce without resurrecting a saved draft | P4 | web/e2e/capture.spec.ts | planned |
 | 89 | qa/native_storage_check.py:287 | Unavailable storage at boot leaves editable UI and failed Save retains text | P4 | web/e2e/capture.spec.ts | planned |
 | 90 | qa/native_storage_check.py:291 | Failed database open can retry in the same page without reloading | P2 | web/src/local/db.test.ts | planned |
-| 91 | qa/native_storage_check.py:294 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `pageErrors` (runs in every spec) | planned |
+| 91 | qa/native_storage_check.py:294 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 92 | qa/now_ui_check.py:118 | `kind + ' / ' + label + ' has no horizontal overflow'` | P4 | web/e2e/now.spec.ts | planned |
 | 93 | qa/now_ui_check.py:137 | `kind + ' uses real server state'` | P4 | web/e2e/now.spec.ts | planned |
 | 94 | qa/now_ui_check.py:138 | `kind + ' preserves the four navigation destinations'` | P4 | web/e2e/now.spec.ts | planned |
@@ -138,7 +138,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 119 | qa/now_ui_check.py:279 | All-complete state has no agent onboarding prompt | P4 | web/e2e/now.spec.ts | planned |
 | 120 | qa/now_ui_check.py:283 | Stale integration status is visibly unknown, not running or complete | P4 | web/e2e/now.spec.ts | planned |
 | 121 | qa/now_ui_check.py:287 | Reconnect returns to real available work | P4 | web/e2e/offline.spec.ts | planned |
-| 122 | qa/now_ui_check.py:291 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `pageErrors` (runs in every spec) | planned |
+| 122 | qa/now_ui_check.py:291 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 123 | qa/settings_link_check.py:29 | Native settings URL opens actual existing dialog at startup | P4 | web/e2e/settings.spec.ts | planned |
 | 124 | qa/settings_link_check.py:31 | Settings link adds no navigation screen | P4 | web/e2e/settings.spec.ts | planned |
 | 125 | qa/settings_link_check.py:34 | Linked settings edits actual existing server permission | P4 | web/e2e/settings.spec.ts | planned |
@@ -146,7 +146,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 127 | qa/settings_link_check.py:46 | Settings navigation never ingests an unsaved draft | P4 | web/e2e/settings.spec.ts | planned |
 | 128 | qa/settings_link_check.py:58 | Settings link preserves note-edit route and unsaved editor text | P4 | web/e2e/settings.spec.ts | planned |
 | 129 | qa/settings_link_check.py:60 | Opening settings never replaces the saved note original | P4 | web/e2e/settings.spec.ts | planned |
-| 130 | qa/settings_link_check.py:62 | No uncaught JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `pageErrors` (runs in every spec) | planned |
+| 130 | qa/settings_link_check.py:62 | No uncaught JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 131 | qa/task_capture_check.py:64 | One multiline input; no unsupported voice button or mandatory details | P4 | web/e2e/task-capture.spec.ts | planned |
 | 132 | qa/task_capture_check.py:71 | `f'{width}px layout has no horizontal overflow'` | P4 | web/e2e/task-capture.spec.ts | planned |
 | 133 | qa/task_capture_check.py:76 | `f'{width}px Details is keyboard reachable'` | P4 | web/e2e/task-capture.spec.ts | planned |
@@ -180,7 +180,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 161 | qa/task_link_check.py:55 | Saved note original is unchanged | P4 | web/e2e/plan.spec.ts | planned |
 | 162 | qa/task_link_check.py:58 | Task-link navigation never changes pin or manual priority | P4 | web/e2e/plan.spec.ts | planned |
 | 163 | qa/task_link_check.py:62 | Missing task has truthful error, no fake action | P4 | web/e2e/plan.spec.ts | planned |
-| 164 | qa/task_link_check.py:63 | No uncaught JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `pageErrors` (runs in every spec) | planned |
+| 164 | qa/task_link_check.py:63 | No uncaught JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 165 | qa/webview_check.py:143 | `'Actual virtual open-idle process sample and native shell SIGTERM lease cleanup' if stage == 'idle' else 'Actual native shell SIGKILL closes lease and stops owned service'` | P6 | electron/e2e/managed.spec.ts | planned |
 | 166 | qa/webview_check.py:161 | Actual second desktop launch refused by persistent-profile lock | P6 | electron/e2e/single-instance.spec.ts | planned |
 | 167 | qa/webview_check.py:170 | `f'{stage}: actual owned backend stopped after checkpoint-approved close'` | P6 | electron/e2e/managed.spec.ts | planned |
