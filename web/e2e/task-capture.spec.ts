@@ -1,0 +1,410 @@
+// web/e2e/task-capture.spec.ts
+import { chromium, type Page } from '@playwright/test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { runSql } from './db';
+import { failFetch, loseAck } from './faults';
+import { expect, gotoApp, readLocalDb, test } from './fixtures';
+import { E2E_TOKEN, type NoemaServer } from './server';
+
+type Task = { id: string; title: string; project: string; priority: string; status: string; version: number; planned_on: string | null; due_at: string | null;
+  not_before: string | null; original_input: string | null; interpretation: { method?: string; explanation?: string } };
+type State = { tasks: Task[]; reminders: unknown[]; focus: { task_id: string; pinned: boolean } | null; capabilities: { organizer: boolean } };
+const state = (noema: NoemaServer) => noema.api<State>('GET', '/api/state');
+const taskCount = async (noema: NoemaServer) => (await state(noema)).tasks.length;
+const byOriginal = async (noema: NoemaServer, raw: string) => (await state(noema)).tasks.find(t => t.original_input === raw);
+const addTaskDialog = (page: Page) => page.getByRole('dialog', { name: 'Add task' });
+const rawInput = (page: Page) => addTaskDialog(page).getByLabel('What do you need to do?');
+const detailsSummary = (page: Page) => addTaskDialog(page).locator('#task-details summary');
+async function openAddTask(page: Page) {
+  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  await expect(addTaskDialog(page)).toBeVisible();
+  return addTaskDialog(page);
+}
+async function addWithKeyboard(page: Page, raw: string) {
+  await rawInput(page).fill(raw);
+  await rawInput(page).press('Control+Enter');
+  await expect(addTaskDialog(page)).toHaveCount(0);
+}
+// qa/task_capture_check.py:160-162: only the task-draft key fails, so the rest of IndexedDB keeps working.
+async function breakTaskDraftStorage(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __put?: typeof IDBObjectStore.prototype.put };
+    w.__put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, value: unknown, key?: IDBValidKey) {
+      if (key === 'task-draft') throw new DOMException('Injected quota failure', 'QuotaExceededError');
+      return w.__put!.call(this, value, key);
+    };
+  });
+}
+async function repairTaskDraftStorage(page: Page) {
+  await page.evaluate(() => { IDBObjectStore.prototype.put = (window as unknown as { __put: typeof IDBObjectStore.prototype.put }).__put; });
+}
+async function submitWithBrokenDraftStorage(page: Page, raw: string) {
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill(raw);
+  await breakTaskDraftStorage(page);
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Draft storage failed. Task not added; keep this dialog open and retry.');
+  return dialog;
+}
+async function submitWithServerTrigger(page: Page, noema: NoemaServer, raw: string) {
+  runSql(noema.dataDir, "CREATE TRIGGER ui_fail BEFORE INSERT ON task_captures BEGIN SELECT RAISE(ABORT, 'Injected fixture failure'); END");
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill(raw);
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Not confirmed added');
+  return dialog;
+}
+async function submitWithLostAck(page: Page, raw: string) {
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill(raw);
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Not confirmed added');
+  return dialog;
+}
+async function submitOffline(page: Page, raw: string) {
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill(raw);
+  await page.evaluate(() => {
+    const original = window.fetch;
+    window.fetch = async (input, init) => {
+      if (String(input) === '/api/task-captures') { window.fetch = original; throw new TypeError('Injected offline transport'); }
+      return original(input, init);
+    };
+  });
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Not confirmed added');
+  return dialog;
+}
+
+test.use({ viewport: { width: 1200, height: 900 } });
+
+test('One multiline input; no unsupported voice button or mandatory details', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await expect(rawInput(page)).toBeFocused();
+  await expect(dialog.locator('input:visible, select:visible')).toHaveCount(0);
+  await expect(dialog.locator('textarea:visible')).toHaveCount(1);
+  await expect(dialog.locator('#task-details')).not.toHaveAttribute('open', '');
+  await expect(dialog.getByRole('button', { name: /record|voice|microphone/i })).toHaveCount(0);
+});
+
+for (const width of [1200, 390]) {
+  const viewport = { width, height: width === 390 ? 844 : 900 };
+  test(`${width}px layout has no horizontal overflow`, async ({ page, noema }) => {
+    await page.setViewportSize(viewport);
+    await gotoApp(page, noema, '#/plan');
+    const dialog = await openAddTask(page);
+    await rawInput(page).fill('Review the cleanup path');
+    expect(await dialog.evaluate(d => d.scrollWidth <= d.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test(`${width}px Details is keyboard reachable`, async ({ page, noema }) => {
+    await page.setViewportSize(viewport);
+    await gotoApp(page, noema, '#/plan');
+    await openAddTask(page);
+    await expect(rawInput(page)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(detailsSummary(page)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(addTaskDialog(page).locator('#task-details')).toHaveAttribute('open', '');
+  });
+}
+
+test('Ordinary Enter inserts a newline, never submits', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await rawInput(page).fill('Review the cleanup path');
+  await rawInput(page).press('End');
+  await rawInput(page).press('Enter');
+  await expect(rawInput(page)).toHaveValue('Review the cleanup path\n');
+  await expect(addTaskDialog(page)).toBeVisible();
+  expect(await taskCount(noema)).toBe(0);
+});
+
+test('Opening and closing Details preserves input and chosen workflow', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Review the cleanup path');
+  await detailsSummary(page).click();
+  await dialog.getByLabel('Workflow · optional').fill('Explicit fixture workflow');
+  await detailsSummary(page).click();
+  await expect(rawInput(page)).toHaveValue('Review the cleanup path');
+  await detailsSummary(page).click();
+  await expect(dialog.getByLabel('Workflow · optional')).toHaveValue('Explicit fixture workflow');
+});
+
+test('Keyboard submit durably creates one task without a model', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Review the cleanup path');
+  await detailsSummary(page).click();
+  await dialog.getByLabel('Workflow · optional').fill('Explicit fixture workflow');
+  await rawInput(page).press('Control+Enter');
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  const current = await state(noema);
+  expect(current.capabilities.organizer).toBe(false);
+  expect(current.tasks).toHaveLength(1);
+  expect(current.tasks[0]).toMatchObject({ original_input: 'Review the cleanup path', project: 'Explicit fixture workflow' });
+  expect(current.focus).toBeNull();
+});
+
+test('Compact confirmation includes Edit and does not open full editor', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await addWithKeyboard(page, 'Review the cleanup path');
+  await expect(page.locator('.toast-layer')).toContainText('Task added.');
+  await expect(page.locator('.toast-layer').getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/plan$/);
+});
+
+test('Planned day is separate from deadline/reminder/availability', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await addWithKeyboard(page, 'Review another cleanup tomorrow');
+  const planned = await byOriginal(noema, 'Review another cleanup tomorrow');
+  expect(planned?.planned_on).not.toBeNull();
+  expect(planned?.due_at).toBeNull();
+  expect(planned?.not_before).toBeNull();
+  expect((await state(noema)).reminders).toHaveLength(0);
+});
+
+test('Accidental dismissal and reload recover task draft and details', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Maybe review Atlas next Friday; not confirmed');
+  await detailsSummary(page).click();
+  await dialog.getByLabel('Priority').selectOption('low');
+  await rawInput(page).press('Escape');
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  const again = await openAddTask(page);
+  await expect(rawInput(page)).toHaveValue('Maybe review Atlas next Friday; not confirmed');
+  await detailsSummary(page).click();
+  await expect(again.getByLabel('Priority')).toHaveValue('low');
+  expect(await taskCount(noema)).toBe(0);
+});
+
+test('Task draft survives close and reload; initially focused; Enter inserts newline', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await expect(rawInput(page)).toBeFocused();
+  await rawInput(page).fill('leetcode by tonight');
+  await rawInput(page).press('Enter');
+  await expect(rawInput(page)).toHaveValue(/\n$/);
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await openAddTask(page);
+  await expect(rawInput(page)).toBeFocused();
+  await expect(rawInput(page)).toHaveValue('leetcode by tonight\n');
+});
+
+test('Actual browser-profile restart recovers task draft', async ({ noema }) => {
+  const profile = await mkdtemp(join(tmpdir(), 'noema-task-profile-'));
+  try {
+    let context = await chromium.launchPersistentContext(profile, { viewport: { width: 1200, height: 900 } });
+    let page = context.pages()[0] ?? await context.newPage();
+    await gotoApp(page, noema, '#/plan');
+    await openAddTask(page);
+    await rawInput(page).fill('Draft that survives a restart');
+    await addTaskDialog(page).getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(addTaskDialog(page)).toHaveCount(0);
+    await context.close();
+    context = await chromium.launchPersistentContext(profile, { viewport: { width: 1200, height: 900 } });
+    page = context.pages()[0] ?? await context.newPage();
+    await gotoApp(page, noema, '#/plan');
+    await openAddTask(page);
+    await expect(rawInput(page)).toHaveValue('Draft that survives a restart');
+    expect(await taskCount(noema)).toBe(0);
+    await context.close();
+  } finally {
+    await rm(profile, { recursive: true, force: true });
+  }
+});
+
+test('Ambiguous workflow/date save without interview or fabricated fields', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Maybe review Atlas next Friday; not confirmed');
+  await detailsSummary(page).click();
+  await dialog.getByLabel('Priority').selectOption('low');
+  await rawInput(page).press('Control+Enter');
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  const uncertain = await byOriginal(noema, 'Maybe review Atlas next Friday; not confirmed');
+  expect(uncertain).toMatchObject({ planned_on: null, due_at: null, not_before: null, project: 'Unassigned', priority: 'low' });
+  await expect(page.locator('.toast-layer')).toContainText('Task added. Date wording kept; correct it in Edit if needed.');
+});
+
+test('Unsupported input saved with honest unavailable interpretation', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await addWithKeyboard(page, 'Compare memory layouts');
+  const saved = await byOriginal(noema, 'Compare memory layouts');
+  expect(saved).toMatchObject({ title: 'Compare memory layouts', project: 'Unassigned', planned_on: null, due_at: null });
+  expect(saved?.interpretation).toMatchObject({ method: 'limited-rules', explanation: '' });
+  await expect(page.locator('.toast-layer')).toHaveText(/^Task added\./);
+});
+
+test('Repeated submit does not duplicate task', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Idempotent example');
+  await dialog.locator('form').evaluate((form: HTMLFormElement) => { form.requestSubmit(); form.requestSubmit(); });
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('Create task form persists to real SQLite', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await addWithKeyboard(page, 'Persist me across a restart');
+  await noema.restart();
+  expect((await byOriginal(noema, 'Persist me across a restart'))?.title).toBe('Persist me across a restart');
+});
+
+test('Add a task opens an implemented form and persists explicit intent', async ({ page, noema }) => {
+  await gotoApp(page, noema);
+  await page.getByRole('region', { name: 'Next action' }).getByRole('button', { name: 'Add a task' }).click();
+  await addWithKeyboard(page, 'Explicitly chosen task');
+  expect((await state(noema)).tasks.map(t => t.title)).toEqual(['Explicitly chosen task']);
+});
+
+test('Injected storage failure retains input, blocks dismissal and makes no task', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitWithBrokenDraftStorage(page, 'Retain this on local storage failure');
+  await expect(rawInput(page)).toHaveValue('Retain this on local storage failure');
+  await expect(rawInput(page)).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(dialog.locator('#task-draft-status')).toContainText('Draft not stored');
+  await rawInput(page).press('Escape');
+  await expect(addTaskDialog(page)).toBeVisible();
+  expect(await taskCount(noema)).toBe(0);
+});
+
+test('Local storage retry adds exactly once', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitWithBrokenDraftStorage(page, 'Retain this on local storage failure');
+  await repairTaskDraftStorage(page);
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('Failed submission reports an inline error, retains wording and refuses unsafe close', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitWithBrokenDraftStorage(page, 'Preserve on failure, with more text');
+  await expect(rawInput(page)).toHaveValue('Preserve on failure, with more text');
+  const box = (await dialog.boundingBox())!;
+  await page.mouse.click(Math.max(2, box.x - 10), Math.max(2, box.y - 10)); // backdrop
+  await dialog.getByRole('button', { name: 'Close dialog' }).click();
+  await expect(addTaskDialog(page)).toBeVisible();
+  await expect(rawInput(page)).toHaveValue('Preserve on failure, with more text');
+});
+
+test('Server storage failure shows no false success and rolls back task', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await submitWithServerTrigger(page, noema, 'Retain on database failure');
+  await expect(rawInput(page)).toBeDisabled();
+  await expect(rawInput(page)).toHaveValue('Retain on database failure');
+  await expect(page.locator('.toast-layer')).not.toContainText('Task added.');
+  expect(await taskCount(noema)).toBe(0);
+});
+
+test('Server storage retry adds once', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitWithServerTrigger(page, noema, 'Retain on database failure');
+  runSql(noema.dataDir, 'DROP TRIGGER ui_fail');
+  await dialog.getByRole('button', { name: 'Retry add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('Lost acknowledgement is unconfirmed, not a success', async ({ page, noema }) => {
+  await loseAck(page, '/api/task-captures', 1);
+  await gotoApp(page, noema, '#/plan');
+  await submitWithLostAck(page, 'Retried submission must not duplicate');
+  await expect(addTaskDialog(page)).toBeVisible();
+  await expect(addTaskDialog(page).getByRole('button', { name: 'Retry add task' })).toBeVisible();
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('Retry after actual commit returns same task, never duplicates', async ({ page, noema }) => {
+  await loseAck(page, '/api/task-captures', 1);
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitWithLostAck(page, 'Retried submission must not duplicate');
+  const committed = (await state(noema)).tasks[0].id;
+  await dialog.getByRole('button', { name: 'Retry add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect((await state(noema)).tasks.map(t => t.id)).toEqual([committed]);
+});
+
+test('Injected generic HTTP 200 cannot falsely acknowledge a task', async ({ page, noema }) => {
+  await failFetch(page, { path: '/api/task-captures', times: 1, fault: { status: 200, body: '{}', contentType: 'application/json' } });
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Generic success is not a task acknowledgement');
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(dialog.getByRole('alert')).toContainText('Not confirmed added');
+  expect(await taskCount(noema)).toBe(0);
+  await dialog.getByRole('button', { name: 'Retry add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('Disconnected task saving retains draft, no task/outbox success', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await submitOffline(page, 'Disconnected task draft, not a queued task');
+  await expect(rawInput(page)).toHaveValue('Disconnected task draft, not a queued task');
+  expect(await taskCount(noema)).toBe(0);
+  expect((await readLocalDb(page)).outbox).toHaveLength(0);
+  await expect(page.getByRole('button', { name: /captures? on this device/ })).toHaveCount(0);
+});
+
+test('Disconnected draft retry after reload uses durable capture identity', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await submitOffline(page, 'Disconnected task draft, not a queued task');
+  type Pending = { capture_id: string; raw: string; local_day: string; details: Record<string, unknown> };
+  const pending = ((await readLocalDb(page)).taskDraft as { pending: Pending }).pending;
+  expect(pending.raw).toBe('Disconnected task draft, not a queued task');
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  const again = await openAddTask(page);
+  await expect(rawInput(page)).toHaveValue('Disconnected task draft, not a queued task');
+  await expect(again.locator('#task-draft-status')).toHaveText('Previous save is unconfirmed. Retry the same attempt; this draft is not an offline task queue.');
+  await again.getByRole('button', { name: 'Retry add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  const tasks = (await state(noema)).tasks;
+  expect(tasks).toHaveLength(1);
+  // The identity persisted before the first attempt is the one the server stored: replaying it returns this task.
+  expect((await noema.api<Task>('POST', '/api/task-captures', pending)).id).toBe(tasks[0].id);
+  expect(await taskCount(noema)).toBe(1);
+});
+
+test('a 401 unfreezes the input and Unlock stacks over Add task without discarding it', async ({ page, noema }) => {
+  await failFetch(page, { path: '/api/task-captures', times: 1, fault: { status: 401, body: '{"detail":"Unlock Noema to continue"}', contentType: 'application/json' } });
+  await gotoApp(page, noema, '#/plan');
+  const dialog = await openAddTask(page);
+  await rawInput(page).fill('Add after unlocking');
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  const unlock = page.getByRole('dialog', { name: 'Unlock Noema' });
+  await expect(unlock).toBeVisible();
+  await unlock.getByLabel('Access token').fill(E2E_TOKEN);
+  await unlock.getByRole('button', { name: 'Unlock' }).click();
+  await expect(unlock).toHaveCount(0);
+  await expect(addTaskDialog(page)).toBeVisible();
+  await expect(rawInput(page)).toBeEnabled();
+  await expect(rawInput(page)).toHaveValue('Add after unlocking');
+  await expect(dialog.getByRole('alert')).toHaveText('Not confirmed added. Your input is preserved. Unlock Noema to continue');
+  await dialog.getByRole('button', { name: 'Add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  expect(await taskCount(noema)).toBe(1);
+});

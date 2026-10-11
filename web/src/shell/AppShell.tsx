@@ -8,6 +8,7 @@ import { useSnapshot } from '../state/queries';
 import { Icon } from '../ui/Icon';
 import { ToastHost } from '../ui/Toast';
 import { openDialog } from './dialogs';
+import { DialogHost } from './DialogHost';
 import { installKeyboard } from './keyboard';
 import { Nav } from './Nav';
 import { notifyDueReminders } from './notifications';
@@ -40,6 +41,7 @@ export function AppShell(): JSX.Element {
         <main className="content" data-quiet=""><Outlet /></main>
       </div>
       <ToastHost />
+      <DialogHost />
       <UnlockHost />
       <RouteGuards />
     </div>
