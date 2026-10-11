@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
-import { noHorizontalOverflow, openKind, seed, task } from './nowSeed';
+import { agentRun, noHorizontalOverflow, openKind, seed, task } from './nowSeed';
 
 const LONG = 'Investigate-the-allocator-cleanup-path-without-any-spaces-' + 'x'.repeat(120);
 
@@ -87,8 +87,16 @@ test('Phone touch targets are at least 44×44 px', async ({ page, context, noema
   await page.setViewportSize({ width: 390, height: 844 });
   await openKind(page, context, noema, 'available');
   expect(await smallTargets(page)).toEqual([]);
+  await seed(noema, 'attention'); // run awaiting review: Review result link
+  await seed(noema, 'waiting');
+  await seed(noema, 'complete');
+  await agentRun(noema, await task(noema, 'Running agent task'));
   await gotoApp(page, noema, '#/plan');
   expect(await smallTargets(page)).toEqual([]);
+  for (const label of ['Needs you', 'Running', 'Available now', 'Completed', 'All']) {
+    await page.getByRole('group', { name: 'Task views' }).getByRole('button', { name: label, exact: true }).click();
+    expect(await smallTargets(page), label).toEqual([]);
+  }
   await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
   await page.getByRole('dialog', { name: 'Add task' }).locator('#task-details summary').click();
   expect(await smallTargets(page)).toEqual([]);
