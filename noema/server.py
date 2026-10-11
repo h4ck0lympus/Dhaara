@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from uuid import uuid4
 from fastapi import FastAPI, Request, File, Form, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse, Response
 from pydantic import ValidationError
 from starlette.staticfiles import StaticFiles
 from . import __version__
@@ -23,6 +23,14 @@ from .worker import Worker
 ROOT=Path(__file__).resolve().parents[1]
 MAX_UPLOAD=32*1024*1024
 MAX_BODY=64*1024*1024
+
+class HashedAssets(StaticFiles):
+    """Vite output under dist/assets is content-hashed, so a URL never changes content."""
+    async def check_config(self): pass  # dist may be built after start; a missing directory is a plain 404, not a 500
+    async def get_response(self,path,scope):
+        response=await super().get_response(path,scope)
+        response.headers['Cache-Control']='public, max-age=31536000, immutable'
+        return response
 
 class BodyLimit:
     def __init__(self,app): self.app=app
@@ -49,8 +57,9 @@ def detect_mime(data: bytes, declared: str):
     raise Problem(400,'Supported attachments: PNG, JPEG, WebP images and WebM, WAV, Ogg, MP3 or M4A audio. The content must match its format.')
 
 
-def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_identity=None):
+def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_identity=None, dist_dir=None):
     root=Path(data_dir or os.getenv('NOEMA_DATA_DIR',str(ROOT/'.data')))
+    dist=Path(dist_dir) if dist_dir is not None else ROOT/'web'/'dist'
     store=Store(root)
     token_file=root/'admin.token'
     admin=admin_token or os.getenv('NOEMA_ACCESS_TOKEN')
@@ -339,14 +348,27 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     @app.get('/api/openapi')
     def schema(): return app.openapi()
 
-    @app.get('/')
-    def index(): return FileResponse(ROOT/'public'/'index.html')
+    no_cache={'Cache-Control':'no-cache'}
 
-    @app.get('/companion')
-    def companion_page(): return FileResponse(ROOT/'public'/'companion.html')
+    def dist_file(name,media_type,headers=None):
+        path=dist/name
+        if not path.is_file(): raise Problem(404,'Not found')
+        return FileResponse(path,media_type=media_type,headers={**no_cache,**(headers or {})})
+
+    @app.get('/')
+    def index():
+        if not (dist/'index.html').is_file():
+            return PlainTextResponse('Frontend not built: run `npm --prefix web run build`',status_code=503,headers=no_cache)
+        return dist_file('index.html','text/html')
 
     @app.get('/sw.js')
-    def sw(): return FileResponse(ROOT/'public'/'sw.js',media_type='application/javascript',headers={'Service-Worker-Allowed':'/'})
+    def sw(): return dist_file('sw.js','application/javascript',{'Service-Worker-Allowed':'/'})
 
-    app.mount('/static',StaticFiles(directory=ROOT/'public'),name='static')
+    @app.get('/manifest.webmanifest')
+    def manifest(): return dist_file('manifest.webmanifest','application/manifest+json')
+
+    @app.get('/icon.svg')
+    def icon(): return dist_file('icon.svg','image/svg+xml')
+
+    app.mount('/assets',HashedAssets(directory=dist/'assets',check_dir=False),name='assets')
     return app

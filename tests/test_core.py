@@ -37,8 +37,59 @@ def run(c,t,**kw):
 def event(c,r,seq,kind,**kw):
     return c.post('/api/runs/'+r['id']+'/events',json={'event_id':uuid4().hex,'seq':seq,'kind':kind,**kw})
 
-def test_health_and_static(env):
- c,s,w=env;assert c.get('/api/health').json()['ok'];assert 'Noema' in c.get('/').text;assert c.get('/static/app.js').status_code==200
+SHELL_ASSET='index-AbCd1234.js'
+
+def make_dist(root):
+    (root/'assets').mkdir(parents=True)
+    (root/'index.html').write_text('<!doctype html><title>Noema</title><div id="root"></div>')
+    (root/'assets'/SHELL_ASSET).write_text('export {};')
+    (root/'sw.js').write_text('const CACHE="noema-shell-000000000000";const PRECACHE=["/"];\n')
+    (root/'manifest.webmanifest').write_text('{"id":"/","start_url":"/","scope":"/"}')
+    (root/'icon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+    return root
+
+def test_frontend_not_built_returns_503(tmp_path):
+    app=create_app(tmp_path/'data',start_worker=False,admin_token=ADMIN,dist_dir=tmp_path/'missing')
+    with TestClient(app) as c:
+        r=c.get('/')
+        assert r.status_code==503
+        assert r.text=='Frontend not built: run `npm --prefix web run build`'
+        assert r.headers['content-type'].startswith('text/plain')
+        assert r.headers['cache-control']=='no-cache'
+        assert "default-src 'self'" in r.headers['content-security-policy']
+        assert c.get('/api/health').json()['ok']
+        for path in ('/assets/'+SHELL_ASSET,'/sw.js','/manifest.webmanifest','/icon.svg'):
+            assert c.get(path).status_code==404,path
+
+def test_frontend_routes_and_headers(tmp_path):
+    dist=make_dist(tmp_path/'dist')
+    app=create_app(tmp_path/'data',start_worker=False,admin_token=ADMIN,dist_dir=dist)
+    with TestClient(app) as c:
+        index=c.get('/')
+        assert index.status_code==200 and '<div id="root">' in index.text
+        assert index.headers['content-type'].startswith('text/html')
+        assert index.headers['cache-control']=='no-cache'
+        assert index.headers['x-frame-options']=='DENY'
+        asset=c.get('/assets/'+SHELL_ASSET)
+        assert asset.status_code==200 and asset.text=='export {};'
+        assert asset.headers['cache-control']=='public, max-age=31536000, immutable'
+        assert c.get('/assets/missing-AbCd1234.js').status_code==404
+        sw=c.get('/sw.js')
+        assert sw.status_code==200 and sw.text.startswith('const CACHE=')
+        assert sw.headers['content-type'].startswith('application/javascript')
+        assert sw.headers['service-worker-allowed']=='/'
+        assert sw.headers['cache-control']=='no-cache'
+        manifest=c.get('/manifest.webmanifest')
+        assert manifest.json()=={'id':'/','start_url':'/','scope':'/'}
+        assert manifest.headers['content-type'].startswith('application/manifest+json')
+        assert manifest.headers['cache-control']=='no-cache'
+        icon=c.get('/icon.svg')
+        assert icon.headers['content-type'].startswith('image/svg+xml') and icon.headers['cache-control']=='no-cache'
+        for path in ('/static/app.js','/static/sw.js','/companion','/index.html'):
+            assert c.get(path).status_code==404,path
+        assert c.get('/api/state').status_code==401
+        (dist/'manifest.webmanifest').unlink()
+        assert c.get('/manifest.webmanifest').status_code==404
 
 def test_companion_saved_actions_preserve_available_order_and_pin(env):
  c,s,w=env
