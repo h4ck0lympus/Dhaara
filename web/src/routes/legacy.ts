@@ -16,7 +16,9 @@ export function installLegacyHashRewrite(navigate: (to: string) => void): () => 
     if (rewritten) navigate(rewritten.slice(1));
   };
   // The router's popstate handler maps '#plan' to '#/overview' before hashchange fires: rewrite first, in the capture phase.
+  // Modal links are left as typed: replaceState here would move the router to /task/... before installModalLinks reads its location.
   const onPopState = () => {
+    if (modalRequestForHash(location.hash)) return;
     const rewritten = rewriteLegacyHash(location.hash);
     if (rewritten) history.replaceState(history.state, '', rewritten);
   };

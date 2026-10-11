@@ -408,3 +408,27 @@ test('a 401 unfreezes the input and Unlock stacks over Add task without discardi
   await expect(addTaskDialog(page)).toHaveCount(0);
   expect(await taskCount(noema)).toBe(1);
 });
+
+test('Confirmation Edit opens the saved task even when post-save snapshot failed', async ({ page, noema }) => {
+  await gotoApp(page, noema, '#/plan');
+  await openAddTask(page);
+  await rawInput(page).fill('Edit the acknowledged task despite failed refresh');
+  await page.evaluate(() => {
+    const original = window.fetch;
+    let failNextState = false;
+    window.fetch = async (input, init) => {
+      if (String(input).startsWith('/api/state') && failNextState) {
+        failNextState = false;
+        return new Response('{"detail":"Injected outage"}', { status: 503, headers: { 'Content-Type': 'application/json' } });
+      }
+      const response = await original(input, init);
+      if (String(input) === '/api/task-captures') failNextState = true;
+      return response;
+    };
+  });
+  await addTaskDialog(page).getByRole('button', { name: 'Add task' }).click();
+  await expect(addTaskDialog(page)).toHaveCount(0);
+  await page.locator('.toast-layer').getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByRole('dialog', { name: 'Edit the acknowledged task despite failed refresh' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Add task' })).toHaveCount(0);
+});

@@ -159,3 +159,10 @@ export async function expectFontsLoaded(page: Page): Promise<void> {
   expect(fontPaths).toHaveLength(4);
   for (const path of fontPaths) expect(path).toMatch(/^\/assets\/.+-[A-Za-z0-9_-]{8}\.otf$/);
 }
+
+// Forces a snapshot refetch (the same trigger the service-up event gives the page) and waits for it to land.
+export async function refetch(page: Page): Promise<void> {
+  const response = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/state' && r.ok());
+  await page.evaluate(() => window.dispatchEvent(new Event('noema:service-up')));
+  await response;
+}

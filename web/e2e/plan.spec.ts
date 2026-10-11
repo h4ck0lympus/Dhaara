@@ -114,3 +114,157 @@ test('a long unbroken title never scrolls the page sideways at 390 px', async ({
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+// web/e2e/plan.spec.ts — append
+test('Task detail shows the next action and source before the activity log', async ({ page, noema }) => {
+  const t = await task(noema, 'Review the proposed fix', { next_action: 'Check cleanup first.', detail: 'The slot may still point at the chunk.' });
+  await agentRun(noema, t, 'needs_input');
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Review the proposed fix/ }).click();
+  const detail = page.getByRole('dialog', { name: 'Review the proposed fix' });
+  await expect(detail.getByText('Check cleanup first.')).toBeVisible();
+  await expect(detail.getByText('The slot may still point at the chunk.')).toBeVisible();
+  const order = await detail.evaluate(d => {
+    const headings = [...d.querySelectorAll('h3')].map(x => x.textContent);
+    return [headings.indexOf('Continue here'), headings.indexOf('Agent runs')];
+  });
+  expect(order[0]).toBeGreaterThanOrEqual(0);
+  expect(order[0]).toBeLessThan(order[1]);
+  await expect(detail).toContainText('Needs your input');
+  await expect(detail).toContainText('No explicit urgency; neutral default.');
+});
+
+test('Escape closes the detail and focus returns to the row', async ({ page, noema }) => {
+  await task(noema, 'Read the chapter');
+  await gotoApp(page, noema, '#/plan');
+  const title = page.getByRole('button', { name: /^Read the chapter/ });
+  await title.click();
+  await expect(page.getByRole('dialog', { name: 'Read the chapter' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Read the chapter' })).toHaveCount(0);
+  await expect(title).toBeFocused();
+});
+
+test('End tracking asks first; declining keeps the run', async ({ page, noema }) => {
+  const t = await task(noema, 'Long agent job');
+  const run = await agentRun(noema, t);
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Long agent job/ }).click();
+  const detail = page.getByRole('dialog', { name: 'Long agent job' });
+  const runStatus = async () => (await serverState(noema)).runs.find(r => r.id === run.id)?.status;
+  page.once('dialog', d => { expect(d.message()).toBe('End tracking this run? This does not stop or kill the external agent process.'); void d.dismiss(); });
+  await detail.getByRole('button', { name: 'End tracking' }).click();
+  expect(await runStatus()).toBe('working');
+  page.once('dialog', d => void d.accept());
+  await detail.getByRole('button', { name: 'End tracking' }).click();
+  await expect.poll(runStatus).toBe('cancelled');
+});
+
+test('reminders: add, snooze by 20 minutes, dismiss', async ({ page, noema }) => {
+  await task(noema, 'Revisit the allocator');
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Revisit the allocator/ }).click();
+  const detail = page.getByRole('dialog', { name: 'Revisit the allocator' });
+  await detail.getByLabel('Reminder time').fill('2030-01-02T09:30');
+  await detail.getByRole('button', { name: 'Add reminder' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Reminder saved.');
+  const reminders = async () => (await serverState(noema)).reminders;
+  await expect.poll(async () => (await reminders()).length).toBe(1);
+  await expect(detail.getByText(/^scheduled · /)).toBeVisible();
+  await detail.getByRole('button', { name: '+20 min' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Reminder moved forward by 20 minutes.');
+  await detail.getByRole('button', { name: 'Dismiss' }).click();
+  await expect.poll(async () => (await reminders()).length).toBe(0);
+});
+
+test('Parked is distinct from done and can be unparked', async ({ page, noema }) => {
+  const t = await task(noema, 'Someday idea');
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Someday idea/ }).click();
+  const detail = page.getByRole('dialog', { name: 'Someday idea' });
+  await detail.getByRole('button', { name: 'Park' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task parked.');
+  await expect(detail.getByRole('button', { name: 'Unpark' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await view(page, 'Parked').click();
+  await expect(rows(page)).toHaveText([/Someday idea/]);
+  await view(page, 'Completed').click();
+  await expect(rows(page)).toHaveCount(0);
+  await view(page, 'Parked').click();
+  await page.getByRole('button', { name: /^Someday idea/ }).click();
+  await page.getByRole('dialog', { name: 'Someday idea' }).getByRole('button', { name: 'Unpark' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task unparked.');
+  await expect.poll(async () => (await getTask(noema, t.id)).status).toBe('todo');
+});
+
+test('Focus on this asks before replacing a pin', async ({ page, noema }) => {
+  const pinned = await task(noema, 'Pinned work');
+  const other = await task(noema, 'Other work');
+  await noema.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Other work/ }).click();
+  const detail = page.getByRole('dialog', { name: 'Other work' });
+  page.once('dialog', d => void d.dismiss());
+  await detail.getByRole('button', { name: 'Focus on this' }).click();
+  expect((await serverState(noema)).focus?.task_id).toBe(pinned.id);
+  page.once('dialog', d => void d.accept());
+  await detail.getByRole('button', { name: 'Focus on this' }).click();
+  await expect(page).toHaveURL(/#\/overview$/);
+  expect((await serverState(noema)).focus).toMatchObject({ task_id: other.id, pinned: true });
+});
+
+test('session links open only http(s) URLs in a new tab without a referrer', async ({ page, noema }) => {
+  await task(noema, 'Linked work', { session_url: 'https://example.test/session' });
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('button', { name: /^Linked work/ }).click();
+  const link = page.getByRole('dialog', { name: 'Linked work' }).getByRole('link', { name: 'Open session ↗' });
+  await expect(link).toHaveAttribute('href', 'https://example.test/session');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
+test('Startup task link opens existing dialog over Plan', async ({ page, noema }) => {
+  const t = await task(noema, 'Synthetic linked task', { priority: 'low', next_action: 'Read the saved synthetic action.' });
+  await page.goto(`${noema.origin}/#task/${t.id}`);
+  const dialog = page.getByRole('dialog', { name: 'Synthetic linked task' });
+  await expect(dialog).toContainText('Read the saved synthetic action.');
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/plan');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('A little room to plan.');
+});
+
+test('Task link adds no main navigation/layout', async ({ page, noema }) => {
+  const t = await task(noema, 'Synthetic linked task');
+  await page.goto(`${noema.origin}/#/task/${t.id}`);
+  await expect(page.getByRole('dialog', { name: 'Synthetic linked task' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveCount(4);
+  await expect(page.locator('.sidebar')).toHaveCount(1);
+  await expect(page.locator('main.content')).toHaveCount(1);
+});
+
+test('Task-link navigation never changes pin or manual priority', async ({ page, noema }) => {
+  const t = await task(noema, 'Synthetic linked task', { priority: 'low' });
+  await noema.api('POST', '/api/focus', { task_id: t.id, pinned: true });
+  const before = await serverState(noema);
+  await gotoApp(page, noema);
+  for (const hash of [`#task/${t.id}`, `#/task/${t.id}`]) {
+    await page.evaluate(h => { location.hash = h; }, hash);
+    const dialog = page.getByRole('dialog', { name: 'Synthetic linked task' });
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/overview');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  }
+  const after = await serverState(noema);
+  expect(after.focus).toEqual(before.focus);
+  expect(after.tasks.find(x => x.id === t.id)?.priority).toBe('low');
+});
+
+test('Missing task has truthful error, no fake action', async ({ page, noema }) => {
+  await gotoApp(page, noema);
+  await page.evaluate(() => { location.hash = '#task/missing-synthetic-task'; });
+  await expect(page.locator('.toast-layer')).toHaveText(/Task unavailable\./);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.goto('about:blank'); // force a cold start, not a same-document hash change
+  await page.goto(`${noema.origin}/#/task/missing-synthetic-task`);
+  await expect(page.locator('.toast-layer')).toHaveText(/Task unavailable\./);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});

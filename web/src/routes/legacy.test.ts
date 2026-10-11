@@ -35,6 +35,13 @@ describe('installLegacyHashRewrite', () => {
     expect(location.hash).toBe('#/plan');
   });
 
+  it('leaves legacy modal links for installModalLinks', () => {
+    cleanups.push(installLegacyHashRewrite(vi.fn()));
+    history.replaceState(null, '', '#task/abc');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(location.hash).toBe('#task/abc');
+  });
+
   it('stops listening after uninstall', () => {
     const navigate = vi.fn();
     installLegacyHashRewrite(navigate)();

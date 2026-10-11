@@ -214,3 +214,106 @@ test('a stale run is never presented as running in the Overview', async ({ page,
   await gotoApp(page, noema);
   await expect(page.locator('details.agent-status')).toContainText('Fixture command wrapper · Status unknown');
 });
+
+// web/e2e/now.spec.ts — append
+test('Now suggestion cannot silently replace pinned focus', async ({ page, context, noema }) => {
+  await openKind(page, context, noema, 'available');
+  const pinned = (await serverState(noema)).tasks.find(t => t.title === 'Read the ownership chapter')!;
+  await noema.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
+  await page.reload();
+  await expect(recommendation(page).getByRole('button', { name: 'Start' })).toHaveCount(0);
+  await recommendation(page).getByRole('button', { name: 'View next action' }).click();
+  await expect(page.getByRole('dialog', { name: 'Continue the two-pointer exercise' })).toBeVisible();
+  expect((await serverState(noema)).focus).toMatchObject({ task_id: pinned.id, pinned: true });
+});
+
+test('Declining explicit pinned replacement preserves focus', async ({ page, context, noema }) => {
+  await openKind(page, context, noema, 'available');
+  const pinned = (await serverState(noema)).tasks.find(t => t.title === 'Read the ownership chapter')!;
+  await noema.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
+  await page.reload();
+  await recommendation(page).getByRole('button', { name: 'View next action' }).click();
+  const detail = page.getByRole('dialog', { name: 'Continue the two-pointer exercise' });
+  page.once('dialog', d => { expect(d.message()).toBe('Replace your pinned focus with this task?'); void d.dismiss(); });
+  await detail.getByRole('button', { name: 'Focus on this' }).click();
+  await expect(detail).toBeVisible();
+  expect((await serverState(noema)).focus).toMatchObject({ task_id: pinned.id, pinned: true });
+});
+
+test('Human-attention action opens the real task/result details', async ({ page, context, noema }) => {
+  await openKind(page, context, noema, 'attention');
+  await recommendation(page).getByRole('button', { name: 'Open for review' }).click();
+  await expect(page.getByRole('dialog', { name: 'Review the cleanup result' })).toContainText('Fixture command wrapper');
+});
+
+test('Mouse submission from Now reveals the new task without jumping the viewport', async ({ page, noema }) => {
+  await task(noema, 'Read the ownership chapter');
+  await gotoApp(page, noema);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole('button', { name: 'Add something for later' }).click();
+  const add = page.getByRole('dialog', { name: 'Add task' });
+  await add.getByLabel('What do you need to do?').fill('Check the cleanup path');
+  await add.getByRole('button', { name: 'Add task' }).click();
+  await expect(add).toHaveCount(0);
+  await expect(page.locator('.toast-layer')).toContainText('Task added.');
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  await recommendation(page).locator('details.alternatives summary').click();
+  await expect(recommendation(page).locator('details.alternatives')).toContainText('Check the cleanup path');
+});
+
+test('Saved task is visible and reopenable from Now after reload; pin is preserved', async ({ page, noema }) => {
+  const pinned = await task(noema, 'Study allocator cleanup');
+  await noema.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
+  await gotoApp(page, noema);
+  await page.getByRole('button', { name: 'Add something for later' }).click();
+  const add = page.getByRole('dialog', { name: 'Add task' });
+  await add.getByLabel('What do you need to do?').fill('Practice LeetCode');
+  await add.getByLabel('What do you need to do?').press('Control+Enter');
+  await expect(add).toHaveCount(0);
+  await page.reload();
+  await expect(recommendation(page).locator('h2')).toHaveText('Practice LeetCode');
+  await recommendation(page).getByRole('button', { name: 'View next action' }).click();
+  await expect(page.getByRole('dialog', { name: 'Practice LeetCode' })).toContainText('Practice LeetCode');
+  expect((await serverState(noema)).focus).toMatchObject({ task_id: pinned.id, pinned: true });
+  await expect(page.locator('[data-focus-kind=pinned]')).toContainText('Pinned by you');
+});
+
+test('Separate focus, next actions and Tasks; colored priorities and manual completion persist without changing pin', async ({ page, noema }) => {
+  const pinned = await task(noema, 'Study allocator cleanup');
+  await task(noema, 'Inspect the allocator example', { priority: 'high' });
+  await task(noema, 'Idempotent example', { priority: 'medium' });
+  await noema.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
+  await gotoApp(page, noema);
+  await expect(page.locator('.focus-line')).toContainText('Study allocator cleanup');
+  await expect(recommendation(page).locator('h2')).toHaveText('Inspect the allocator example');
+  const alternatives = recommendation(page).locator('details.alternatives');
+  await alternatives.locator('summary').click();
+  await expect(alternatives.locator('.priority-control.priority-medium')).toBeVisible();
+  await alternatives.getByRole('button', { name: 'Complete Idempotent example' }).click();
+  await expect(page.locator('.toast-layer')).toContainText('Task completed.');
+  await page.reload();
+  expect((await serverState(noema)).tasks.find(t => t.title === 'Idempotent example')?.status).toBe('done');
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tasks' }).click();
+  await page.getByRole('group', { name: 'Task views' }).getByRole('button', { name: 'Completed', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Reopen Idempotent example' })).toBeVisible();
+  expect((await serverState(noema)).focus).toMatchObject({ task_id: pinned.id, pinned: true });
+});
+
+test('Server restart retains manual priority, pinned focus and due reminder', async ({ page, noema }) => {
+  const t = await task(noema, 'Revisit the allocator');
+  await gotoApp(page, noema, '#/plan');
+  await page.getByRole('combobox', { name: 'Priority for Revisit the allocator' }).selectOption('high');
+  await expect(page.locator('.toast-layer')).toContainText('Priority updated.');
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Overview' }).click();
+  await page.getByRole('button', { name: 'Start' }).click();
+  await expect(page.locator('[data-focus-kind=pinned]')).toContainText('Pinned by you');
+  await noema.api('POST', '/api/reminders', { task_id: t.id, at: new Date(Date.now() - 60_000).toISOString() });
+  await noema.restart();
+  await page.reload();
+  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('[data-focus-kind=pinned]')).toContainText('Pinned by you');
+  await expect(recommendation(page)).toContainText('You asked to revisit this.');
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tasks' }).click();
+  await expect(page.getByRole('combobox', { name: 'Priority for Revisit the allocator' }).locator('option:checked')).toHaveText('high · Set by you');
+  expect((await serverState(noema)).reminders.map(r => r.state)).toEqual(['due']);
+});
