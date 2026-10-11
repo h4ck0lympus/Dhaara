@@ -12,3 +12,32 @@ self.addEventListener('activate', (event) => {
       .then(() => self.clients.claim()),
   );
 });
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (request.mode === 'navigate') event.respondWith(navigate(request));
+  else if (url.pathname.startsWith('/assets/')) event.respondWith(asset(request));
+});
+
+async function asset(request) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
+
+async function navigate(request) {
+  let response = null;
+  try {
+    response = await fetch(request);
+    if (response.status < 500) return response;
+  } catch {
+    // Server unreachable: fall through to the cached shell.
+  }
+  const shell = await caches.match('/', { cacheName: CACHE });
+  return shell ?? response ?? Response.error();
+}

@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
 import { S } from '../src/strings';
 import { startNoema, type NoemaServer } from './server';
 
@@ -9,36 +9,38 @@ export const PNG_1PX = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 export type SeedDraft = { id: string; raw: string; task_id: string; files: { name: string; type: string; base64: string }[]; error?: string };
 export type LocalDbSnapshot = { draft: unknown; taskDraft: unknown; outbox: { id: string; raw: string; error?: string; fileCount: number }[] };
 
-export const test = base.extend<{ noema: NoemaServer; csp: void; pageErrors: void }>({
+// Collects CSP violations and uncaught page errors from every page of a context (spec §8: zero in every E2E run).
+export async function guardContext(context: BrowserContext): Promise<() => void> {
+  const violations: string[] = [];
+  const errors: string[] = [];
+  // exposeFunction/addInitScript on the context survive navigations, so every document of every page is covered.
+  await context.exposeFunction('__noemaReportCsp', (violation: string) => {
+    violations.push(violation);
+  });
+  await context.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (event) => {
+      const report = (window as unknown as { __noemaReportCsp(v: string): void }).__noemaReportCsp;
+      report(`${event.effectiveDirective} blocked ${event.blockedURI} at ${event.sourceFile}:${event.lineNumber}`);
+    });
+  });
+  context.on('weberror', (webError) => errors.push(webError.error().message));
+  return () => {
+    expect(violations, 'CSP violations').toEqual([]);
+    expect(errors, 'uncaught page errors').toEqual([]);
+  };
+}
+
+export const test = base.extend<{ noema: NoemaServer; guards: void }>({
   noema: async ({}, use) => {
     const noema = await startNoema();
     await use(noema);
     await noema.stop();
   },
-  csp: [
-    async ({ page }, use) => {
-      const violations: string[] = [];
-      // exposeFunction survives navigations, so violations from every document of the test are kept.
-      await page.exposeFunction('__noemaReportCsp', (violation: string) => {
-        violations.push(violation);
-      });
-      await page.addInitScript(() => {
-        document.addEventListener('securitypolicyviolation', (event) => {
-          const report = (window as unknown as { __noemaReportCsp(v: string): void }).__noemaReportCsp;
-          report(`${event.effectiveDirective} blocked ${event.blockedURI} at ${event.sourceFile}:${event.lineNumber}`);
-        });
-      });
+  guards: [
+    async ({ context }, use) => {
+      const assertClean = await guardContext(context);
       await use();
-      expect(violations, 'CSP violations').toEqual([]);
-    },
-    { auto: true },
-  ],
-  pageErrors: [
-    async ({ page }, use) => {
-      const errors: string[] = [];
-      page.on('pageerror', (error) => errors.push(error.message));
-      await use();
-      expect(errors, 'uncaught page errors').toEqual([]);
+      assertClean();
     },
     { auto: true },
   ],
