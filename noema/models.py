@@ -132,3 +132,10 @@ class SettingsInput(Input):
     motion: bool | None = None
     companion: Literal['cat', 'dot', 'hidden'] | None = None
     companion_size: int | None = Field(default=None, ge=24, le=72)
+    display_name: str | None = Field(default=None, max_length=60)
+
+    @field_validator('display_name', mode='before')
+    @classmethod
+    def strip_display_name(cls, value):
+        # Strip before the length check; non-strings fall through to the str check and are rejected, never coerced.
+        return value.strip() if isinstance(value, str) else value

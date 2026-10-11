@@ -91,6 +91,25 @@ def test_frontend_routes_and_headers(tmp_path):
         (dist/'manifest.webmanifest').unlink()
         assert c.get('/manifest.webmanifest').status_code==404
 
+def test_display_name_setting(env):
+    c,s,w=env
+    assert c.get('/api/state').json()['settings']['display_name']==''
+    r=c.patch('/api/settings',json={'display_name':'  Vishal  '})
+    assert r.status_code==200,r.text
+    assert r.json()['display_name']=='Vishal'
+    assert c.get('/api/state').json()['settings']['display_name']=='Vishal'
+    assert c.patch('/api/settings',json={'display_name':'x'*61}).status_code==422
+    padded=c.patch('/api/settings',json={'display_name':' '*10+'y'*60})
+    assert padded.status_code==200,padded.text
+    assert padded.json()['display_name']=='y'*60
+    assert c.patch('/api/settings',json={'display_name':5}).status_code==422
+    assert c.patch('/api/settings',json={'motion':True}).json()['display_name']=='y'*60
+    assert c.patch('/api/settings',json={'display_name':''}).json()['display_name']==''
+    s.set_meta('settings',{'observation_enabled':False,'motion':False,'companion':'cat','companion_size':40})
+    old=c.get('/api/state').json()['settings']
+    assert old['display_name']==''
+    assert old['observation_enabled'] is False and old['motion'] is False
+
 def test_companion_saved_actions_preserve_available_order_and_pin(env):
  c,s,w=env
  pinned=task(c,title='Pinned synthetic task',priority='low',next_action='Keep this focus.')

@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, seq);
 CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
 '''
 
-DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': False, 'companion': 'cat', 'companion_size': 40}
+DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': False, 'companion': 'cat', 'companion_size': 40, 'display_name': ''}
 
 class Store:
     def __init__(self, root: Path):
@@ -380,7 +380,7 @@ class Store:
             item = dict(row); item['task_ids'] = json.loads(item['task_ids']); return item
 
     def settings(self, updates=None):
-        result = self.meta('settings')
+        result = {**DEFAULT_SETTINGS, **self.meta('settings')}  # rows written before a setting existed get its default
         if updates:
             result.update({k:v for k,v in updates.items() if v is not None})
             self.set_meta('settings', result)
