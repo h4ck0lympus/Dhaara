@@ -1,8 +1,7 @@
 // web/e2e/plan.spec.ts
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
-import { TASK_EDIT_FIELDS } from '../src/domain/tasks';
-import { agentRun, serverState, task } from './nowSeed';
+import { agentRun, changeElsewhere, serverState, task } from './nowSeed';
 import type { NoemaServer } from './server';
 
 type Task = { id: string; title: string; status: string; priority: string; version: number };
@@ -270,11 +269,6 @@ test('Missing task has truthful error, no fake action', async ({ page, noema }) 
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-async function changeElsewhere(noema: NoemaServer, id: string, changes: Record<string, unknown>) {
-  const fresh = await noema.api<Record<string, unknown>>('GET', `/api/tasks/${id}`);
-  await noema.api('PUT', `/api/tasks/${id}`, { ...Object.fromEntries(TASK_EDIT_FIELDS.map(k => [k, fresh[k]])), ...changes, expected_version: fresh.version });
-}
-
 test('a 409 conflict shows Reopen and never overwrites', async ({ page, noema }) => {
   const t = await task(noema, 'Shared task');
   await gotoApp(page, noema, '#/plan');
@@ -286,6 +280,7 @@ test('a 409 conflict shows Reopen and never overwrites', async ({ page, noema })
   await editor.getByRole('button', { name: 'Save task' }).click();
   await expect(editor.getByRole('alert')).toHaveText('This task changed. Reopen it before saving.');
   expect((await getTask(noema, t.id)).title).toBe('Changed elsewhere');
+  page.once('dialog', async d => { expect(d.message()).toBe('Reopen discards your unsaved edits. Continue?'); await d.accept(); });
   await editor.getByRole('button', { name: 'Reopen' }).click();
   await expect(editor.getByLabel('Title', { exact: true })).toHaveValue('Changed elsewhere');
   await editor.getByLabel('Title', { exact: true }).fill('Merged by hand');

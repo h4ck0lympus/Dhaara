@@ -30,7 +30,7 @@ import { captureDraftStore } from '../local/drafts';
 import { rearmReminder } from '../shell/notifications';
 import { useSnapshot } from '../state/queries';
 import { S } from '../strings';
-import { toast } from '../ui/Toast';
+import { toast, toastError } from '../ui/Toast';
 import { TaskDetailDialog } from './TaskDetail';
 
 const focus = (task_id: string, pinned: boolean): NonNullable<Focus> => ({ task_id, pinned, source: 'manual', updated_at: '2026-10-08T11:00:00+00:00' });
@@ -167,6 +167,40 @@ describe('TaskDetailDialog', () => {
     await waitFor(() => expect(h.navigate).toHaveBeenCalledWith({ to: '/capture' }));
     expect(captureDraftStore.setTaskId).toHaveBeenCalledWith('t');
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('a failing setTaskId shows the error toast, does not throw and keeps the dialog open', async () => {
+    const failure = new Error('IndexedDB unavailable');
+    vi.mocked(captureDraftStore.setTaskId).mockRejectedValueOnce(failure);
+    const { onClose } = show(makeSnapshot({ tasks: [makeTask('t')] }));
+    fireEvent.click(screen.getByRole('button', { name: '＋ Capture what you learned' }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(failure));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(h.navigate).not.toHaveBeenCalled();
+  });
+
+  it('closing a dirty edit form asks first (Escape or backdrop reach the same request)', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { onClose } = show(makeSnapshot({ tasks: [makeTask('t')] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Typed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    expect(confirm).toHaveBeenCalledWith('Discard your unsaved edits?');
+    expect(onClose).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    expect(onClose).toHaveBeenCalledOnce();
+    confirm.mockRestore();
+  });
+
+  it('closing a clean edit form or the detail view never asks', () => {
+    const confirm = vi.spyOn(window, 'confirm');
+    const { onClose } = show(makeSnapshot({ tasks: [makeTask('t')] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    expect(confirm).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+    confirm.mockRestore();
   });
 
   it('fetches a task missing from the snapshot, and says when it is unavailable', async () => {

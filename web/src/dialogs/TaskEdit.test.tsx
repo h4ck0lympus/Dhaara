@@ -22,14 +22,15 @@ const stored = makeTask('t', {
 });
 const tasks = [stored, makeTask('dep', { title: 'Fixture prerequisite' })];
 
+const dirtyRef = { current: false };
 function ui(task: Task, onDone = vi.fn(), onCancel = vi.fn()) {
-  return <QueryClientProvider client={new QueryClient()}><TaskEditForm task={task} tasks={tasks} onDone={onDone} onCancel={onCancel} /></QueryClientProvider>;
+  return <QueryClientProvider client={new QueryClient()}><TaskEditForm task={task} tasks={tasks} onDone={onDone} onCancel={onCancel} dirtyRef={dirtyRef} /></QueryClientProvider>;
 }
 const title = () => screen.getByLabelText('Title') as HTMLInputElement;
 const alertText = () => screen.getByRole('alert').textContent;
 
-beforeEach(() => { h.save.mockReset().mockResolvedValue(stored); h.call.mockReset(); });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+beforeEach(() => { dirtyRef.current = false; h.save.mockReset().mockResolvedValue(stored); h.call.mockReset(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); });
 
 describe('TaskEditForm', () => {
   it('opens with Details collapsed and the title focused', () => {
@@ -63,6 +64,7 @@ describe('TaskEditForm', () => {
   });
 
   it('a 409 shows the conflict, never retries, and Reopen loads the current version', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     h.save.mockRejectedValueOnce(new ApiError('http', 'This task changed. Reopen it before saving.', 409));
     h.call.mockResolvedValueOnce({ ...stored, title: 'Changed elsewhere', version: 5 });
     render(ui(stored));
@@ -89,6 +91,7 @@ describe('TaskEditForm', () => {
   });
 
   it('a failed Reopen keeps the form and says why', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     h.save.mockRejectedValueOnce(new ApiError('http', 'This task changed. Reopen it before saving.', 409));
     h.call.mockRejectedValueOnce(new ApiError('network', 'Server unreachable. Your saved captures remain queued on this device.', null));
     render(ui(stored));
@@ -105,5 +108,56 @@ describe('TaskEditForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledOnce();
     expect(h.save).not.toHaveBeenCalled();
+  });
+
+  describe('unsaved edits are never discarded silently (handbook §14)', () => {
+    async function conflicted() {
+      h.save.mockRejectedValueOnce(new ApiError('http', 'This task changed. Reopen it before saving.', 409));
+      h.call.mockResolvedValueOnce({ ...stored, title: 'Changed elsewhere', version: 5 });
+      render(ui(stored));
+      fireEvent.change(title(), { target: { value: 'My edit' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save task' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Reopen' }));
+    }
+
+    it('declining the Reopen confirm keeps the typed title and does not fetch', async () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      await conflicted();
+      expect(confirm).toHaveBeenCalledWith('Reopen discards your unsaved edits. Continue?');
+      expect(h.call).not.toHaveBeenCalled();
+      expect(title().value).toBe('My edit');
+    });
+
+    it('accepting the Reopen confirm loads the current version', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true);
+      await conflicted();
+      await waitFor(() => expect(title().value).toBe('Changed elsewhere'));
+    });
+
+    it('Cancel on a dirty form asks first; declining stays, accepting leaves', () => {
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+      const onCancel = vi.fn();
+      render(ui(stored, vi.fn(), onCancel));
+      fireEvent.change(title(), { target: { value: 'My edit' } });
+      expect(dirtyRef.current).toBe(true);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(confirm).toHaveBeenCalledWith('Discard your unsaved edits?');
+      expect(onCancel).not.toHaveBeenCalled();
+      confirm.mockReturnValue(true);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onCancel).toHaveBeenCalledOnce();
+    });
+
+    it('Cancel on a clean form never asks; reverting the text makes it clean again', () => {
+      const confirm = vi.spyOn(window, 'confirm');
+      const onCancel = vi.fn();
+      render(ui(stored, vi.fn(), onCancel));
+      fireEvent.change(title(), { target: { value: 'x' } });
+      fireEvent.change(title(), { target: { value: 'Original title' } });
+      expect(dirtyRef.current).toBe(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(confirm).not.toHaveBeenCalled();
+      expect(onCancel).toHaveBeenCalledOnce();
+    });
   });
 });

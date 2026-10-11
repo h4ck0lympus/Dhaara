@@ -7,7 +7,7 @@ import { STATUS_LABEL } from '../domain/tasks';
 export type TaskFieldChange = <K extends keyof TaskEditable>(name: K, value: TaskEditable[K]) => void;
 
 const PRIORITY_OPTIONS: [Priority, string][] = [
-  ['auto', 'Automatic'], ['high', 'High · set by me'], ['medium', 'Medium · set by me'], ['low', 'Low · set by me'],
+  ['auto', 'Automatic'], ['high', 'High · Set by you'], ['medium', 'Medium · Set by you'], ['low', 'Low · Set by you'],
 ];
 const STATUSES: TaskStatus[] = ['todo', 'active', 'waiting', 'blocked', 'review', 'parked', 'done'];
 

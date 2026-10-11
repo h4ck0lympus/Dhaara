@@ -1,7 +1,7 @@
 // web/src/dialogs/TaskDetail.tsx
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useState, type FormEvent, type JSX } from 'react';
+import { useRef, useState, type FormEvent, type JSX } from 'react';
 import { call } from '../api/client';
 import { TaskSchema, type Snapshot, type SnapshotTask, type Task, type TaskStatus } from '../api/schemas';
 import { confirmFocusChange } from '../components/focus';
@@ -14,7 +14,7 @@ import { useCreateReminder, useDismissReminder, useEndTracking, usePatchTask, us
 import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { messageOf, toast, toastError } from '../ui/Toast';
-import { TaskEditForm } from './TaskEdit';
+import { DISCARD_EDITS, TaskEditForm } from './TaskEdit';
 
 function SessionLink({ url }: { url: string }): JSX.Element | null {
   if (!isSessionUrl(url)) return null; // app.js:27 — http(s) only
@@ -83,7 +83,7 @@ function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
   }
 
   async function captureForTask() {
-    await captureDraftStore.setTaskId(task.id);
+    try { await captureDraftStore.setTaskId(task.id); } catch (error) { toastError(error); return; }
     onClose();
     void navigate({ to: '/capture' });
   }
@@ -186,6 +186,7 @@ function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
 
 export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => void }): JSX.Element {
   const [editing, setEditing] = useState(false);
+  const editDirty = useRef(false);
   const snapshot = useSnapshot().data;
   const snapTask = snapshot?.tasks.find(t => t.id === id);
   // A just-acknowledged task may be missing from a failed post-save refresh.
@@ -199,9 +200,9 @@ export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => v
     );
   }
   return (
-    <Dialog title={editing ? 'Edit task' : task.title} onRequestClose={onClose}>
+    <Dialog title={editing ? 'Edit task' : task.title} onRequestClose={() => { if (!editing || !editDirty.current || window.confirm(DISCARD_EDITS)) onClose(); }}>
       {editing
-        ? <TaskEditForm task={task} tasks={snapshot?.tasks ?? []} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} />
+        ? <TaskEditForm task={task} tasks={snapshot?.tasks ?? []} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} dirtyRef={editDirty} />
         : <TaskView task={task} snapTask={snapTask} snapshot={snapshot} onClose={onClose} onEdit={() => setEditing(true)} />}
     </Dialog>
   );

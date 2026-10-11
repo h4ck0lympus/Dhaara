@@ -1,5 +1,6 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { onUnauthorized } from './api/client';
 import type { Snapshot } from './api/schemas';
@@ -43,7 +44,7 @@ async function start(): Promise<void> {
   installModalLinks(() => router!.state.location, request => openModalLink(request, latestSnapshot(qc)));
   router = createAppRouter(qc);
   createRoot(document.getElementById('root')!).render(
-    <QueryClientProvider client={qc}><RouterProvider router={router} /></QueryClientProvider>,
+    <StrictMode><QueryClientProvider client={qc}><RouterProvider router={router} /></QueryClientProvider></StrictMode>,
   );
   registerServiceWorker();
 }

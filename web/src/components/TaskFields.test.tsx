@@ -32,10 +32,10 @@ describe('TaskFields', () => {
     expect((screen.getByLabelText('Workflow · optional') as HTMLInputElement).placeholder).toBe('Unassigned');
   });
 
-  it('labels manual priority choices as set by me (app.js:304)', () => {
+  it('labels manual priority choices as Set by you, matching the Priority control', () => {
     renderFields();
     const options = [...(screen.getByLabelText('Priority') as HTMLSelectElement).options].map(o => o.textContent);
-    expect(options).toEqual(['Automatic', 'High · set by me', 'Medium · set by me', 'Low · set by me']);
+    expect(options).toEqual(['Automatic', 'High · Set by you', 'Medium · Set by you', 'Low · Set by you']);
   });
 
   it('converts values like the old form (app.js:313-320)', () => {

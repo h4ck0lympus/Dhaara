@@ -68,6 +68,15 @@ describe('n opens Capture', () => {
 });
 
 describe('Ctrl/Cmd+K opens search', () => {
+  it('is ignored while a dialog or Unlock is open', () => {
+    act(() => openDialog({ kind: 'task-capture' }));
+    const event = press({ key: 'k', ctrlKey: true });
+    act(() => { closeDialog(); requestUnlock(); });
+    press({ key: 'k', metaKey: true });
+    expect(navigate).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it.each([{ ctrlKey: true }, { metaKey: true }])('%j navigates to Notes and focuses #note-search', init => {
     vi.useFakeTimers();
     const search = document.createElement('input');

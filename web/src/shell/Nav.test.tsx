@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 import { Outlet, RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./dialogs', () => ({ openDialog: vi.fn() }));
 import { openDialog } from './dialogs';
@@ -16,6 +16,7 @@ function renderNavAt(path: string) {
   return router;
 }
 
+beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); }); // jsdom does not implement scrollTo
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
 
 describe('Nav', () => {

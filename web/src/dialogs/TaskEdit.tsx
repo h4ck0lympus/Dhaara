@@ -1,7 +1,7 @@
 // Port of public/app.js:331-344 (Edit task). Server values are copied into the form once, when it opens,
 // so a snapshot refetch never replaces in-progress input (spec §4.3).
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent, type JSX } from 'react';
+import { useState, type FormEvent, type JSX, type MutableRefObject } from 'react';
 import { ApiError, call } from '../api/client';
 import { TaskSchema, type SnapshotTask, type Task, type TaskEditable } from '../api/schemas';
 import { TaskFields } from '../components/TaskFields';
@@ -10,8 +10,11 @@ import { useSaveTask } from '../state/queries';
 import { S } from '../strings';
 import { messageOf, toast } from '../ui/Toast';
 
-export function TaskEditForm({ task, tasks, onDone, onCancel }: {
-  task: Task; tasks: SnapshotTask[]; onDone: () => void; onCancel: () => void;
+export const DISCARD_EDITS = 'Discard your unsaved edits?';
+
+// dirtyRef lets the hosting dialog ask the same question when Escape, the backdrop or the close button asks to leave.
+export function TaskEditForm({ task, tasks, onDone, onCancel, dirtyRef }: {
+  task: Task; tasks: SnapshotTask[]; onDone: () => void; onCancel: () => void; dirtyRef: MutableRefObject<boolean>;
 }): JSX.Element {
   const save = useSaveTask();
   const qc = useQueryClient();
@@ -20,6 +23,9 @@ export function TaskEditForm({ task, tasks, onDone, onCancel }: {
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [reopening, setReopening] = useState(false);
+
+  const dirty = JSON.stringify(values) !== JSON.stringify(editableFields(opened));
+  dirtyRef.current = dirty;
 
   function change<K extends keyof TaskEditable>(name: K, value: TaskEditable[K]): void {
     setValues(current => ({ ...current, [name]: value }));
@@ -41,6 +47,7 @@ export function TaskEditForm({ task, tasks, onDone, onCancel }: {
   }
 
   async function reopen() {
+    if (dirty && !window.confirm('Reopen discards your unsaved edits. Continue?')) return;
     setReopening(true);
     try {
       const fresh = await call('task', TaskSchema, { params: { id: opened.id } });
@@ -69,7 +76,7 @@ export function TaskEditForm({ task, tasks, onDone, onCancel }: {
       <p className="field-error" role="alert">{error}</p>
       {conflict && <button type="button" className="secondary" disabled={reopening} onClick={() => void reopen()}>Reopen</button>}
       <div className="dialog-actions">
-        <button type="button" className="quiet-button" onClick={onCancel}>Cancel</button>
+        <button type="button" className="quiet-button" onClick={() => { if (!dirty || window.confirm(DISCARD_EDITS)) onCancel(); }}>Cancel</button>
         <button type="submit" className="primary" disabled={save.isPending}>Save task</button>
       </div>
     </form>

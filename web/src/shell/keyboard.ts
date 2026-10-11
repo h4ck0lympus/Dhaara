@@ -11,7 +11,8 @@ function isField(element: Element | null): boolean {
 export function installKeyboard(navigate: (to: string) => void): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.isComposing || event.defaultPrevented) return;
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k'
+      && !isDialogOpen() && !isUnlockOpen()) {
       event.preventDefault();
       navigate('/notes');
       setTimeout(() => document.querySelector<HTMLInputElement>('#note-search')?.focus(), 100); // app.js:563

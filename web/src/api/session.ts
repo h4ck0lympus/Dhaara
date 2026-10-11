@@ -5,8 +5,8 @@ import { OkSchema, SnapshotSchema, type Snapshot } from './schemas';
 
 export type BootResult = { kind: 'ready'; snapshot: Snapshot } | { kind: 'locked' } | { kind: 'unreachable'; error: ApiError };
 
-export function fetchSnapshot(minutes: number | null): Promise<Snapshot> {
-  return call('state', SnapshotSchema, { query: { minutes: minutes ?? undefined } });
+export function fetchSnapshot(minutes: number | null, signal?: AbortSignal): Promise<Snapshot> {
+  return call('state', SnapshotSchema, { query: { minutes: minutes ?? undefined }, signal });
 }
 
 function isUnauthorized(error: unknown): boolean {
@@ -17,15 +17,18 @@ function unreachable(error: unknown): BootResult {
   return { kind: 'unreachable', error: error instanceof ApiError ? error : new ApiError('network', S.networkError, null) };
 }
 
+// A hung server must not hold the shell blank: an abort counts as unreachable and the shell opens disconnected.
+const BOOT_TIMEOUT_MS = 10_000;
+
 export async function boot(): Promise<BootResult> {
   try {
-    return { kind: 'ready', snapshot: await fetchSnapshot(null) };
+    return { kind: 'ready', snapshot: await fetchSnapshot(null, AbortSignal.timeout(BOOT_TIMEOUT_MS)) };
   } catch (error) {
     if (!isUnauthorized(error)) return unreachable(error);
   }
   try {
-    await call('sessionCreate', OkSchema, { body: { token: '' } });
-    return { kind: 'ready', snapshot: await fetchSnapshot(null) };
+    await call('sessionCreate', OkSchema, { body: { token: '' }, signal: AbortSignal.timeout(BOOT_TIMEOUT_MS) });
+    return { kind: 'ready', snapshot: await fetchSnapshot(null, AbortSignal.timeout(BOOT_TIMEOUT_MS)) };
   } catch (error) {
     return isUnauthorized(error) ? { kind: 'locked' } : unreachable(error);
   }

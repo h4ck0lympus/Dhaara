@@ -14,6 +14,25 @@ function respond(...responses: [number, string][]) {
 const requests = () => fetchMock.mock.calls.map(([url, init]) => `${init?.method} ${String(url)}${init?.body ? ' ' + String(init.body) : ''}`);
 
 describe('boot', () => {
+  it('is unreachable when the server accepts the connection but never replies (10 s timeout)', async () => {
+    vi.useFakeTimers();
+    // Native AbortSignal.timeout ignores fake timers; rebuild it on setTimeout so the 10 s is observable.
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation(ms => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(new DOMException('timed out', 'TimeoutError')), ms);
+      return controller.signal;
+    });
+    try {
+      fetchMock.mockImplementationOnce((_url, init) => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal!.reason));
+      }));
+      const pending = boot();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect((await pending).kind).toBe('unreachable');
+      expect(timeout).toHaveBeenCalledWith(10_000);
+    } finally { vi.useRealTimers(); timeout.mockRestore(); }
+  });
+
   it('uses the cookie it already has: one GET, no session call (non-loopback cookie-only client)', async () => {
     respond([200, SNAPSHOT]);
     expect(await boot()).toEqual({ kind: 'ready', snapshot: makeSnapshot() });

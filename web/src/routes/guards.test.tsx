@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { Outlet, RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../ui/Toast', () => ({ toast: vi.fn() }));
 import { toast } from '../ui/Toast';
@@ -16,6 +16,7 @@ const noteEdit: NavigationGuard = {
   check: () => ({ kind: 'confirm', message: 'Leave without saving this note edit? The last saved revision remains safe.' }),
 };
 const cleanups: (() => void)[] = [];
+beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); }); // jsdom does not implement scrollTo
 afterEach(() => { cleanups.splice(0).forEach(fn => fn()); cleanup(); vi.restoreAllMocks(); vi.mocked(toast).mockClear(); });
 
 describe('guard registry', () => {

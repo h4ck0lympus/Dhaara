@@ -2,6 +2,7 @@
 // Test-only seeds for Overview states (port of qa/now_ui_check.py:64-99).
 import { randomUUID } from 'node:crypto';
 import type { BrowserContext, Page } from '@playwright/test';
+import { TASK_EDIT_FIELDS } from '../src/domain/tasks';
 import { runSql } from './db';
 import { expect, gotoApp } from './fixtures';
 import { E2E_TOKEN, type NoemaServer } from './server';
@@ -15,6 +16,11 @@ export const KINDS = ['new', 'available', 'waiting', 'attention', 'complete', 'u
 export type Kind = (typeof KINDS)[number];
 
 export const task = (noema: NoemaServer, title: string, fields: Record<string, unknown> = {}) => noema.api<SeedTask>('POST', '/api/tasks', { title, ...fields });
+// Simulates an edit from another device: PUT the task's current editable fields with `changes`, at its current version.
+export async function changeElsewhere(noema: NoemaServer, id: string, changes: Record<string, unknown>): Promise<void> {
+  const fresh = await noema.api<Record<string, unknown>>('GET', `/api/tasks/${id}`);
+  await noema.api('PUT', `/api/tasks/${id}`, { ...Object.fromEntries(TASK_EDIT_FIELDS.map(k => [k, fresh[k]])), ...changes, expected_version: fresh.version });
+}
 export const serverState = (noema: NoemaServer) => noema.api<SeedState>('GET', '/api/state');
 
 export async function agentRun(noema: NoemaServer, t: SeedTask, event?: 'completed' | 'needs_input', session_url = '') {
