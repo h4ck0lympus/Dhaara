@@ -19,7 +19,7 @@ test('loopback boot logs in automatically and never shows Unlock', async ({ page
 
 const LEGACY: [string, string, string][] = [
   ['#plan', '#/plan', COPY.plan.title], ['#capture', '#/capture', COPY.capture.title],
-  ['#notes', '#/notes', COPY.notes.title], ['#note/abc', '#/note/abc', COPY.notes.title],
+  ['#notes', '#/notes', COPY.notes.title], ['#note/abc', '#/note/abc', 'Note unavailable'],
 ];
 
 for (const [legacy, modern, heading] of LEGACY) {
@@ -80,5 +80,5 @@ test('a lazily loaded route opens offline from the service-worker cache', async 
   await expect(page.locator('#connection-label')).toHaveText('Server connected');
   await context.setOffline(true);
   await page.evaluate(() => { location.hash = '#/note/x'; });
-  await expect(page.getByRole('heading', { level: 1, name: COPY.notes.title })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Note unavailable' })).toBeVisible();
 });

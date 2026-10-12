@@ -33,9 +33,10 @@ export function ageRun(noema: NoemaServer, runId: string): void {
   runSql(noema.dataDir, 'UPDATE runs SET updated_at=? WHERE id=?', [new Date(Date.now() - 5 * 60_000).toISOString(), runId]);
 }
 
-export async function note(noema: NoemaServer, raw: string): Promise<{ id: string }> {
+export async function note(noema: NoemaServer, raw: string, files: { name: string; type: string; bytes: Buffer }[] = []): Promise<{ id: string }> {
   const form = new FormData();
   form.set('payload', JSON.stringify({ capture_id: randomUUID(), raw }));
+  for (const file of files) form.append('attachments', new Blob([new Uint8Array(file.bytes)], { type: file.type }), file.name);
   const response = await fetch(noema.origin + '/api/captures', { method: 'POST', body: form, headers: { Authorization: 'Bearer ' + E2E_TOKEN, 'X-Noema-Request': '1' } });
   if (!response.ok) throw new Error(`POST /api/captures → ${response.status}`);
   return response.json() as Promise<{ id: string }>;

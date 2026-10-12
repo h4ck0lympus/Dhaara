@@ -1,5 +1,6 @@
 import type { BrowserContext, BrowserType, Locator, Page } from '@playwright/test';
 import { expect, PNG_1PX } from './fixtures';
+import { runSql } from './db';
 import { note } from './nowSeed';
 import type { NoemaServer } from './server';
 
@@ -80,7 +81,12 @@ export function beforeUnloadArmed(page: Page): Promise<boolean> {
 
 export type CreatedNote = { id: string; title: string; folder: string; body: string; raw: string; version: number; task_id: string | null };
 
-export const createNote = (noema: NoemaServer, raw: string) => note(noema, raw) as Promise<CreatedNote>;
+export const createNote = (noema: NoemaServer, raw: string, files: { name: string; type: string; bytes: Buffer }[] = []) => note(noema, raw, files) as Promise<CreatedNote>;
+
+// Test-only: inserts a worker-style AI suggestion straight into the disposable database.
+export function seedSuggestion(noema: NoemaServer, noteId: string, s: { id: string; title: string; body: string; folder: string }): void {
+  runSql(noema.dataDir, 'INSERT INTO suggestions VALUES(?,?,?,?,?,?)', [s.id, noteId, s.title, s.body, s.folder, new Date().toISOString()]);
+}
 
 export const editNote = (noema: NoemaServer, from: CreatedNote, changes: Partial<Pick<CreatedNote, 'title' | 'folder' | 'body'>>) =>
   noema.api<CreatedNote>('PUT', `/api/notes/${from.id}`, { title: from.title, folder: from.folder, body: from.body, ...changes, expected_version: from.version });
