@@ -1,8 +1,9 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog, session } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_TEXT, parseArgs, userArgv, type CliOptions } from './cli.js';
 import { installNavigationGuards } from './navigation.js';
+import { installPermissions, PERMISSION_PROMPTS } from './permissions.js';
 import { prepareProfile, resolveProfile } from './profile.js';
 
 const DIST = path.dirname(fileURLToPath(import.meta.url));
@@ -58,6 +59,9 @@ function run(options: CliOptions): void {
     const window = createWindow();
     win = window;
     installNavigationGuards(window.webContents, origin);
+    installPermissions(session.defaultSession, origin, async (kind) => (await dialog.showMessageBox(window, {
+      type: 'question', message: PERMISSION_PROMPTS[kind], buttons: ['Allow', 'Deny'], defaultId: 1, cancelId: 1,
+    })).response === 0);
     void window.loadURL(origin).catch(() => undefined);
   });
 }

@@ -48,6 +48,7 @@ export async function launchNoema(args: string[], options: { env?: Record<string
     env,
   });
   launched.push(app);
+  app.on('close', () => { const at = launched.indexOf(app); if (at >= 0) launched.splice(at, 1); });   // a closed app has no process() to kill
   const window = await app.firstWindow();
   return { app, window, profile };
 }
@@ -83,4 +84,22 @@ export async function stubOpenExternal(app: ElectronApplication): Promise<void> 
 
 export function openedExternal(app: ElectronApplication): Promise<string[]> {
   return app.evaluate(() => (globalThis as typeof globalThis & { __opened?: string[] }).__opened ?? []);
+}
+
+/** Replaces dialog.showMessageBox in the main process; answers are consumed in order (spec §6.3: tests stub it). */
+export async function stubMessageBox(app: ElectronApplication, responses: number[]): Promise<void> {
+  await app.evaluate(({ dialog }, queue) => {
+    const g = globalThis as typeof globalThis & { __messageBoxes?: string[] };
+    g.__messageBoxes = g.__messageBoxes ?? [];
+    const answers = [...queue];
+    dialog.showMessageBox = (async (...args: unknown[]) => {
+      const options = (args.length > 1 ? args[1] : args[0]) as { message: string; cancelId?: number };
+      g.__messageBoxes!.push(options.message);
+      return { response: answers.length > 0 ? answers.shift()! : options.cancelId ?? 0, checkboxChecked: false };
+    }) as typeof dialog.showMessageBox;
+  }, responses);
+}
+
+export function messageBoxes(app: ElectronApplication): Promise<string[]> {
+  return app.evaluate(() => (globalThis as typeof globalThis & { __messageBoxes?: string[] }).__messageBoxes ?? []);
 }
