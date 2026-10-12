@@ -76,3 +76,32 @@ export function backingSize(cssWidth: number, cssHeight: number, devicePixelRati
 function fract(value: number): number {
   return value - Math.floor(value);
 }
+
+/** Visible content rectangles packed for the shader, largest first, clipped to the viewport. Unused slots are zero. (experiments field.ts:40-53, unchanged) */
+export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHeight: number): Float32Array {
+  const packed = new Float32Array(QUIET_SLOTS * 4);
+  const visible = rects
+    .map((rect) => {
+      const left = Math.max(0, rect.left), top = Math.max(0, rect.top);
+      const right = Math.min(viewportWidth, rect.left + rect.width), bottom = Math.min(viewportHeight, rect.top + rect.height);
+      return { left, top, width: right - left, height: bottom - top };
+    })
+    .filter((rect) => Number.isFinite(rect.width + rect.height) && rect.width > 1 && rect.height > 1)
+    .sort((a, b) => b.width * b.height - a.width * a.height)
+    .slice(0, QUIET_SLOTS);
+  visible.forEach((rect, i) => packed.set([rect.left, rect.top, rect.width, rect.height], i * 4));
+  return packed;
+}
+
+/** Nested surfaces (a heading inside the main column) would use up QUIET_SLOTS and push a disjoint dialog out. */
+export function removeContained(rects: Rect[]): Rect[] {
+  return rects.filter((rect, i) =>
+    !rects.some((other, j) => j !== i && contains(other, rect) && (j < i || !contains(rect, other))),
+  );
+}
+
+function contains(outer: Rect, inner: Rect): boolean {
+  return outer.left <= inner.left && outer.top <= inner.top &&
+    outer.left + outer.width >= inner.left + inner.width &&
+    outer.top + outer.height >= inner.top + inner.height;
+}
