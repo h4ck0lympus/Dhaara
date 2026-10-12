@@ -19,44 +19,44 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 |---|---|---|---|---|---|
 | 1 | desktop/qa/scenario.js:22 | Original web UI loaded | — | — | drop (proposed): asserts the deleted `public/` UI (spec §3); `scenario.spec.ts` loads the React shell in every stage |
 | 2 | desktop/qa/scenario.js:23 | Original stylesheet used | — | — | drop (proposed): asserts `/static/styles.css`, which spec §6.1 removes |
-| 3 | desktop/qa/scenario.js:35 | Explicit offline Save queues a capture while backend is stopped | P6 | electron/e2e/scenario.spec.ts | planned |
-| 4 | desktop/qa/scenario.js:40 | Editor remains usable while backend is stopped | P6 | electron/e2e/scenario.spec.ts | planned |
-| 5 | desktop/qa/scenario.js:43 | Explicit native Retry reconnects without navigating or losing draft | P6 | electron/e2e/scenario.spec.ts | planned |
-| 6 | desktop/qa/scenario.js:45 | Retry uploads queued capture once without ingesting unsaved draft | P6 | electron/e2e/scenario.spec.ts | planned |
-| 7 | desktop/qa/scenario.js:56 | Native webview initially focuses multiline task capture | P6 | electron/e2e/scenario.spec.ts | planned |
-| 8 | desktop/qa/scenario.js:57 | Native Details starts collapsed | P6 | electron/e2e/scenario.spec.ts | planned |
-| 9 | desktop/qa/scenario.js:65 | Native one-input Save durably adds one task | P6 | electron/e2e/scenario.spec.ts | planned |
-| 10 | desktop/qa/scenario.js:66 | Native capture preserves override and separates planned day | P6 | electron/e2e/scenario.spec.ts | planned |
-| 11 | desktop/qa/scenario.js:67 | Native task capture never changes the existing pin | P6 | electron/e2e/scenario.spec.ts | planned |
-| 12 | desktop/qa/scenario.js:75 | Task draft survives actual shell/profile/service restart | P6 | electron/e2e/scenario.spec.ts | planned |
-| 13 | desktop/qa/scenario.js:81 | Failed task checkpoint keeps committed task draft | P6 | electron/e2e/scenario.spec.ts | planned |
-| 14 | desktop/qa/scenario.js:82 | Failed task checkpoint keeps managed service/window usable | P6 | electron/e2e/scenario.spec.ts | planned |
-| 15 | desktop/qa/scenario.js:89 | Native capture reopens the exact unsaved task input | P6 | electron/e2e/scenario.spec.ts | planned |
-| 16 | desktop/qa/scenario.js:91 | Task draft recovery never auto-submits | P6 | electron/e2e/scenario.spec.ts | planned |
-| 17 | desktop/qa/scenario.js:102 | Native webview IndexedDB commits draft | P6 | electron/e2e/scenario.spec.ts | planned |
-| 18 | desktop/qa/scenario.js:103 | Synthetic image paste stores native Blob attachment | P6 | electron/e2e/scenario.spec.ts | planned |
-| 19 | desktop/qa/scenario.js:104 | Nothing ingested before explicit Save | P6 | electron/e2e/scenario.spec.ts | planned |
-| 20 | desktop/qa/scenario.js:109 | Close checkpoint and draft survive webview process restart | P6 | electron/e2e/scenario.spec.ts | planned |
-| 21 | desktop/qa/scenario.js:111 | Blob survives webview process restart | P6 | electron/e2e/scenario.spec.ts | planned |
-| 22 | desktop/qa/scenario.js:113 | Recovered Blob bytes are exact | P6 | electron/e2e/scenario.spec.ts | planned |
-| 23 | desktop/qa/scenario.js:116 | Capture commits and resets local draft | P6 | electron/e2e/scenario.spec.ts | planned |
-| 24 | desktop/qa/scenario.js:117 | Acknowledged capture removed from native outbox | P6 | electron/e2e/scenario.spec.ts | planned |
-| 25 | desktop/qa/scenario.js:119 | Original text committed to real service | P6 | electron/e2e/scenario.spec.ts | planned |
-| 26 | desktop/qa/scenario.js:120 | Original attachment committed to real service | P6 | electron/e2e/scenario.spec.ts | planned |
-| 27 | desktop/qa/scenario.js:128 | Actual note editor accepts focus | P6 | electron/e2e/scenario.spec.ts | planned |
-| 28 | desktop/qa/scenario.js:129 | Actual WebKit editor accepts multiline code | P6 | electron/e2e/scenario.spec.ts | planned |
-| 29 | desktop/qa/scenario.js:130 | Native editor undo restores previous text | P6 | electron/e2e/scenario.spec.ts | planned |
-| 30 | desktop/qa/scenario.js:134 | Saved code renders in actual note viewer | P6 | electron/e2e/scenario.spec.ts | planned |
-| 31 | desktop/qa/scenario.js:135 | Edit retains original | P6 | electron/e2e/scenario.spec.ts | planned |
-| 32 | desktop/qa/scenario.js:139 | Manual priority and pinned focus preserved | P6 | electron/e2e/scenario.spec.ts | planned |
-| 33 | desktop/qa/scenario.js:154 | Declined checkpoint-risk prompt retains editor | P6 | electron/e2e/scenario.spec.ts | planned |
-| 34 | desktop/qa/scenario.js:155 | Declined close retains live backend without duplicate capture | P6 | electron/e2e/scenario.spec.ts | planned |
-| 35 | desktop/qa/scenario.js:159 | Recovered checkpoint-failure draft on managed relaunch | P6 | electron/e2e/scenario.spec.ts | planned |
-| 36 | desktop/qa/scenario.js:160 | Recovery draft was not automatically ingested | P6 | electron/e2e/scenario.spec.ts | planned |
-| 37 | desktop/qa/scenario.js:163 | Saved capture does not reappear on restart | P6 | electron/e2e/scenario.spec.ts | planned |
-| 38 | desktop/qa/scenario.js:164 | Restart does not duplicate capture | P6 | electron/e2e/scenario.spec.ts | planned |
-| 39 | desktop/qa/scenario.js:165 | Focus and manual priority survive restart | P6 | electron/e2e/scenario.spec.ts | planned |
-| 40 | desktop/qa/scenario.js:167 | Original, edited code and revisions survive backend restart | P6 | electron/e2e/scenario.spec.ts | planned |
+| 3 | desktop/qa/scenario.js:35 | Explicit offline Save queues a capture while backend is stopped | P6 | electron/e2e/scenario.spec.ts › "crash: service-down keeps the page; offline Save queues; repeated Retry gives one service, service-up without reload and one flush" | planned |
+| 4 | desktop/qa/scenario.js:40 | Editor remains usable while backend is stopped | P6 | electron/e2e/scenario.spec.ts › "crash: service-down keeps the page; offline Save queues; repeated Retry gives one service, service-up without reload and one flush" | planned |
+| 5 | desktop/qa/scenario.js:43 | Explicit native Retry reconnects without navigating or losing draft | P6 | electron/e2e/scenario.spec.ts › "crash: service-down keeps the page; offline Save queues; repeated Retry gives one service, service-up without reload and one flush" | planned |
+| 6 | desktop/qa/scenario.js:45 | Retry uploads queued capture once without ingesting unsaved draft | P6 | electron/e2e/scenario.spec.ts › "crash: service-down keeps the page; offline Save queues; repeated Retry gives one service, service-up without reload and one flush" | planned |
+| 7 | desktop/qa/scenario.js:56 | Native webview initially focuses multiline task capture | P4 | web/e2e/task-capture.spec.ts › "Task draft survives close and reload; initially focused; Enter inserts newline" | planned |
+| 8 | desktop/qa/scenario.js:57 | Native Details starts collapsed | P4 | web/e2e/task-capture.spec.ts › "One multiline input; no unsupported voice button or mandatory details" | planned |
+| 9 | desktop/qa/scenario.js:65 | Native one-input Save durably adds one task | P4 | web/e2e/task-capture.spec.ts › "Keyboard submit durably creates one task without a model" | planned |
+| 10 | desktop/qa/scenario.js:66 | Native capture preserves override and separates planned day | P4 | web/e2e/task-capture.spec.ts › "Planned day is separate from deadline/reminder/availability" | planned |
+| 11 | desktop/qa/scenario.js:67 | Native task capture never changes the existing pin | P4 | web/e2e/task-capture.spec.ts › "Task save never replaces pinned focus" | planned |
+| 12 | desktop/qa/scenario.js:75 | Task draft survives actual shell/profile/service restart | P6 | electron/e2e/scenario.spec.ts › "task draft: an unfinished Add task input is checkpointed on close"; electron/e2e/scenario.spec.ts › "task-recover: Add task reopens the exact input and never auto-submits" | planned |
+| 13 | desktop/qa/scenario.js:81 | Failed task checkpoint keeps committed task draft | P6 | electron/e2e/scenario.spec.ts › "task-checkpoint-failure: a failed task checkpoint keeps the window, the service and the committed task draft" | planned |
+| 14 | desktop/qa/scenario.js:82 | Failed task checkpoint keeps managed service/window usable | P6 | electron/e2e/scenario.spec.ts › "task-checkpoint-failure: a failed task checkpoint keeps the window, the service and the committed task draft" | planned |
+| 15 | desktop/qa/scenario.js:89 | Native capture reopens the exact unsaved task input | P6 | electron/e2e/scenario.spec.ts › "task-recover: Add task reopens the exact input and never auto-submits" | planned |
+| 16 | desktop/qa/scenario.js:91 | Task draft recovery never auto-submits | P6 | electron/e2e/scenario.spec.ts › "task-recover: Add task reopens the exact input and never auto-submits" | planned |
+| 17 | desktop/qa/scenario.js:102 | Native webview IndexedDB commits draft | P6 | electron/e2e/scenario.spec.ts › "draft: text and a pasted image stay on this device; an edit made just before close is checkpointed" | planned |
+| 18 | desktop/qa/scenario.js:103 | Synthetic image paste stores native Blob attachment | P6 | electron/e2e/scenario.spec.ts › "draft: text and a pasted image stay on this device; an edit made just before close is checkpointed" | planned |
+| 19 | desktop/qa/scenario.js:104 | Nothing ingested before explicit Save | P6 | electron/e2e/scenario.spec.ts › "draft: text and a pasted image stay on this device; an edit made just before close is checkpointed" | planned |
+| 20 | desktop/qa/scenario.js:109 | Close checkpoint and draft survive webview process restart | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 21 | desktop/qa/scenario.js:111 | Blob survives webview process restart | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 22 | desktop/qa/scenario.js:113 | Recovered Blob bytes are exact | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 23 | desktop/qa/scenario.js:116 | Capture commits and resets local draft | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 24 | desktop/qa/scenario.js:117 | Acknowledged capture removed from native outbox | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 25 | desktop/qa/scenario.js:119 | Original text committed to real service | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 26 | desktop/qa/scenario.js:120 | Original attachment committed to real service | P6 | electron/e2e/scenario.spec.ts › "recover: the exact text and Blob bytes survive the restart; Save commits once" | planned |
+| 27 | desktop/qa/scenario.js:128 | Actual note editor accepts focus | P4 | web/e2e/notes.spec.ts › "Note edits create revision and retain raw text" | planned |
+| 28 | desktop/qa/scenario.js:129 | Actual WebKit editor accepts multiline code | P4 | web/e2e/notes.spec.ts › "Note edits create revision and retain raw text"; web/e2e/notes.spec.ts › "Image attachment preview, capture save, note edit/save/reopen, immutable original" | planned |
+| 29 | desktop/qa/scenario.js:130 | Native editor undo restores previous text | P4 | web/e2e/notes.spec.ts › "Leaving an unsaved note edit asks first; declining keeps the edit" | planned |
+| 30 | desktop/qa/scenario.js:134 | Saved code renders in actual note viewer | P4 | web/src/ui/Markdown.test.tsx › "keeps fenced code verbatim, including markup-looking text" | planned |
+| 31 | desktop/qa/scenario.js:135 | Edit retains original | P4 | web/e2e/notes.spec.ts › "Original tab shows untouched capture" | planned |
+| 32 | desktop/qa/scenario.js:139 | Manual priority and pinned focus preserved | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original" | planned |
+| 33 | desktop/qa/scenario.js:154 | Declined checkpoint-risk prompt retains editor | P6 | electron/e2e/scenario.spec.ts › "checkpoint-failure: a declined close-anyway prompt keeps the editor and the service" | planned |
+| 34 | desktop/qa/scenario.js:155 | Declined close retains live backend without duplicate capture | P6 | electron/e2e/scenario.spec.ts › "checkpoint-failure: a declined close-anyway prompt keeps the editor and the service" | planned |
+| 35 | desktop/qa/scenario.js:159 | Recovered checkpoint-failure draft on managed relaunch | P6 | electron/e2e/scenario.spec.ts › "checkpoint-recover: the retained draft returns and is not ingested" | planned |
+| 36 | desktop/qa/scenario.js:160 | Recovery draft was not automatically ingested | P6 | electron/e2e/scenario.spec.ts › "checkpoint-recover: the retained draft returns and is not ingested" | planned |
+| 37 | desktop/qa/scenario.js:163 | Saved capture does not reappear on restart | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original" | planned |
+| 38 | desktop/qa/scenario.js:164 | Restart does not duplicate capture | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original" | planned |
+| 39 | desktop/qa/scenario.js:165 | Focus and manual priority survive restart | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original" | planned |
+| 40 | desktop/qa/scenario.js:167 | Original, edited code and revisions survive backend restart | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original"; web/e2e/notes.spec.ts › "Original tab shows untouched capture"; web/e2e/notes.spec.ts › "Note edits create revision and retain raw text" | planned |
 | 41 | experiments/ui-ab/scripts/verify.py:41 | Terrain animates, stays static with reduced motion, pauses when hidden, and does not capture input | P5 | web/e2e/terrain.spec.ts | planned |
 | 42 | experiments/ui-ab/scripts/verify.py:42 | Task draft survives close and reload; initially focused; Enter inserts newline | P4 | web/e2e/task-capture.spec.ts | planned |
 | 43 | experiments/ui-ab/scripts/verify.py:43 | Fixture preserves raw input, coarse Tonight, provenance; returns to Plan with Edit | — | — | drop (proposed): fixture interpreter and the hard-coded "Tonight" are removed (spec §4.6); provenance and Edit are covered by row "Compact confirmation includes Edit and does not open full editor" |
@@ -181,10 +181,10 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 162 | qa/task_link_check.py:58 | Task-link navigation never changes pin or manual priority | P4 | web/e2e/plan.spec.ts | planned |
 | 163 | qa/task_link_check.py:62 | Missing task has truthful error, no fake action | P4 | web/e2e/plan.spec.ts | planned |
 | 164 | qa/task_link_check.py:63 | No uncaught JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
-| 165 | qa/webview_check.py:143 | `'Actual virtual open-idle process sample and native shell SIGTERM lease cleanup' if stage == 'idle' else 'Actual native shell SIGKILL closes lease and stops owned service'` | P6 | electron/e2e/managed.spec.ts | planned |
-| 166 | qa/webview_check.py:161 | Actual second desktop launch refused by persistent-profile lock | P6 | electron/e2e/single-instance.spec.ts | planned |
-| 167 | qa/webview_check.py:170 | `f'{stage}: actual owned backend stopped after checkpoint-approved close'` | P6 | electron/e2e/managed.spec.ts | planned |
-| 168 | qa/webview_check.py:175 | `f'Independent backend read confirms {expected_notes} explicitly saved note(s), pinned focus and manual low priority'` | P6 | electron/e2e/scenario.spec.ts | planned |
+| 165 | qa/webview_check.py:143 | `'Actual virtual open-idle process sample and native shell SIGTERM lease cleanup' if stage == 'idle' else 'Actual native shell SIGKILL closes lease and stops owned service'` | P6 | electron/e2e/managed.spec.ts › "starts the owned service, loads only the verified origin, and stops the service after the close checkpoint"; electron/e2e/scenario.spec.ts › "kill: SIGKILL of Electron closes the lease and the owned service stops" | planned |
+| 166 | qa/webview_check.py:161 | Actual second desktop launch refused by persistent-profile lock | P6 | electron/e2e/single-instance.spec.ts › "a second instance focuses the first and exits 0 without using its own arguments" | planned |
+| 167 | qa/webview_check.py:170 | `f'{stage}: actual owned backend stopped after checkpoint-approved close'` | P6 | electron/e2e/managed.spec.ts › "starts the owned service, loads only the verified origin, and stops the service after the close checkpoint" | planned |
+| 168 | qa/webview_check.py:175 | `f'Independent backend read confirms {expected_notes} explicitly saved note(s), pinned focus and manual low priority'` | P6 | electron/e2e/scenario.spec.ts › "verify: a restart neither duplicates the capture nor loses focus, manual priority or the original" | planned |
 | 169 | tests/now_state.test.cjs:12 | empty connected workspace is new, not complete | P2 | web/src/domain/nowState.test.ts | planned |
 | 170 | tests/now_state.test.cjs:13 | notes without tasks are not a new workspace or implicit work | P2 | web/src/domain/nowState.test.ts | planned |
 | 171 | tests/now_state.test.cjs:14 | one available suggestion keeps server ranking and hidden alternatives | P2 | web/src/domain/nowState.test.ts | planned |
@@ -207,18 +207,18 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 188 | tests/now_state.test.cjs:74 | another available recommendation does not replace an actionable pin | P2 | web/src/domain/nowState.test.ts | planned |
 | 189 | tests/now_state.test.cjs:79 | dependency or agent waiting pin stays pinned while other work is recommended | P2 | web/src/domain/nowState.test.ts | planned |
 | 190 | tests/now_state.test.cjs:86 | attention on another task outranks a pin without changing it; no focus stays unset | P2 | web/src/domain/nowState.test.ts | planned |
-| 191 | tests/test_managed_service.py:104 | test_cold_reopen_browser_and_retry_preserve_state | P6 | electron/test/lifecycle.test.ts | planned |
-| 192 | tests/test_managed_service.py:135 | test_wrong_endpoint_is_not_contacted_or_killed | P6 | electron/test/lifecycle.test.ts | planned |
-| 193 | tests/test_managed_service.py:149 | test_startup_errors_are_bounded | P6 | electron/test/lifecycle.test.ts | planned |
-| 194 | tests/test_managed_service.py:165 | test_timeout_cancel_cleanup_owned_descendant | P6 | electron/test/lifecycle.test.ts | planned |
-| 195 | tests/test_managed_service.py:183 | test_backend_crash_requires_explicit_retry | P6 | electron/test/lifecycle.test.ts | planned |
-| 196 | tests/test_managed_service.py:195 | test_unexpected_owner_death_closes_lease | P6 | electron/test/lifecycle.test.ts | planned |
-| 197 | tests/test_managed_service.py:206 | test_external_backend_not_owned | P6 | electron/test/lifecycle.test.ts | planned |
+| 191 | tests/test_managed_service.py:104 | test_cold_reopen_browser_and_retry_preserve_state | P6 | electron/test/service-parity.test.ts › "cold reopen, retries while running and a competing owner keep one service and its state (:104)" | planned |
+| 192 | tests/test_managed_service.py:135 | test_wrong_endpoint_is_not_contacted_or_killed | P6 | electron/test/service-parity.test.ts › "never contacts or kills a port occupant (:135)" | planned |
+| 193 | tests/test_managed_service.py:149 | test_startup_errors_are_bounded | P6 | electron/test/service-parity.test.ts › "bounds a %s failure as a startup error (:148)"; electron/test/service-parity.test.ts › "refuses a data directory that is a file before spawning (:148 permissions)"; electron/test/service-start.test.ts › "reports a missing or empty interpreter as python-missing" | planned |
+| 194 | tests/test_managed_service.py:165 | test_timeout_cancel_cleanup_owned_descendant | P6 | electron/test/service-stop.test.ts › "cancel during startup rejects with cancelled and removes the whole owned group"; electron/test/service-stop.test.ts › "a startup timeout also removes an owned descendant" | planned |
+| 195 | tests/test_managed_service.py:183 | test_backend_crash_requires_explicit_retry | P6 | electron/test/service-parity.test.ts › "needs an explicit Retry after a crash, and Retry rebinds the fixed port at once (:183, SO_REUSEADDR)" | planned |
+| 196 | tests/test_managed_service.py:195 | test_unexpected_owner_death_closes_lease | P6 | electron/test/service-parity.test.ts › "owner %s closes the lease and frees the lock and port (:194)" | planned |
+| 197 | tests/test_managed_service.py:206 | test_external_backend_not_owned | P6 | electron/test/service-parity.test.ts › "never owns an external service on the same workspace (:206)" | planned |
 | 198 | tests/test_managed_service.py:230 | test_public_handshake_does_not_authorize_api | P6 | tests/test_managed_service.py | planned |
-| 199 | tests/test_managed_service.py:244 | test_separately_wrapped_agent_survives_owned_quit | P6 | electron/test/lifecycle.test.ts | planned |
-| 200 | tests/test_managed_service.py:281 | test_invalid_identity_never_loads_workspace | P6 | electron/test/lifecycle.test.ts | planned |
-| 201 | tests/test_managed_service.py:292 | test_managed_disables_inherited_optional_features | P6 | electron/test/lifecycle.test.ts | planned |
-| 202 | tests/test_managed_service.py:307 | test_owner_death_before_python_lease_watcher | P6 | electron/test/lifecycle.test.ts | planned |
+| 199 | tests/test_managed_service.py:244 | test_separately_wrapped_agent_survives_owned_quit | P6 | electron/test/service-parity.test.ts › "lets a separately wrapped agent survive an owned quit (:244)" | planned |
+| 200 | tests/test_managed_service.py:281 | test_invalid_identity_never_loads_workspace | P6 | electron/test/service-start.test.ts › "%s fails identity, stops the service and never writes the workspace" | planned |
+| 201 | tests/test_managed_service.py:292 | test_managed_disables_inherited_optional_features | P6 | electron/test/service-parity.test.ts › "disables inherited optional features and never uses NOEMA_DATA_DIR (:292)" | planned |
+| 202 | tests/test_managed_service.py:307 | test_owner_death_before_python_lease_watcher | P6 | electron/test/service-parity.test.ts › "owner SIGKILL before the lease watcher still stops Python through PDEATHSIG (:307)" | planned |
 
 ## B. public/app.js strings
 
