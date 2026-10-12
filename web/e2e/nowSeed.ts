@@ -9,7 +9,7 @@ import { E2E_TOKEN, type NoemaServer } from './server';
 
 export type SeedTask = { id: string; title: string; status: string; priority: string; version: number };
 export type SeedState = {
-  tasks: SeedTask[]; notes: unknown[]; reminders: { id: string; state: string }[];
+  tasks: SeedTask[]; notes: { id: string; title: string; folder: string; task_id: string | null }[]; reminders: { id: string; state: string }[];
   focus: { task_id: string; pinned: boolean } | null; runs: { id: string; status: string }[];
 };
 export const KINDS = ['new', 'available', 'waiting', 'attention', 'complete', 'unknown', 'disconnected'] as const;
