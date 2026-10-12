@@ -317,3 +317,16 @@ test('Server restart retains manual priority, pinned focus and due reminder', as
   await expect(page.getByRole('combobox', { name: 'Priority for Revisit the allocator' }).locator('option:checked')).toHaveText('high · Set by you');
   expect((await serverState(noema)).reminders.map(r => r.state)).toEqual(['due']);
 });
+
+test('Agent setup creates a real task-scoped token', async ({ page, context, noema }) => {
+  await openKind(page, context, noema, 'available');
+  await page.locator('details.agent-status summary').click();
+  await page.getByRole('button', { name: 'Set up agent reporting' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Your workspace' });
+  await dialog.getByLabel('Label').fill('Isolated UI token');
+  const first = (await serverState(noema)).tasks[0];
+  await dialog.getByLabel('Allowed tasks · agent tokens').selectOption([first.id]);
+  await dialog.getByRole('button', { name: 'Create token' }).click();
+  await expect(dialog.locator('.token-value')).toHaveText(/\S{20,}/);
+  await expect.poll(async () => (await noema.api<{ name: string; scope: string }[]>('GET', '/api/tokens')).map(t => [t.name, t.scope])).toEqual([['Isolated UI token', 'agent']]);
+});

@@ -2,6 +2,7 @@
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
 import { agentRun, changeElsewhere, serverState, task } from './nowSeed';
+import { createNote } from './screenTest';
 import type { NoemaServer } from './server';
 
 type Task = { id: string; title: string; status: string; priority: string; version: number };
@@ -287,4 +288,55 @@ test('a 409 conflict shows Reopen and never overwrites', async ({ page, noema })
   await editor.getByRole('button', { name: 'Save task' }).click();
   await expect(page.locator('.toast-layer')).toContainText('Task saved.');
   expect((await getTask(noema, t.id)).title).toBe('Merged by hand');
+});
+
+// The Python helper opens /#task/<id> in a running tab (spec §4.5). A link must never unmount the screen underneath.
+const openLink = (page: Page, hash: string) => page.evaluate(h => { location.hash = h; }, hash);
+const captureEditor = (page: Page) => page.getByLabel('Rough learning note');
+
+async function taskLinkOverCapture(page: Page, noema: NoemaServer) {
+  const t = await task(noema, 'Synthetic linked task', { priority: 'low' });
+  await gotoApp(page, noema, '#/capture');
+  await captureEditor(page).fill('Synthetic unsaved capture stays untouched.');
+  await openLink(page, `#task/${t.id}`);
+  const dialog = page.getByRole('dialog', { name: 'Synthetic linked task' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+}
+
+async function taskLinkOverNoteEdit(page: Page, noema: NoemaServer) {
+  const t = await task(noema, 'Synthetic linked task');
+  const note = await createNote(noema, 'Synthetic saved note original.');
+  await gotoApp(page, noema, `#/note/${note.id}`);
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByLabel('Note', { exact: true }).fill('Synthetic unsaved note edit.');
+  await openLink(page, `#task/${t.id}`);
+  const dialog = page.getByRole('dialog', { name: 'Synthetic linked task' });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  return note;
+}
+
+test('Task link preserves unsaved Capture and route', async ({ page, noema }) => {
+  await taskLinkOverCapture(page, noema);
+  await expect(captureEditor(page)).toHaveValue('Synthetic unsaved capture stays untouched.');
+  expect(await page.evaluate(() => location.hash)).toBe('#/capture');
+});
+
+test('Opening task never ingests a learning-note draft', async ({ page, noema }) => {
+  await taskLinkOverCapture(page, noema);
+  expect((await serverState(noema)).notes).toEqual([]);
+});
+
+test('Task link preserves note-edit text and route', async ({ page, noema }) => {
+  const note = await taskLinkOverNoteEdit(page, noema);
+  await expect(page.getByLabel('Note', { exact: true })).toHaveValue('Synthetic unsaved note edit.');
+  expect(await page.evaluate(() => location.hash)).toBe(`#/note/${note.id}`);
+});
+
+test('Saved note original is unchanged', async ({ page, noema }) => {
+  const note = await taskLinkOverNoteEdit(page, noema);
+  expect((await noema.api<{ raw: string }>('GET', `/api/notes/${note.id}`)).raw).toBe('Synthetic saved note original.');
 });
