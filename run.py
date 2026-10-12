@@ -12,11 +12,11 @@ if __name__=='__main__':
     parser.add_argument('--data-dir')
     parser.add_argument('--open',action='store_true',help='Open the local interface')
     parser.add_argument('--desktop-managed',action='store_true',help=argparse.SUPPRESS)
+    parser.add_argument('--owner-pid',type=int,help=argparse.SUPPRESS)
     args=parser.parse_args()
     if args.desktop_managed:
         from noema.desktop_service import managed
-        managed(args)
-        raise SystemExit(0)
+        raise SystemExit(managed(args))
     if args.host not in ('127.0.0.1','::1','localhost') and (not os.getenv('NOEMA_ACCESS_TOKEN') or not os.getenv('NOEMA_ALLOWED_HOSTS')):
         parser.error('Remote binding requires NOEMA_ACCESS_TOKEN and NOEMA_ALLOWED_HOSTS. Use HTTPS before microphone capture or exposing private notes.')
     from pathlib import Path
