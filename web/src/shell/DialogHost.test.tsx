@@ -9,18 +9,19 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
 vi.mock('../local/outbox', () => ({ useOutboxItems: () => ({ items: [], reload: vi.fn() }), retryItem: vi.fn(), discardItem: vi.fn() }));
 vi.mock('../capture/Sketch', () => ({ SketchDialog: stub }));
 vi.mock('../dialogs/TaskDetail', () => ({ TaskDetailDialog: stub }));
+vi.mock('../dialogs/NoteHistory', () => ({ NoteHistoryDialog: stub }));
 vi.mock('../dialogs/TaskCapture', () => ({ TaskCaptureDialog: stub }));
 import { DialogHost } from './DialogHost';
 import { closeDialog, openDialog, type DialogRequest } from './dialogs';
 
-// Record<kind, ...> makes this table exhaustive at compile time. 'pending' arms still render nothing (Phase 2b Tasks 12-13); flip them to a request when they land.
+// Record<kind, ...> makes this table exhaustive at compile time. 'pending' arms still render nothing (Phase 2b Task 13); flip them to a request when they land.
 const requests: Record<DialogRequest['kind'], DialogRequest | 'pending'> = {
   task: { kind: 'task', id: 't1' },
   'task-capture': { kind: 'task-capture' },
   sketch: { kind: 'sketch' },
   outbox: { kind: 'outbox' },
   settings: 'pending',
-  'note-history': 'pending',
+  'note-history': { kind: 'note-history', noteId: 'n1' },
 };
 
 beforeAll(polyfillDialog);

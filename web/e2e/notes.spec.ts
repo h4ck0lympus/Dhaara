@@ -303,3 +303,66 @@ test.describe('Note view', () => {
     await expectPhoneFriendly(page, '.note-screen');
   });
 });
+
+test.describe('Note history', () => {
+  const historyDialog = (page: Page) => page.getByRole('dialog', { name: 'Note history' });
+  const restoreButton = { name: 'Restore as a new revision' };
+
+  test('Original and History are tabs beside the note', async ({ page, noema }) => {   // handbook-trace U19
+    const note = await createNote(noema, 'tab layout');
+    await gotoApp(page, noema, `#/note/${note.id}`);
+    const tabs = page.getByRole('group', { name: 'Note views' });
+    await expect(tabs.getByRole('button')).toHaveText(['Note', 'Original', 'History']);
+    await tabs.getByRole('button', { name: 'Original' }).click();
+    await expect(page.locator('.original-block')).toBeVisible();
+    await expect(page.locator('.note-body')).toHaveCount(0);
+    await tabs.getByRole('button', { name: 'History' }).click();
+    await expect(historyDialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(historyDialog(page)).toBeHidden();
+    await expect(page.locator('.original-block')).toBeVisible();
+  });
+
+  test('History restore adds another revision', async ({ page, noema }) => {   // browser_check.py:134-135
+    const note = await createNote(noema, 'original raw words');
+    await editNote(noema, note, { title: 'Edited title', body: 'edited body' });
+    await gotoApp(page, noema, `#/note/${note.id}`);
+    await page.getByRole('button', { name: 'History' }).click();
+    const dialog = historyDialog(page);
+    const current = dialog.getByRole('listitem').filter({ hasText: 'Version 2 · manual' });
+    await expect(current).toBeVisible();
+    await expect(current.getByRole('button', restoreButton)).toHaveCount(0);
+    await dialog.getByRole('listitem').filter({ hasText: 'Version 1' }).getByRole('button', restoreButton).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('status').filter({ hasText: 'Restored as a new revision.' })).toBeVisible();
+    const full = await noema.api<{ version: number; body: string; raw: string }>('GET', `/api/notes/${note.id}`);
+    expect(full.version).toBe(3);
+    expect(full.body).toBe(full.raw);
+    const history = await noema.api<{ version: number }[]>('GET', `/api/notes/${note.id}/history`);
+    expect(history.map(revision => revision.version)).toEqual([3, 2, 1]);
+  });
+
+  test('Revision previews render untrusted HTML as text', async ({ page, noema }) => {
+    const note = await createNote(noema, 'safe base');
+    await editNote(noema, note, { body: '<img src=z onerror="window.pwned=4">' });
+    await gotoApp(page, noema, `#/note/${note.id}`);
+    await page.getByRole('button', { name: 'History' }).click();
+    const dialog = historyDialog(page);
+    await dialog.getByRole('listitem').filter({ hasText: 'Version 2' }).locator('summary').click();
+    await expect(dialog).toContainText('<img src=z onerror="window.pwned=4">');
+    expect(await page.evaluate('window.pwned')).toBeUndefined();
+  });
+
+  test('A restore against a changed note shows the conflict and changes nothing', async ({ page, noema }) => {
+    const note = await createNote(noema, 'base words');
+    const second = await editNote(noema, note, { body: 'second' });
+    await gotoApp(page, noema, `#/note/${note.id}`);
+    await page.getByRole('button', { name: 'History' }).click();
+    const dialog = historyDialog(page);
+    await expect(dialog.getByRole('listitem').filter({ hasText: 'Version 2' })).toBeVisible();
+    await editNote(noema, second, { body: 'third from another device' });
+    await dialog.getByRole('listitem').filter({ hasText: 'Version 1' }).getByRole('button', restoreButton).click();
+    await expect(dialog.getByRole('alert')).toContainText('This note changed on another screen.');
+    expect((await noema.api<{ body: string }>('GET', `/api/notes/${note.id}`)).body).toBe('third from another device');
+  });
+});
