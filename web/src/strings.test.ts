@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { S } from './strings';
 
 const APP_JS = fileURLToPath(new URL('../../public/app.js', import.meta.url));
-const NEW_KEYS = new Set(['unexpectedResponse', 'unsupportedType', 'totalTooLarge', 'updateReady', 'reload']);
+const NEW_KEYS = new Set(['unexpectedResponse', 'unsupportedType', 'totalTooLarge', 'updateReady', 'reload', 'noteConflict']);
 const snapshot = (tasks: number, notes: number, attention: number, runs: string[]) => ({
   tasks: Array.from({ length: tasks }, () => ({})),
   notes: Array.from({ length: notes }, () => ({})),
@@ -86,6 +86,7 @@ describe('S', () => {
       closeCheckpointFailed: 'Could not checkpoint your draft. Keep Noema open and retry the local save.',
       updateReady: 'Noema was updated. Your drafts are saved on this device.',
       reload: 'Reload',
+      noteConflict: 'This note changed on the server. Your edits were not overwritten — Reload latest replaces them with the newest version; Keep editing keeps them.',
     });
   });
 

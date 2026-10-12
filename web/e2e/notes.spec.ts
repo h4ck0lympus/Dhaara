@@ -224,7 +224,7 @@ test.describe('Note view', () => {
     expect(readFileSync((await file.path())!, 'utf8')).toBe(`# ${note.title}\n\nFolder: ${note.folder}\n\n${note.body}\n`);
   });
 
-  const CONFLICT = 'This note changed on another screen. Your draft has not been overwritten. Reopen to compare.';
+  const CONFLICT = 'This note changed on the server. Your edits were not overwritten — Reload latest replaces them with the newest version; Keep editing keeps them.';
 
   async function conflictedEdit(page: Page, noema: NoemaServer) {
     const note = await createNote(noema, 'conflict base');

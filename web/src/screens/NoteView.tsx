@@ -31,7 +31,8 @@ type EditForm = { title: string; folder: string; body: string; baseVersion: numb
 type FormError = { message: string; conflict: boolean };
 
 function errorOf(error: unknown): FormError {
-  return { message: messageOf(error), conflict: (error as Partial<ApiError>).status === 409 };
+  const conflict = (error as Partial<ApiError>).status === 409;
+  return { message: conflict ? S.noteConflict : messageOf(error), conflict };
 }
 
 export function downloadText(filename: string, text: string): void {

@@ -7,7 +7,7 @@ const { save, connectionGet } = vi.hoisted(() => ({ save: vi.fn(), connectionGet
 vi.mock('../domain/connection', () => ({ connection: { get: connectionGet } }));
 vi.mock('../local/drafts', () => ({
   useCaptureDraft: () => ({ draft: { id: 'd1', raw: 'note', files: [], task_id: '' }, saveState: 'saved', saving: false }),
-  captureDraftStore: { getSnapshot: () => ({ saving: false, draft: { id: 'd1' } }), save },
+  captureDraftStore: { getSnapshot: () => ({ saving: false, draft: { id: 'd1' } }), subscribe: () => () => {}, save },
 }));
 vi.mock('../local/db', () => ({ outboxGet: vi.fn(async () => undefined), isOutboxItem: vi.fn(() => false) }));
 vi.mock('../local/outbox', () => ({ subscribeOutbox: vi.fn(() => () => {}) }));

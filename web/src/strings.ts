@@ -66,6 +66,7 @@ export const S = {
   taskSaved: 'Task saved.', // 362
   editAction: 'Edit', // 14
   priorityUpdated: 'Priority updated.', // 496
+  noteConflict: 'This note changed on the server. Your edits were not overwritten — Reload latest replaces them with the newest version; Keep editing keeps them.',
   taskReopened: 'Task reopened.', // 499
   taskCompleted: 'Task completed.', // 499
   unlockTitle: 'Unlock Noema', // 302
