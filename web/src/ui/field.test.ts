@@ -223,6 +223,18 @@ describe('packQuietRects', () => {
   });
 });
 
+describe('packQuietRects with more than six disjoint surfaces', () => {
+  it('merges the smallest into bounding boxes so every surface stays quiet', () => {
+    const rects = Array.from({ length: QUIET_SLOTS + 1 }, (_, i) => ({ left: i * 100, top: 0, width: 50 - i, height: 50 }));
+    const packed = packQuietRects(rects, 1000, 1000);
+    const slots = Array.from({ length: QUIET_SLOTS }, (_, i) => packed.slice(i * 4, i * 4 + 4)).filter((slot) => slot[2] > 0);
+    expect(slots.length).toBeLessThanOrEqual(QUIET_SLOTS);
+    for (const rect of rects) {
+      expect(slots.some((s) => s[0] <= rect.left && s[1] <= rect.top && s[0] + s[2] >= rect.left + rect.width && s[1] + s[3] >= rect.top + rect.height)).toBe(true);
+    }
+  });
+});
+
 describe('removeContained', () => {
   const main = { left: 100, top: 0, width: 800, height: 900 };
 

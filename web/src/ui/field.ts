@@ -80,6 +80,7 @@ function fract(value: number): number {
 /** Visible content rectangles packed for the shader, largest first, clipped to the viewport. Unused slots are zero. (experiments field.ts:40-53, unchanged) */
 export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHeight: number): Float32Array {
   const packed = new Float32Array(QUIET_SLOTS * 4);
+  const area = (rect: Rect) => rect.width * rect.height;
   const visible = rects
     .map((rect) => {
       const left = Math.max(0, rect.left), top = Math.max(0, rect.top);
@@ -87,8 +88,14 @@ export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHei
       return { left, top, width: right - left, height: bottom - top };
     })
     .filter((rect) => Number.isFinite(rect.width + rect.height) && rect.width > 1 && rect.height > 1)
-    .sort((a, b) => b.width * b.height - a.width * a.height)
-    .slice(0, QUIET_SLOTS);
+    .sort((a, b) => area(b) - area(a));
+  // Too many disjoint surfaces: the two smallest become their bounding box (more quiet, never less) instead of one being dropped.
+  while (visible.length > QUIET_SLOTS) {
+    const [a, b] = visible.splice(-2);
+    const left = Math.min(a.left, b.left), top = Math.min(a.top, b.top);
+    visible.push({ left, top, width: Math.max(a.left + a.width, b.left + b.width) - left, height: Math.max(a.top + a.height, b.top + b.height) - top });
+    visible.sort((x, y) => area(y) - area(x));
+  }
   visible.forEach((rect, i) => packed.set([rect.left, rect.top, rect.width, rect.height], i * 4));
   return packed;
 }
