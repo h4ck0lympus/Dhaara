@@ -40,7 +40,7 @@ export function AppShell(): JSX.Element {
             <Icon name="settings" size={18} />
           </button>
         </header>
-        <main className="content" data-quiet=""><Outlet /></main>
+        <main className="content"><Outlet /></main>
       </div>
       <ToastHost />
       <DialogHost />

@@ -113,7 +113,7 @@ export function NowScreen(): JSX.Element {
         )}
       </section>
       {needsYou.length > 0 && (
-        <section className="needs-you" aria-label="Needs you">
+        <section className="needs-you" aria-label="Needs you" data-quiet="">
           <h2 className="eyebrow">Needs you</h2>
           {needsYou.map(t => (
             <button type="button" key={t.id} className="attention-row" onClick={() => openTask(t.id)}>
@@ -123,7 +123,7 @@ export function NowScreen(): JSX.Element {
         </section>
       )}
       {(tasks.length > 0 || runs.length > 0) && (
-        <details className="agent-status" open={n.mode === 'unknown' || !connected}>
+        <details className="agent-status" data-quiet="" open={n.mode === 'unknown' || !connected}>
           <summary>Agent reports <span className="count">{reported.length}</span></summary>
           <p className="small dim" id="integration-status">{n.integration}</p>
           {reported.map(r => (
@@ -143,7 +143,7 @@ export function NowScreen(): JSX.Element {
         </details>
       )}
       {n.waiting.length > 0 && (
-        <details className="waiting-work">
+        <details className="waiting-work" data-quiet="">
           <summary>Waiting work <span className="count">{n.waiting.length}</span></summary>
           {n.waiting.map(t => (
             <div className="run-row" key={t.id}>

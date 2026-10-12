@@ -182,3 +182,206 @@ test.describe('terrain state machine', () => {
     expect(await page.evaluate(() => window.__noemaField === undefined)).toBe(true);
   });
 });
+
+type Box = { left: number; top: number; width: number; height: number };
+
+function centerBox(page: Page): Box {
+  const viewport = page.viewportSize()!;
+  return { left: viewport.width / 2 - 150, top: viewport.height / 2 - 150, width: 300, height: 300 };
+}
+
+function litIn(page: Page, box: Box, step = 6): Promise<{ total: number; lit: number }> {
+  return page.evaluate(async ({ box, step }) => {
+    const field = window.__noemaField!;
+    const reads: Promise<[number, number, number, number]>[] = [];
+    for (let y = box.top + step / 2; y < box.top + box.height; y += step) {
+      for (let x = box.left + step / 2; x < box.left + box.width; x += step) {
+        if (x >= 0 && y >= 0 && x < innerWidth && y < innerHeight) reads.push(field.readPixel(x, y));
+      }
+    }
+    const pixels = await Promise.all(reads);
+    return { total: pixels.length, lit: pixels.filter((pixel) => pixel[3] > 0).length };
+  }, { box, step });
+}
+
+// step 2 CSS px = every backing pixel at DPR 1 (0.5× store), so a 1-px stroke under a quiet surface cannot slip between samples.
+function quietPixels(page: Page, step = 2): Promise<{ total: number; lit: number }> {
+  return page.evaluate(async (step) => {
+    const field = window.__noemaField!;
+    const rects = Array.from(document.querySelectorAll('[data-quiet]'), (element) => element.getBoundingClientRect())
+      .filter((rect) => rect.width > 1 && rect.height > 1);
+    const reads: Promise<[number, number, number, number]>[] = [];
+    for (let y = step / 2; y < innerHeight; y += step) {
+      for (let x = step / 2; x < innerWidth; x += step) {
+        const inside = rects.some((r) => x > r.left + 1 && x < r.right - 1 && y > r.top + 1 && y < r.bottom - 1);
+        if (inside) reads.push(field.readPixel(x, y));
+      }
+    }
+    const pixels = await Promise.all(reads);
+    return { total: pixels.length, lit: pixels.filter((pixel) => pixel[3] > 0).length };
+  }, step);
+}
+
+async function stripQuiet(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    document.querySelectorAll('[data-quiet]').forEach((element) => element.removeAttribute('data-quiet'));
+    window.dispatchEvent(new Event('resize'));
+  });
+}
+
+const ROUTES = ['#/overview', '#/capture', '#/notes', '#/plan', '#/settings'] as const;
+
+/** Alpha 0 under every [data-quiet] surface on every route, over two animated frames per route. */
+async function expectQuietEverywhere(page: Page, noema: NoemaServer, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  await enableMotion(noema);
+  await openField(page, noema);
+  await expectState(page, 'animated');
+  for (const hash of ROUTES) {
+    await page.evaluate((next) => { location.hash = next; }, hash);
+    await expect(hash === '#/settings' ? page.locator('dialog[open]') : page.locator('h1').first()).toBeVisible();
+    await expect.poll(async () => (await quietPixels(page)).lit, { message: hash }).toBe(0);
+    for (let frame = 0; frame < 2; frame++) {
+      const counts = await quietPixels(page);
+      expect(counts.total, hash).toBeGreaterThan(0);
+      expect(counts.lit, hash).toBe(0);
+    }
+  }
+}
+
+test.describe('terrain pixels', () => {
+  // Parity-map row 113 (qa/now_ui_check.py:252) and handbook-trace U25, title verbatim.
+  test('Dot field never paints over the reading surface', async ({ page, noema }) => {
+    await expectQuietEverywhere(page, noema, { width: 1440, height: 900 });
+  });
+
+  test('Dot field never paints over the reading surface at phone width', async ({ page, noema }) => {
+    await expectQuietEverywhere(page, noema, { width: 390, height: 844 });
+  });
+
+  // A standalone <dialog data-quiet> (the shape contract §6.2 gives every app dialog), mounted and unmounted the way
+  // React does it. The app's Settings route is not used here: it re-mounts the Now screen on open, which would put
+  // data-quiet back on the main column and hide whether the dialog itself was measured.
+  test('opening and closing a dialog updates the quiet rects', async ({ page, noema }) => {
+    await openField(page, noema);
+    await expectState(page, 'static');
+    await stripQuiet(page);
+    const open = () => page.evaluate(() => {
+      const dialog = document.createElement('dialog');
+      dialog.id = 'quiet-dialog';
+      dialog.setAttribute('data-quiet', '');
+      Object.assign(dialog.style, { width: '320px', height: '320px', padding: '0', border: '0' });
+      document.getElementById('root')!.append(dialog);
+      dialog.showModal();
+    });
+    await open();
+    const box = (await page.locator('#quiet-dialog').boundingBox())!;
+    const inner = { left: box.x + 2, top: box.y + 2, width: box.width - 4, height: box.height - 4 };
+    await expect.poll(async () => (await litIn(page, inner)).lit).toBe(0);
+    await page.evaluate(() => {
+      const dialog = document.getElementById('quiet-dialog') as HTMLDialogElement;
+      dialog.close();
+      dialog.remove();
+    });
+    await expect.poll(async () => (await litIn(page, inner)).lit).toBeGreaterThan(0);
+    await open();
+    await expect.poll(async () => (await litIn(page, inner)).lit).toBe(0);
+  });
+
+  test('resizing a quiet surface without a DOM mutation updates the quiet rects', async ({ page, noema }) => {
+    await openField(page, noema);
+    await stripQuiet(page);
+    const box = centerBox(page);
+    await expect.poll(async () => (await litIn(page, box)).lit).toBeGreaterThan(0);
+    await page.evaluate((b) => {
+      const probe = document.createElement('div');
+      probe.id = 'quiet-probe';
+      probe.setAttribute('data-quiet', '');
+      Object.assign(probe.style, { position: 'fixed', left: `${b.left}px`, top: `${b.top}px`, width: '0px', height: '0px' });
+      document.getElementById('root')!.append(probe);
+    }, box);
+    await expect.poll(async () => (await litIn(page, box)).lit).toBeGreaterThan(0);
+    await page.evaluate((b) => {
+      const probe = document.getElementById('quiet-probe')!;
+      probe.style.width = `${b.width}px`;
+      probe.style.height = `${b.height}px`;
+    }, box);
+    await expect.poll(async () => (await litIn(page, box)).lit).toBe(0);
+  });
+
+  test('scrolling a quiet surface into view updates the quiet rects', async ({ page, noema }) => {
+    await openField(page, noema);
+    await stripQuiet(page);
+    const box = centerBox(page);
+    await page.evaluate((b) => {
+      const scroller = document.createElement('div');
+      scroller.id = 'quiet-scroller';
+      Object.assign(scroller.style, { position: 'fixed', inset: '0', overflow: 'auto', pointerEvents: 'none' });
+      const spacer = document.createElement('div');
+      Object.assign(spacer.style, { position: 'relative', height: `${innerHeight * 3}px` });
+      const surface = document.createElement('div');
+      surface.setAttribute('data-quiet', '');
+      Object.assign(surface.style, {
+        position: 'absolute', left: `${b.left}px`, top: `${innerHeight * 2 + b.top}px`, width: `${b.width}px`, height: `${b.height}px`,
+      });
+      spacer.append(surface);
+      scroller.append(spacer);
+      document.getElementById('root')!.append(scroller);
+    }, box);
+    await expect.poll(async () => (await litIn(page, box)).lit).toBeGreaterThan(0);
+    await page.evaluate(() => { document.getElementById('quiet-scroller')!.scrollTop = innerHeight * 2; });
+    await expect.poll(async () => (await litIn(page, box)).lit).toBe(0);
+  });
+
+  test('the packed RGBA8 height texture draws when EXT_color_buffer_float is missing', async ({ page, noema }) => {
+    await page.addInitScript(() => {
+      const original = WebGL2RenderingContext.prototype.getExtension;
+      WebGL2RenderingContext.prototype.getExtension = function (this: WebGL2RenderingContext, name: string) {
+        if (name === 'EXT_color_buffer_float') {
+          (window as unknown as { __floatBlocked: boolean }).__floatBlocked = true;
+          return null;
+        }
+        return original.call(this, name);
+      } as typeof original;
+    });
+    await openField(page, noema);
+    await expectState(page, 'static');
+    expect(await page.evaluate(() => (window as unknown as { __floatBlocked?: boolean }).__floatBlocked)).toBe(true);
+    await expect.poll(async () => (await quietPixels(page)).lit).toBe(0);
+    await stripQuiet(page);
+    await expect.poll(async () => (await litIn(page, centerBox(page))).lit).toBeGreaterThan(0);
+  });
+
+  test('the terrain is visible in the composited page, not hidden behind the app background', async ({ page, noema }) => {
+    await openField(page, noema);
+    await stripQuiet(page);
+    const box = centerBox(page);
+    await expect.poll(async () => (await litIn(page, box)).lit).toBeGreaterThan(0);
+    const clip = { x: box.left, y: box.top, width: box.width, height: box.height };
+    const withField = await page.screenshot({ clip, animations: 'disabled' });
+    await page.locator(FIELD).evaluate((canvas) => { (canvas as HTMLCanvasElement).style.visibility = 'hidden'; });
+    const without = await page.screenshot({ clip, animations: 'disabled' });
+    expect(withField.equals(without)).toBe(false);
+  });
+  // Real composited layout, no DOM stripping: the shell must not mark the whole content area quiet.
+  test('the terrain shows outside the reading surfaces and not under them in the real layout', async ({ page, noema }) => {
+    await openField(page, noema);
+    await expectState(page, 'static');
+    await expect.poll(async () => (await quietPixels(page)).total).toBeGreaterThan(0);
+    expect((await quietPixels(page)).lit).toBe(0);
+    const outside = await page.evaluate(async () => {
+      const field = window.__noemaField!;
+      const rects = Array.from(document.querySelectorAll('[data-quiet]'), (element) => element.getBoundingClientRect());
+      const main = document.querySelector('main.content')!.getBoundingClientRect();
+      const reads: Promise<[number, number, number, number]>[] = [];
+      for (let y = main.top + 1; y < Math.min(main.bottom, innerHeight); y += 4) {
+        for (let x = main.left + 1; x < main.right; x += 4) {
+          if (!rects.some((r) => x >= r.left - 1 && x <= r.right + 1 && y >= r.top - 1 && y <= r.bottom + 1)) reads.push(field.readPixel(x, y));
+        }
+      }
+      const pixels = await Promise.all(reads);
+      return pixels.filter((pixel) => pixel[3] > 0).length;
+    });
+    expect(outside).toBeGreaterThan(0);
+  });
+});
