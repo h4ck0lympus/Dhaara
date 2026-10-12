@@ -103,3 +103,69 @@ export async function stubMessageBox(app: ElectronApplication, responses: number
 export function messageBoxes(app: ElectronApplication): Promise<string[]> {
   return app.evaluate(() => (globalThis as typeof globalThis & { __messageBoxes?: string[] }).__messageBoxes ?? []);
 }
+
+export async function closeWindow(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0]?.close(); }).catch(() => undefined);
+}
+
+export async function openCapture(page: Page): Promise<Locator> {
+  await page.evaluate(() => { location.hash = '#/capture'; });
+  // Capture has exactly one writing surface and no title or folder field (spec §4.7).
+  const editor = page.locator('textarea').first();
+  await editor.waitFor();
+  return editor;
+}
+
+export type LocalDraft = { raw: string; files: { name: string; bytes: number[] }[] } | null;
+
+/** Reads kv['draft'] from the page's real IndexedDB (desktop/qa/scenario.js:6-14). The app must have opened it first. */
+export function readDraft(page: Page): Promise<LocalDraft> {
+  return page.evaluate(() => new Promise<LocalDraft>((resolve, reject) => {
+    const open = indexedDB.open('noema-local-v1', 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      let tx: IDBTransaction;
+      try {
+        tx = db.transaction('kv', 'readonly');
+      } catch (error) {
+        db.close();
+        reject(error);
+        return;
+      }
+      const request = tx.objectStore('kv').get('draft');
+      tx.onabort = () => { db.close(); reject(tx.error); };
+      tx.oncomplete = () => {
+        db.close();
+        const draft = request.result as { raw: string; files: { name: string; blob: Blob }[] } | undefined;
+        if (!draft) {
+          resolve(null);
+          return;
+        }
+        Promise.all(draft.files.map(async (file) => ({ name: file.name, bytes: Array.from(new Uint8Array(await file.blob.arrayBuffer())) })))
+          .then((files) => resolve({ raw: draft.raw, files }), reject);
+      };
+    };
+  }));
+}
+
+export function outboxIds(page: Page): Promise<string[]> {
+  return page.evaluate(() => new Promise<string[]>((resolve, reject) => {
+    const open = indexedDB.open('noema-local-v1', 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      let tx: IDBTransaction;
+      try {
+        tx = db.transaction('outbox', 'readonly');
+      } catch (error) {
+        db.close();
+        reject(error);
+        return;
+      }
+      const request = tx.objectStore('outbox').getAllKeys();
+      tx.onabort = () => { db.close(); reject(tx.error); };
+      tx.oncomplete = () => { db.close(); resolve(request.result.map(String)); };
+    };
+  }));
+}

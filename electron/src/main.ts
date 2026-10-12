@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, session } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_TEXT, parseArgs, userArgv, type CliOptions } from './cli.js';
+import { installCloseHandler } from './close.js';
 import { installNavigationGuards } from './navigation.js';
 import { installPermissions, PERMISSION_PROMPTS } from './permissions.js';
 import { prepareProfile, resolveProfile } from './profile.js';
@@ -62,6 +63,11 @@ function run(options: CliOptions): void {
     installPermissions(session.defaultSession, origin, async (kind) => (await dialog.showMessageBox(window, {
       type: 'question', message: PERMISSION_PROMPTS[kind], buttons: ['Allow', 'Deny'], defaultId: 1, cancelId: 1,
     })).response === 0);
+    // win.destroy() after approval, so beforeunload cannot cancel the close silently (spec §6.3).
+    installCloseHandler(window, origin, () => {
+      window.destroy();
+      app.quit();
+    });
     void window.loadURL(origin).catch(() => undefined);
   });
 }

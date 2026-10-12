@@ -135,9 +135,24 @@ describe('installCheckpointClose', () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
-  it('reports a checkpoint failure as an error and keeps the window open', async () => {
+  it('asks before risking a task draft whose write failed, and closes only when the user accepts', async () => {
     state.task.draft.pending = { capture_id: 't1', raw: 'x', local_day: '2026-10-10', details: {} };
-    vi.mocked(taskDraftStore.persist).mockRejectedValueOnce(new Error('QuotaExceededError'));
+    vi.mocked(taskDraftStore.persist).mockRejectedValue(new Error('QuotaExceededError'));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    uninstall = installCheckpointClose();
+    requestClose();
+    await settle();
+    expect(confirm.mock.calls).toEqual([[S.closeDraftFailed]]);
+    expect(toast).not.toHaveBeenCalled();
+    expect(postMessage).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    requestClose();
+    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('noema:close-approved'));
+  });
+
+  it('reports an unexpected checkpoint failure as an error and keeps the window open', async () => {
+    vi.spyOn(window, 'confirm').mockImplementation(() => { throw new Error('boom'); });
+    state.guards.add('recording');
     uninstall = installCheckpointClose();
     requestClose();
     await vi.waitFor(() => expect(toast).toHaveBeenCalledWith(S.closeCheckpointFailed, { tone: 'error' }));
