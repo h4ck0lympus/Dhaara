@@ -166,3 +166,9 @@ export async function refetch(page: Page): Promise<void> {
   await page.evaluate(() => window.dispatchEvent(new Event('noema:service-up')));
   await response;
 }
+
+// Takes the browser offline and waits for the app to show it.
+export async function goOffline(page: Page, context: BrowserContext): Promise<void> {
+  await context.setOffline(true);
+  await expect(page.locator('.offline-banner')).toBeVisible();
+}

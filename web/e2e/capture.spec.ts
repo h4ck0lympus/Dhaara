@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import type { BrowserContext, Page } from '@playwright/test';
 import { S } from '../src/strings';
 import { blockIdbOpen, delayIdbTransactions, failIdbWrite } from './faults';
-import { expect, gotoApp, readLocalDb, refetch, seedLocalDb, test } from './fixtures';
+import { expect, goOffline, gotoApp, readLocalDb, refetch, seedLocalDb, test } from './fixtures';
 import { serverState } from './nowSeed';
 import { MB, PNG, beforeUnloadArmed, expectPhoneFriendly, fakeMicrophonePage, navLink, persistentBrowser, readDraftFileBytes, waitForServiceWorker } from './screenTest';
 
@@ -13,10 +13,6 @@ const draftStatus = (page: Page) => page.locator('#draft-status');
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save note' });
 const localError = (page: Page) => page.locator('#local-save-error');
 const notice = (page: Page) => page.locator('.saved-notice');
-const goOffline = async (page: Page, context: BrowserContext) => {
-  await context.setOffline(true);
-  await expect(page.locator('.offline-banner')).toBeVisible();
-};
 const draftRaw = async (page: Page) => ((await readLocalDb(page)).draft as { raw: string }).raw;
 
 test.describe('Capture', () => {

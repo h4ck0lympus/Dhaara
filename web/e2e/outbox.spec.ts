@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { S } from '../src/strings';
-import { loseAck } from './faults';
-import { expect, PNG_1PX, putOutboxItem, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
+import { failFetch, loseAck } from './faults';
+import { expect, gotoApp, PNG_1PX, putOutboxItem, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
 import { E2E_TOKEN, type NoemaServer } from './server';
 
 // public/app.js wrote these shapes; v1 outbox items carry no `error` key until a rejection.
@@ -88,4 +88,83 @@ test('Browser/server restart retries lost acknowledgment without duplicate notes
   await openApp(fresh, noema);
   await expect.poll(() => outboxIds(fresh)).toEqual([]);
   expect((await notes(noema)).map((note) => note.id)).toEqual([QUEUED.id]);
+});
+
+const editor = (page: Page) => page.getByLabel('Rough learning note');
+const outboxDialog = (page: Page) => page.getByRole('dialog', { name: S.outboxTitle });
+
+test.describe('Outbox dialog', () => {
+  test('Outbox lists queued captures; Open a copy asks before replacing a draft; Discard asks first', async ({ page, noema }) => {
+    // Every upload attempt in this test fails, so queued-0001 stays queued through every flush trigger.
+    await failFetch(page, { path: /\/api\/captures$/, method: 'POST', times: 100, fault: { status: 503, body: '{"detail":"Service busy"}', contentType: 'application/json' } });
+    await seedLocalDb(page, noema.origin, {
+      draft: { id: 'draft-0001', raw: 'Unsaved current draft', task_id: '', files: [] },
+      outbox: [
+        { id: 'queued-0001', raw: 'Queued thought about heaps', task_id: '', files: [{ name: 'heap.png', type: 'image/png', base64: PNG_1PX }] },
+        { id: 'queued-0002', raw: 'Rejected capture', task_id: '', files: [], error: 'Supported attachments: PNG, JPEG, WebP images.' },
+      ],
+    });
+    await gotoApp(page, noema, '#/capture');
+    await page.getByRole('button', { name: S.outboxCount(2) }).click();
+    const dialog = outboxDialog(page);
+    await expect(dialog.getByText(S.outboxHelp)).toBeVisible();
+    const first = dialog.getByRole('listitem').filter({ hasText: 'Queued thought about heaps' });
+    await expect(first.getByText(S.attachmentsCount(1))).toBeVisible();
+    await expect(dialog.getByRole('listitem').filter({ hasText: 'Rejected capture' }).getByRole('alert')).toContainText('Supported attachments');
+
+    page.once('dialog', (prompt) => { expect(prompt.message()).toBe(S.confirmReplaceDraft); void prompt.dismiss(); });
+    await first.getByRole('button', { name: S.openCopy }).click();
+    await expect(dialog).toBeVisible();
+    await expect(editor(page)).toHaveValue('Unsaved current draft');
+
+    page.once('dialog', (prompt) => void prompt.accept());
+    await first.getByRole('button', { name: S.openCopy }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/#\/capture$/);
+    await expect(editor(page)).toHaveValue('Queued thought about heaps');
+    await expect(page.getByRole('img', { name: 'heap.png' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: S.openedCopy })).toBeVisible();
+    const local = await readLocalDb(page);
+    expect(local.outbox.map((item) => item.id).sort()).toEqual(['queued-0001', 'queued-0002']);
+    expect((local.draft as { id: string }).id).not.toBe('queued-0001');
+
+    await page.getByRole('button', { name: S.outboxCount(2) }).click();
+    const rejected = outboxDialog(page).getByRole('listitem').filter({ hasText: 'Rejected capture' });
+    page.once('dialog', (prompt) => { expect(prompt.message()).toBe(S.confirmDiscard); void prompt.accept(); });
+    await rejected.getByRole('button', { name: S.discard }).click();
+    await expect(rejected).toHaveCount(0);
+    expect((await readLocalDb(page)).outbox.map((item) => item.id)).toEqual(['queued-0001']);
+  });
+
+  test('Retry clears a stored error and uploads the capture', async ({ page, noema }) => {
+    await seedLocalDb(page, noema.origin, { outbox: [{ id: 'retry-capture-01', raw: 'Retry me', task_id: '', files: [], error: 'Temporary rejection' }] });
+    await gotoApp(page, noema, '#/capture');
+    await page.getByRole('button', { name: S.outboxCount(1) }).click();
+    const dialog = outboxDialog(page);
+    await dialog.getByRole('button', { name: S.retry }).click();
+    await expect(dialog.getByText(S.outboxEmpty)).toBeVisible();
+    expect((await noema.api<{ raw: string }>('GET', '/api/notes/retry-capture-01')).raw).toBe('Retry me');
+  });
+
+  test('An unreadable queued record is listed with Discard only', async ({ page, noema }) => {
+    await seedLocalDb(page, noema.origin, {});
+    await page.evaluate(() => new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('noema-local-v1', 1);
+      request.onsuccess = () => {
+        const tx = request.result.transaction('outbox', 'readwrite');
+        tx.objectStore('outbox').put({ id: 'broken-0001', raw: 42 });
+        tx.oncomplete = () => { request.result.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      };
+      request.onerror = () => reject(request.error);
+    }));
+    await gotoApp(page, noema, '#/capture');
+    await page.getByRole('button', { name: S.outboxCount(1) }).click();
+    const item = outboxDialog(page).getByRole('listitem');
+    await expect(item).toContainText('This queued item cannot be read.');
+    await expect(item.getByRole('button')).toHaveCount(1);
+    page.once('dialog', (prompt) => void prompt.accept());
+    await item.getByRole('button', { name: S.discard }).click();
+    await expect(outboxDialog(page).getByText(S.outboxEmpty)).toBeVisible();
+  });
 });
