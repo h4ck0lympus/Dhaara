@@ -5,6 +5,7 @@ import { UnlockDialog } from '../dialogs/Unlock';
 import { useConnected } from '../domain/connection';
 import { RouteGuards } from '../routes/guards';
 import { useSnapshot } from '../state/queries';
+import { BackgroundField } from '../ui/BackgroundField';
 import { Icon } from '../ui/Icon';
 import { ToastHost } from '../ui/Toast';
 import { openDialog } from './dialogs';
@@ -28,6 +29,7 @@ export function AppShell(): JSX.Element {
   const letter = avatarLetter(snapshot?.settings.display_name ?? '');
   return (
     <div className="app">
+      <BackgroundField motion={snapshot?.settings.motion ?? false} />
       <Nav />
       <div className="workspace">
         <header className="topbar">
