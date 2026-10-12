@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Attachments, toastRejections } from '../capture/Attachments';
 import { SavedNotice, type SavedCapture } from '../capture/SavedNotice';
 import { COPY } from '../copy';
-import { useConnected } from '../domain/connection';
+import { connection } from '../domain/connection';
 import { isOutboxItem, outboxGet } from '../local/db';
 import { captureDraftStore, useCaptureDraft, type LocalSaveState } from '../local/drafts';
 import { ACCEPT_ATTR } from '../local/limits';
@@ -36,7 +36,6 @@ async function ackState(id: string): Promise<SavedCapture['state']> {
 export function CaptureScreen() {
   const { draft, saveState, saving } = useCaptureDraft();
   const snapshot = useSnapshot().data ?? null;
-  const connected = useConnected();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const picker = useRef<HTMLInputElement>(null);
@@ -73,7 +72,7 @@ export function CaptureScreen() {
       return;
     }
     setSaved({ id, state: 'queued' });
-    toast(connected ? S.captureSavedSending : S.captureSavedOffline);   // app.js:417
+    toast(connection.get() ? S.captureSavedSending : S.captureSavedOffline);   // app.js:417
     await runFlush(queryClient);
     try {
       const state = await ackState(id);

@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 import { S } from '../src/strings';
 import { blockIdbOpen, delayIdbTransactions, failIdbWrite } from './faults';
 import { expect, gotoApp, readLocalDb, refetch, seedLocalDb, test } from './fixtures';
@@ -13,6 +13,10 @@ const draftStatus = (page: Page) => page.locator('#draft-status');
 const saveButton = (page: Page) => page.getByRole('button', { name: 'Save note' });
 const localError = (page: Page) => page.locator('#local-save-error');
 const notice = (page: Page) => page.locator('.saved-notice');
+const goOffline = async (page: Page, context: BrowserContext) => {
+  await context.setOffline(true);
+  await expect(page.locator('.offline-banner')).toBeVisible();
+};
 const draftRaw = async (page: Page) => ((await readLocalDb(page)).draft as { raw: string }).raw;
 
 test.describe('Capture', () => {
@@ -77,7 +81,7 @@ test.describe('Capture', () => {
 
   test('While queued, Capture says the capture is on this device', async ({ page, noema, context }) => {   // handbook-trace U16; browser_check.py:136-141
     await gotoApp(page, noema, '#/capture');
-    await context.setOffline(true);
+    await goOffline(page, context);
     await editor(page).fill('Offline learning note. Keep my original.');
     await saveButton(page).click();
     await expect(editor(page)).toHaveValue('');
@@ -96,7 +100,7 @@ test.describe('Capture', () => {
     await editor(page).fill('label check');
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
     const device = await draftStatus(page).textContent();
-    await context.setOffline(true);
+    await goOffline(page, context);
     await saveButton(page).click();
     await expect(notice(page)).toHaveAttribute('data-storage', 'queued');
     const queued = await notice(page).locator('.storage-label').textContent();
@@ -364,7 +368,7 @@ test.describe('Capture on native browser storage', () => {
 test.describe('Offline Capture', () => {
   test('Offline capture remains queued in storage adapter', async ({ page, noema, context }) => {   // browser_check.py:136-139
     await gotoApp(page, noema, '#/capture');
-    await context.setOffline(true);
+    await goOffline(page, context);
     await editor(page).fill('Offline learning note. Keep my original.');
     await saveButton(page).click();
     await expect(page.getByRole('status').filter({ hasText: S.captureSavedOffline })).toBeVisible();
@@ -386,7 +390,7 @@ test.describe('Offline Capture', () => {
 
   test('Explicit offline Save atomically queues original and resets stored draft', async ({ page, noema, context }) => {   // native_storage_check.py:184
     await gotoApp(page, noema, '#/capture');
-    await context.setOffline(true);
+    await goOffline(page, context);
     await editor(page).fill('free_slot(0x1234) may leave a pointer.');
     await expect(page.locator('#draft-status')).toHaveText(S.draftSaved);
     await saveButton(page).click();
@@ -405,7 +409,7 @@ test.describe('Offline Capture', () => {
       let page = await context.newPage();
       await gotoApp(page, noema, '#/capture');
       await waitForServiceWorker(page);
-      await context.setOffline(true);
+      await goOffline(page, context);
       await editor(page).fill('Offline heap sketch');
       await page.locator('input[type=file]').setInputFiles({ name: 'heap.png', mimeType: 'image/png', buffer: PNG });
       await expect(page.getByRole('img', { name: 'heap.png' })).toBeVisible();
