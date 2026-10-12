@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEve
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Attachments, toastRejections } from '../capture/Attachments';
+import { RECORDER_TEXT, formatElapsed, useRecorder } from '../capture/Recorder';
 import { SavedNotice, type SavedCapture } from '../capture/SavedNotice';
 import { COPY } from '../copy';
 import { connection } from '../domain/connection';
@@ -41,6 +42,15 @@ export function CaptureScreen() {
   const picker = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState<SavedCapture | null>(null);
   const [dragging, setDragging] = useState(false);
+  const recorder = useRecorder();
+  const recording = recorder.phase !== 'idle';
+  const recordingGuard = useMemo<NavigationGuard | null>(
+    () => (recording
+      ? { id: 'recording', check: to => (to !== '/capture' ? { kind: 'block', toast: S.stopRecordingBeforeLeaving } : null), beforeUnload: true }
+      : null),
+    [recording],
+  );
+  useNavigationGuard(recordingGuard);
 
   const savingGuard = useMemo<NavigationGuard | null>(
     () => (saving ? { id: 'capture-saving', check: () => ({ kind: 'block', toast: S.finishingLocalSave }), beforeUnload: true } : null),
@@ -65,6 +75,10 @@ export function CaptureScreen() {
 
   async function save() {
     if (captureDraftStore.getSnapshot().saving) return;
+    if (recording) {
+      toast(S.stopRecordingBeforeSaving);   // app.js:401
+      return;
+    }
     const id = captureDraftStore.getSnapshot().draft.id;
     const result = await captureDraftStore.save();
     if (!result.ok) {
@@ -134,11 +148,31 @@ export function CaptureScreen() {
           </div>
           <div className="canvas-tools">
             <div className="tool-group">
+              {/* app.js:211, 435 */}
+              <button type="button" className="quiet-button" onClick={() => void recorder.start()} disabled={recording}><Icon name="mic" />{recorder.status === RECORDER_TEXT.added ? 'Record another thought' : 'Record a thought'}</button>
               <button type="button" className="quiet-button" onClick={() => picker.current?.click()}><Icon name="image" />Image</button>
               <button type="button" className="quiet-button" onClick={() => openDialog({ kind: 'sketch' })}><Icon name="pen" />Sketch</button>
             </div>
             <button type="button" className="primary" onClick={() => void save()}>Save note <span aria-hidden="true">↗</span></button>
           </div>
+          {recording ? (
+            <div className="recording-controls" role="group" aria-label="Recording" data-phase={recorder.phase}>
+              <span className="recording-indicator" aria-hidden="true"><Icon name={recorder.phase === 'paused' ? 'pause' : 'mic'} /></span>
+              <span className="recording-phase" aria-live="polite">
+                {recorder.phase === 'paused' ? 'Paused' : recorder.phase === 'starting' ? 'Starting…' : 'Recording'}
+              </span>
+              <span className="recording-elapsed">{formatElapsed(recorder.elapsedMs)}</span>
+              {recorder.phase === 'paused' ? (
+                <button type="button" className="secondary" onClick={recorder.resume}><Icon name="play" />Resume</button>
+              ) : (
+                <button type="button" className="secondary" onClick={recorder.pause} disabled={recorder.phase !== 'recording'}><Icon name="pause" />Pause</button>
+              )}
+              {/* app.js:438 */}
+              <button type="button" className="secondary" onClick={recorder.stop} disabled={recorder.phase === 'starting'}><Icon name="stop" />Stop recording</button>
+            </div>
+          ) : (
+            <p className="record-status">{recorder.status}</p>
+          )}
           <input
             ref={picker}
             type="file"

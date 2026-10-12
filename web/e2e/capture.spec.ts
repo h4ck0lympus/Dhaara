@@ -4,7 +4,7 @@ import { S } from '../src/strings';
 import { blockIdbOpen, delayIdbTransactions, failIdbWrite } from './faults';
 import { expect, gotoApp, readLocalDb, refetch, seedLocalDb, test } from './fixtures';
 import { serverState } from './nowSeed';
-import { MB, PNG, expectPhoneFriendly, navLink, persistentBrowser, readDraftFileBytes, waitForServiceWorker } from './screenTest';
+import { MB, PNG, beforeUnloadArmed, expectPhoneFriendly, fakeMicrophonePage, navLink, persistentBrowser, readDraftFileBytes, waitForServiceWorker } from './screenTest';
 
 const RAW = 'free_slot(0x1234) may leave a pointer. Not confirmed; changing size did not help.';   // native_storage_check.py:25
 
@@ -483,5 +483,136 @@ test.describe('Sketch', () => {
     await expect(page.getByRole('img', { name: 'sketch.png' })).toBeVisible();
     const draft = (await readLocalDb(page)).draft as { files: { name: string }[] };
     expect(draft.files.map(file => file.name)).toEqual(['sketch.png']);
+  });
+});
+
+test.describe('Capture recording', () => {
+  test('Capture has one writing surface, a mic/image/sketch toolbar and one Save note action', async ({ page, noema }) => {   // handbook-trace U13
+    await gotoApp(page, noema, '#/capture');
+    const screen = page.locator('.capture-screen');
+    await expect(screen.getByRole('heading', { level: 1 })).toHaveText('Capture a thought.');
+    await expect(screen.getByText('A quiet place for the rough edges.')).toBeVisible();
+    await expect(screen.getByRole('textbox')).toHaveCount(1);
+    await expect(screen.getByLabel(/title|folder/i)).toHaveCount(0);
+    for (const name of ['Record a thought', 'Image', 'Sketch']) await expect(screen.getByRole('button', { name, exact: true })).toBeVisible();
+    await expect(screen.getByRole('button', { name: 'Save note' })).toHaveCount(1);
+    await expect(screen.getByRole('button', { name: 'Save note' })).toHaveText('Save note ↗');
+    await expect(screen.getByRole('group', { name: 'Visuals & recordings' })).toBeVisible();
+    await expect(draftStatus(page)).toHaveText(S.draftMemory);
+  });
+
+  test('No microphone permission is requested before Record', async ({ playwright, noema }) => {   // handbook-trace R9
+    const errors: string[] = [];
+    const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
+    try {
+      await page.addInitScript(() => {
+        const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        const counter = window as unknown as { micRequests: number };
+        counter.micRequests = 0;
+        navigator.mediaDevices.getUserMedia = constraints => {
+          counter.micRequests += 1;
+          return original(constraints);
+        };
+      });
+      await gotoApp(page, noema, '#/capture');
+      await expect(page.getByText('Audio stays local until you save.')).toBeVisible();
+      await editor(page).fill('typing never opens the microphone');
+      expect(await page.evaluate('window.micRequests')).toBe(0);
+      await page.getByRole('button', { name: 'Record' }).click();
+      await expect(page.getByRole('group', { name: 'Recording', exact: true })).toBeVisible();
+      expect(await page.evaluate('window.micRequests')).toBe(1);
+      await page.getByRole('button', { name: 'Stop' }).click();
+    } finally {
+      await close();
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('Recording shows elapsed time, Pause/Resume and Stop; paused is labelled distinctly', async ({ playwright, noema }) => {   // handbook-trace U14
+    const errors: string[] = [];
+    const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
+    try {
+      await gotoApp(page, noema, '#/capture');
+      await page.getByRole('button', { name: 'Record' }).click();
+      const controls = page.getByRole('group', { name: 'Recording', exact: true });
+      await expect(controls).toHaveAttribute('data-phase', 'recording');
+      await expect(controls.locator('.recording-phase')).toHaveText('Recording');
+      await expect(controls.locator('.recording-elapsed')).not.toHaveText('0:00', { timeout: 3000 });
+      await controls.getByRole('button', { name: 'Pause' }).click();
+      await expect(controls).toHaveAttribute('data-phase', 'paused');
+      await expect(controls.locator('.recording-phase')).toHaveText('Paused');
+      await expect(controls.getByRole('button', { name: 'Resume' })).toBeVisible();
+      const frozen = await controls.locator('.recording-elapsed').textContent();
+      await page.waitForTimeout(1500);
+      await expect(controls.locator('.recording-elapsed')).toHaveText(frozen!);
+      expect(await controls.evaluate(element => getComputedStyle(element).borderTopStyle)).toBe('dashed');
+      await controls.getByRole('button', { name: 'Resume' }).click();
+      await expect(controls.locator('.recording-phase')).toHaveText('Recording');
+      expect(await controls.evaluate(element => getComputedStyle(element).borderTopStyle)).toBe('solid');
+      await controls.getByRole('button', { name: 'Stop' }).click();
+      await expect(controls).toBeHidden();
+      await expect(page.getByText('Recording added. Save when ready.')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Record another thought' })).toBeVisible();
+      await expect(page.locator('.attachment audio')).toHaveCount(1);
+      await expect(page.locator('.attachment-name')).toHaveText(/^voice-.*\.webm$/);
+      await saveButton(page).click();
+      await expect(notice(page)).toContainText('Saved on your server');
+      const [note] = (await serverState(noema)).notes;
+      const full = await noema.api<{ attachments: { mime: string }[] }>('GET', `/api/notes/${note.id}`);
+      expect(full.attachments.map(attachment => attachment.mime)).toEqual(['audio/webm']);
+    } finally {
+      await close();
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('Visual tray stays usable while recording', async ({ playwright, noema }) => {   // handbook-trace U14
+    const errors: string[] = [];
+    const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
+    try {
+      await gotoApp(page, noema, '#/capture');
+      await page.getByRole('button', { name: 'Record' }).click();
+      const controls = page.getByRole('group', { name: 'Recording', exact: true });
+      await expect(controls).toBeVisible();
+      await page.locator('input[type=file]').setInputFiles({ name: 'while-recording.png', mimeType: 'image/png', buffer: PNG });
+      await expect(page.getByRole('img', { name: 'while-recording.png' })).toBeVisible();
+      await page.getByRole('button', { name: 'Sketch' }).click();
+      await expect(page.getByRole('dialog', { name: 'A quick sketch' })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'A quick sketch' })).toBeHidden();
+      await expect(controls).toHaveAttribute('data-phase', 'recording');
+      await controls.getByRole('button', { name: 'Stop' }).click();
+      await expect(page.locator('.attachment')).toHaveCount(2);
+    } finally {
+      await close();
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test('Save, navigation and unload are refused while recording', async ({ playwright, noema }) => {   // spec §4.5 guards
+    const errors: string[] = [];
+    const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
+    try {
+      await gotoApp(page, noema, '#/capture');
+      expect(await beforeUnloadArmed(page)).toBe(false);
+      await editor(page).fill('thinking aloud');
+      await page.getByRole('button', { name: 'Record' }).click();
+      await expect(page.getByRole('group', { name: 'Recording', exact: true })).toBeVisible();
+      await saveButton(page).click();
+      await expect(page.getByRole('status').filter({ hasText: S.stopRecordingBeforeSaving })).toBeVisible();
+      expect((await readLocalDb(page)).outbox).toEqual([]);
+      await navLink(page, 'Notes').click();
+      await expect(page.getByRole('status').filter({ hasText: S.stopRecordingBeforeLeaving })).toBeVisible();
+      await expect(page).toHaveURL(/#\/capture$/);
+      expect(await beforeUnloadArmed(page)).toBe(true);
+      await page.getByRole('button', { name: 'Stop' }).click();
+      await expect(page.getByRole('group', { name: 'Recording', exact: true })).toBeHidden();
+      expect(await beforeUnloadArmed(page)).toBe(false);
+      await navLink(page, 'Notes').click();
+      await expect(page).toHaveURL(/#\/notes$/);
+    } finally {
+      await close();
+    }
+    expect(errors).toEqual([]);
   });
 });
