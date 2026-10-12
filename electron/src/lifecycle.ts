@@ -1,5 +1,11 @@
+import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
+import type { Readable, Writable } from 'node:stream';
+import { setTimeout as delay } from 'node:timers/promises';
 import { ensurePrivateDir, hasFinalComponent } from './paths.js';
 
 export const DEFAULT_MANAGED_PORT = 8765, STOP_GRACE_MS = 5_000, TERM_GRACE_MS = 1_000, ACK_MAX_BYTES = 4_096;
@@ -83,4 +89,249 @@ export function ackMatches(line: string, expected: { instance: string; pid: numb
 export function identityMatches(body: unknown, expected: { instance: string; pid: number }): boolean {
   return hasExactKeys(body, ['protocol', 'instance', 'pid']) && body.protocol === 2
     && body.instance === expected.instance && body.pid === expected.pid;
+}
+
+export type ManagedConfig = { python: string; entryPoint: string; workspace: string /* canonical */; port: number; timeoutMs: number; env: NodeJS.ProcessEnv };
+export type ServiceHandle = { pid: number; instance: string; origin: string };
+export type ManagedState = 'idle' | 'starting' | 'running' | 'crashed' | 'stopping' | 'stopped';
+type Child = ChildProcessByStdio<Writable, Readable, null>;
+
+const IDENTITY_MAX_BYTES = 8_192;   // service.rs:256
+const POLL_MS = 40;                 // service.rs:106
+const cancelledError = () => new LifecycleError('cancelled', MESSAGES.cancelled);
+
+function signalGroup(pgid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(-pgid, signal);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'ESRCH' && code !== 'EPERM') throw error;   // ESRCH: group already gone (success); EPERM: never ours
+  }
+}
+
+function groupAlive(pgid: number): boolean {
+  try {
+    process.kill(-pgid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** GET /api/desktop-instance with no proxy and no credentials; anything but a 200 JSON body is null. */
+function readIdentity(port: number, timeoutMs: number): Promise<unknown> {
+  return new Promise((resolve) => {
+    const request = http.get({ host: '127.0.0.1', port, path: '/api/desktop-instance', agent: false, timeout: timeoutMs }, (response) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      response.on('data', (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > IDENTITY_MAX_BYTES) request.destroy();
+        else chunks.push(chunk);
+      });
+      response.on('end', () => {
+        if (response.statusCode !== 200) return resolve(null);
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+        } catch {
+          resolve(null);
+        }
+      });
+      response.on('error', () => resolve(null));
+    });
+    request.on('timeout', () => request.destroy());
+    request.on('error', () => resolve(null));
+    request.on('close', () => resolve(null));   // a destroyed or truncated response is never an identity
+  });
+}
+
+/** Owns at most one Python service process group (spec §6.4). */
+export class ManagedService extends EventEmitter<{ crashed: [LifecycleError]; exit: [number | null] }> {
+  readonly #config: ManagedConfig;
+  #state: ManagedState = 'idle';
+  #child: Child | null = null;
+  #handle: ServiceHandle | null = null;
+  #starting: Promise<ServiceHandle> | null = null;
+  #cancelled = false;
+  #abort: ((error: LifecycleError) => void) | null = null;
+  readonly #exits = new WeakMap<Child, Promise<number | null>>();
+  readonly #stops = new WeakMap<Child, Promise<void>>();
+
+  constructor(config: ManagedConfig) {
+    super();
+    this.#config = config;
+  }
+
+  get state(): ManagedState {
+    return this.#state;
+  }
+
+  /** Serialised: concurrent calls share one attempt; a running service is returned as is. */
+  start(): Promise<ServiceHandle> {
+    if (this.#starting) return this.#starting;
+    if (this.#state === 'running' && this.#handle) return Promise.resolve(this.#handle);
+    const attempt = this.#launch();
+    this.#starting = attempt;
+    const settle = () => {
+      if (this.#starting === attempt) this.#starting = null;
+    };
+    attempt.then(settle, settle);
+    return attempt;
+  }
+
+  /** During starting: abort the attempt so start() rejects with 'cancelled'. Then stop whatever is left. */
+  async cancel(): Promise<void> {
+    const attempt = this.#starting;
+    if (attempt) {
+      this.#cancelled = true;
+      this.#abort?.(cancelledError());
+      await attempt.catch(() => undefined);
+    }
+    await this.stop();
+  }
+
+  async stop(): Promise<void> {
+    const child = this.#child;
+    if (child === null) {
+      this.#state = 'stopped';
+      return;
+    }
+    if (this.#state === 'running' || this.#state === 'crashed') this.#state = 'stopping';
+    await this.#stopChild(child);
+    if (this.#child === child && this.#state !== 'starting') {
+      this.#state = 'stopped';
+      this.#handle = null;
+    }
+  }
+
+  async #launch(): Promise<ServiceHandle> {
+    this.#cancelled = false;
+    const previous = this.#child;
+    if (previous) await this.#stopChild(previous);   // Retry never spawns while an owned group is alive
+    if (this.#cancelled) {
+      this.#state = 'stopped';
+      throw cancelledError();
+    }
+    this.#state = 'starting';
+    this.#handle = null;
+    const { python, entryPoint, workspace, port, timeoutMs } = this.#config;
+    const deadline = Date.now() + timeoutMs;
+    const instance = randomBytes(32).toString('hex');
+    const env: NodeJS.ProcessEnv = { ...this.#config.env };
+    for (const key of STRIPPED_ENV) delete env[key];
+    let child: Child;
+    try {
+      child = spawn(python, [entryPoint, '--desktop-managed', '--host', '127.0.0.1', '--port', String(port), '--data-dir', workspace, '--owner-pid', String(process.pid)],
+        { detached: true, stdio: ['pipe', 'pipe', 'ignore'], env });
+    } catch {
+      this.#state = 'crashed';   // e.g. an empty --python is rejected synchronously
+      throw new LifecycleError('python-missing', MESSAGES.pythonMissing);
+    }
+    this.#child = child;
+    this.#exits.set(child, new Promise((resolve) => {
+      child.on('exit', (code) => resolve(code));
+      child.on('error', () => {
+        if (child.pid === undefined) resolve(null);   // spawn failure: no 'exit' follows
+      });
+    }));
+    child.on('exit', (code) => this.#onExit(child, code));
+    // Attached before any early return: an unhandled stream 'error' would crash Electron main (spec §6.4.2).
+    let leaseFailed = false;
+    child.stdin.on('error', () => {
+      leaseFailed = true;   // EPIPE: Python is already gone
+    });
+    child.stdout.on('error', () => undefined);
+    if (child.pid === undefined) {
+      await this.#exits.get(child);
+      this.#state = 'crashed';
+      throw new LifecycleError('python-missing', MESSAGES.pythonMissing);
+    }
+    const pid: number = child.pid;
+    child.stdin.write(`${JSON.stringify({ instance })}\n`);   // stdin stays open: it is the lifetime lease
+    try {
+      const line = await this.#readAck(child, deadline, () => leaseFailed);
+      if (!ackMatches(line, { instance, pid, workspace, port })) throw new LifecycleError('identity', MESSAGES.identity);
+      const body = await readIdentity(port, Math.max(250, deadline - Date.now()));
+      if (this.#cancelled) throw cancelledError();
+      if (!identityMatches(body, { instance, pid })) throw new LifecycleError('identity', MESSAGES.identity);
+      if (child.exitCode !== null || child.signalCode !== null) throw exitCodeError(child.exitCode);
+      this.#state = 'running';
+      this.#handle = { pid, instance, origin: `http://127.0.0.1:${port}` };
+      return this.#handle;
+    } catch (error) {
+      await this.#stopChild(child);   // an identity or startup failure stops the service (spec §6.4.4)
+      if (this.#cancelled) {
+        this.#state = 'stopped';
+        throw cancelledError();
+      }
+      this.#state = 'crashed';
+      throw error;
+    }
+  }
+
+  /** Raw bytes up to the first '\n' or ACK_MAX_BYTES within the deadline; the stream is destroyed afterwards. */
+  #readAck(child: Child, deadline: number, leaseFailed: () => boolean): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let buffer = Buffer.alloc(0);
+      let settled = false;
+      const finish = (settle: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        child.stdout.off('data', onData);
+        child.stdout.destroy();   // later output is never read or logged
+        this.#abort = null;
+        settle();
+      };
+      const onData = (chunk: Buffer) => {
+        buffer = Buffer.concat([buffer, chunk]);
+        const newline = buffer.indexOf(0x0a);
+        if (newline >= 0 && newline < ACK_MAX_BYTES) finish(() => resolve(buffer.subarray(0, newline).toString('utf8')));
+        else if (buffer.length >= ACK_MAX_BYTES) finish(() => reject(new LifecycleError('identity', MESSAGES.identity)));
+      };
+      const timer = setTimeout(() => finish(() => reject(new LifecycleError('timeout', MESSAGES.timeout))), Math.max(0, deadline - Date.now()));
+      this.#abort = (error) => finish(() => reject(error));
+      child.stdout.on('data', onData);
+      void this.#exits.get(child)!.then((code) => finish(() => reject(leaseFailed() ? new LifecycleError('early-exit', MESSAGES.earlyExit) : exitCodeError(code))));
+      if (this.#cancelled) this.#abort(cancelledError());
+    });
+  }
+
+  #onExit(child: Child, code: number | null): void {
+    this.emit('exit', code);
+    if (this.#child !== child || this.#state !== 'running') return;
+    this.#state = 'crashed';
+    this.#handle = null;
+    void this.#stopChild(child);   // group cleanup always runs after an observed exit (spec §6.4.7)
+    this.emit('crashed', new LifecycleError('crashed', MESSAGES.crashed));
+  }
+
+  #stopChild(child: Child): Promise<void> {
+    let stopping = this.#stops.get(child);
+    if (!stopping) {
+      stopping = this.#terminate(child);
+      this.#stops.set(child, stopping);
+    }
+    return stopping;
+  }
+
+  /** Close stdin → ≤5 s → SIGTERM -pgid → ≤1 s → SIGKILL -pgid → reap. ESRCH counts as success. */
+  async #terminate(child: Child): Promise<void> {
+    const exited = this.#exits.get(child) ?? Promise.resolve(null);
+    const pgid = child.pid;
+    if (pgid === undefined) {
+      await exited;
+      return;
+    }
+    if (!child.stdin.destroyed) child.stdin.end();   // closing the lease asks Python to stop its own group
+    const grace = new AbortController();
+    await Promise.race([exited, delay(STOP_GRACE_MS, undefined, { signal: grace.signal }).catch(() => undefined)]);
+    grace.abort();
+    // The group id stays reserved while any member lives, so this reaches only our group or returns ESRCH.
+    signalGroup(pgid, 'SIGTERM');
+    const termDeadline = Date.now() + TERM_GRACE_MS;
+    while (groupAlive(pgid) && Date.now() < termDeadline) await delay(POLL_MS);
+    signalGroup(pgid, 'SIGKILL');
+    await exited;   // Node reaps the leader
+  }
 }
