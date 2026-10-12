@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { chromium, type Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
 import type { NoemaServer } from './server';
 
@@ -385,3 +385,48 @@ test.describe('terrain pixels', () => {
     expect(outside).toBeGreaterThan(0);
   });
 });
+
+test.describe('terrain layout fidelity', () => {
+  test('collapsing the sidebar moves the quiet rects with the surfaces', async ({ page, noema }) => {
+    await openField(page, noema);
+    await expectState(page, 'static');
+    await expect.poll(async () => (await quietPixels(page)).total).toBeGreaterThan(0);
+    await page.getByRole('button', { name: 'Collapse sidebar' }).click();
+    await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
+    await expect.poll(async () => (await quietPixels(page)).lit).toBe(0);
+  });
+
+  // A dedicated browser: Playwright hides scrollbars by default, and launchOptions cannot be set per describe.
+  test.describe('with a classic scrollbar', () => {
+    test('no strokes under the right edge of the reading column', async ({ noema }) => {
+      const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      try {
+        await checkScrollbarEdge(page, noema);
+      } finally {
+        await browser.close();
+      }
+    });
+  });
+});
+
+async function checkScrollbarEdge(page: Page, noema: NoemaServer): Promise<void> {
+  await openField(page, noema);
+  await expectState(page, 'static');
+  await page.evaluate(() => {
+    const tall = document.createElement('div');
+    tall.style.cssText = 'height:4000px;width:1px;position:absolute;top:0;left:0;pointer-events:none';
+    document.body.append(tall);
+    window.dispatchEvent(new Event('resize'));
+  });
+  expect(await page.evaluate(() => innerWidth - document.documentElement.clientWidth), 'a classic scrollbar is present').toBeGreaterThan(0);
+  await expect.poll(async () => (await quietPixels(page)).total).toBeGreaterThan(0);
+  // The strokes sit under the quiet rects only if the backing store maps 1:1 onto the CSS box: a store sized from
+  // innerWidth (scrollbar included) is squeezed into the narrower box and shifts every rect. A screenshot strip is too
+  // faint to see the shift (strokes next to a quiet rect are near alpha 0), so assert the mapping itself.
+  const ratios = await page.locator(FIELD).evaluate((canvas) => {
+    const c = canvas as HTMLCanvasElement;
+    return { x: c.width / c.clientWidth, y: c.height / c.clientHeight };
+  });
+  expect(Math.abs(ratios.x - ratios.y)).toBeLessThan(0.001);
+}

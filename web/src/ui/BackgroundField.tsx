@@ -47,6 +47,7 @@ type Resources = {
   vao: WebGLVertexArrayObject;
   float: boolean;
 };
+const NOT_DRAWING = 'The field is not drawing';
 type Controller = { setMotion(on: boolean): void; stop(): void };
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
@@ -138,15 +139,15 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   const reads: PixelRead[] = [];
   const e2e = new URLSearchParams(window.location.search).get('e2e') === '1';
   let resources: Resources | null = null;
-  let frames = 0, frameTimer = 0, seamTimer = 0, idleTimer = 0;
+  let frames = 0, frameTimer = 0, seamTimer = 0, idleTimer = 0, scrollTimer = 0, resizeTimer = 0;
 
   function rejectReads(): void {
-    for (const read of reads.splice(0)) read.reject(new Error('The field is not drawing'));
+    for (const read of reads.splice(0)) read.reject(new Error(NOT_DRAWING));
   }
   function readPixel(x: number, y: number): Promise<Pixel> {
     return new Promise((resolve, reject) => {
       if (!resources) {
-        reject(new Error('The field is not drawing'));
+        reject(new Error(NOT_DRAWING));
         return;
       }
       reads.push({ x, y, resolve, reject });
@@ -178,7 +179,7 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
 
   function prepare(): void {
     resources = createResources(gl);
-    if (resources && !allocateGrid(gl, resources, grid)) resources = null;
+    if (resources && !allocateGrid(gl, resources, grid)) release();
     inputs.supported = resources !== null;
   }
 
@@ -235,10 +236,22 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
     return drawMs;
   }
 
+  function release(): void {
+    const r = resources;
+    resources = null;
+    if (!r) return;
+    gl.deleteProgram(r.height);
+    gl.deleteProgram(r.stroke);
+    gl.deleteBuffer(r.instances);
+    gl.deleteTexture(r.texture);
+    gl.deleteFramebuffer(r.framebuffer);
+    gl.deleteVertexArray(r.vao);
+  }
+
   function regrid(): void {
     grid = gridSize(QUALITY_STEPS[quality.quality]);
     if (resources && !allocateGrid(gl, resources, grid)) {
-      resources = null;
+      release();
       inputs.supported = false;
       apply();
     }
@@ -287,13 +300,21 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
 
   function onQuietChange(): void {
     if (!resources || document.hidden) return;
-    const state = canvas.dataset.state;
-    if (measureQuiet() && (state === 'static' || state === 'paused')) draw();
+    if (measureQuiet() && (shown === 'static' || shown === 'paused')) draw();
+  }
+
+  // Scroll and live-drag resize fire at display rate; one pending timer per kind keeps a still state to the animated frame budget.
+  function onScroll(): void {
+    if (!scrollTimer) scrollTimer = window.setTimeout(() => { scrollTimer = 0; onQuietChange(); }, FRAME_INTERVAL_MS);
+  }
+  function onResize(): void {
+    if (!resizeTimer) resizeTimer = window.setTimeout(() => { resizeTimer = 0; resize(); }, FRAME_INTERVAL_MS);
   }
 
   function resize(): void {
-    cssWidth = Math.max(1, window.innerWidth);
-    cssHeight = Math.max(1, window.innerHeight);
+    // The canvas is fixed to the layout viewport, which excludes a classic scrollbar that window.innerWidth includes.
+    cssWidth = Math.max(1, canvas.clientWidth);
+    cssHeight = Math.max(1, canvas.clientHeight);
     const backing = backingSize(cssWidth, cssHeight, window.devicePixelRatio);
     canvas.width = backing.width;
     canvas.height = backing.height;
@@ -348,6 +369,8 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   function observeQuiet(): void {
     resizeObserver.disconnect();
     document.querySelectorAll(QUIET_SELECTOR).forEach((element) => resizeObserver.observe(element));
+    // Collapsing the sidebar moves every quiet surface without resizing it; the content host's width does change.
+    resizeObserver.observe(document.querySelector('main') ?? document.body);
   }
   const mutationObserver = new MutationObserver(() => {
     observeQuiet();
@@ -359,8 +382,8 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   mutationObserver.observe(document.getElementById('root') ?? document.body, { childList: true, subtree: true });
   ACTIVITY_EVENTS.forEach((type) => window.addEventListener(type, onActivity, LISTEN));
   window.addEventListener('blur', onBlur);
-  window.addEventListener('resize', resize);
-  window.addEventListener('scroll', onQuietChange, LISTEN);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('scroll', onScroll, LISTEN);
   document.addEventListener('visibilitychange', onVisibility);
   reduced.addEventListener('change', onReduced);
   canvas.addEventListener('webglcontextlost', onLost);
@@ -378,25 +401,19 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
       window.clearTimeout(frameTimer);
       window.clearTimeout(seamTimer);
       window.clearTimeout(idleTimer);
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       ACTIVITY_EVENTS.forEach((type) => window.removeEventListener(type, onActivity, LISTEN));
       window.removeEventListener('blur', onBlur);
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('scroll', onQuietChange, LISTEN);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll, LISTEN);
       document.removeEventListener('visibilitychange', onVisibility);
       reduced.removeEventListener('change', onReduced);
       canvas.removeEventListener('webglcontextlost', onLost);
       canvas.removeEventListener('webglcontextrestored', onRestored);
-      if (resources) {
-        gl.deleteProgram(resources.height);
-        gl.deleteProgram(resources.stroke);
-        gl.deleteBuffer(resources.instances);
-        gl.deleteTexture(resources.texture);
-        gl.deleteFramebuffer(resources.framebuffer);
-        gl.deleteVertexArray(resources.vao);
-      }
-      resources = null;
+      release();
       rejectReads();
       if (e2e) delete window.__noemaField;
     },

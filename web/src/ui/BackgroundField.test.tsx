@@ -1,10 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/react';
-import { act } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BackgroundField } from './BackgroundField';
-// Vite's ?raw import (typed by vite/client) gives the source text without needing Node types in src/.
-import SOURCE from './BackgroundField.tsx?raw';
+import { FRAME_INTERVAL_MS } from './field';
 
 function withoutWebGl2() {
   return vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
@@ -48,25 +46,6 @@ describe('BackgroundField', () => {
     await expect(window.__noemaField!.readPixel(0, 0)).rejects.toThrow('The field is not drawing');
     unmount();
     expect(window.__noemaField).toBeUndefined();
-  });
-
-  it('schedules frames with setTimeout only: no requestAnimationFrame loop and no quiet-rect polling', () => {
-    expect(SOURCE).not.toContain('requestAnimationFrame');
-    expect(SOURCE).not.toContain('setInterval');
-    expect(SOURCE).toContain('window.setTimeout(tick, FRAME_INTERVAL_MS)');
-    expect(SOURCE).toContain('Math.min(now - last, MAX_STEP_MS)');
-  });
-
-  it('recomputes quiet rects from a ResizeObserver, a MutationObserver on the app root and scroll', () => {
-    expect(SOURCE).toContain('new ResizeObserver(onQuietChange)');
-    expect(SOURCE).toContain('{ childList: true, subtree: true }');
-    expect(SOURCE).toContain("window.addEventListener('scroll', onQuietChange, LISTEN)");
-  });
-
-  it('renders the height pass into RGBA16F when EXT_color_buffer_float is available and falls back to packed RGBA8', () => {
-    expect(SOURCE).toContain("gl.getExtension('EXT_color_buffer_float') !== null");
-    expect(SOURCE).toContain('float ? gl.RGBA16F : gl.RGBA8');
-    expect(SOURCE).toContain('gl.drawArraysInstanced(gl.LINES, 0, 2, grid.columns * grid.rows)');
   });
 });
 
@@ -152,6 +131,66 @@ describe('BackgroundField with a WebGL2 context', () => {
     expect(calls.deleteProgram).toHaveBeenCalledTimes(2);
     expect(calls.deleteBuffer).toHaveBeenCalledTimes(1);
     expect(calls.deleteTexture).toHaveBeenCalledTimes(1);
+  });
+
+  it('animates through setTimeout only: no requestAnimationFrame loop and no polling interval', () => {
+    const raf = vi.spyOn(window, 'requestAnimationFrame');
+    const interval = vi.spyOn(window, 'setInterval');
+    const { container } = render(<BackgroundField motion />);
+    expect(container.querySelector('canvas')!.dataset.state).toBe('animated');
+    act(() => { vi.advanceTimersByTime(1000); });
+    expect(draws()).toBeGreaterThan(3);
+    expect(raf).not.toHaveBeenCalled();
+    expect(interval).not.toHaveBeenCalled();
+  });
+
+  for (const type of ['pointermove', 'keydown', 'wheel', 'touchstart', 'focus']) {
+    it(`resumes from idle on ${type}`, () => {
+      const { container } = render(<BackgroundField motion />);
+      const canvas = container.querySelector('canvas')!;
+      act(() => { vi.advanceTimersByTime(61_000); });
+      expect(canvas.dataset.state).toBe('paused');
+      // An element focus reaches the window listener only through capture; a window focus is covered by the blur/focus e2e test.
+      const target = type === 'focus' ? container.appendChild(document.createElement('button')) : window;
+      act(() => { target.dispatchEvent(new Event(type)); });
+      expect(canvas.dataset.state).toBe('animated');
+    });
+  }
+
+  it('coalesces a burst of scroll events over a moving quiet surface into one still redraw', () => {
+    const surface = document.body.appendChild(document.createElement('div'));
+    surface.setAttribute('data-quiet', '');
+    let top = 0;
+    surface.getBoundingClientRect = () => ({ left: 0, top: (top += 20), width: 100, height: 100, right: 100, bottom: top + 100, x: 0, y: top, toJSON() {} });
+    // jsdom has no layout, so the fixed canvas would measure 0 x 0 and clip the surface away.
+    vi.spyOn(HTMLCanvasElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
+    vi.spyOn(HTMLCanvasElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    const { container } = render(<BackgroundField motion={false} />);
+    expect(container.querySelector('canvas')!.dataset.state).toBe('static');
+    const before = draws();
+    act(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('scroll')); });
+    act(() => { vi.advanceTimersByTime(FRAME_INTERVAL_MS); });
+    expect(draws()).toBe(before + 1);
+    surface.remove();
+  });
+
+  it('coalesces a burst of resize events into one still redraw', () => {
+    render(<BackgroundField motion={false} />);
+    const before = draws();
+    act(() => { for (let i = 0; i < 10; i++) window.dispatchEvent(new Event('resize')); });
+    act(() => { vi.advanceTimersByTime(FRAME_INTERVAL_MS); });
+    expect(draws()).toBe(before + 1);
+  });
+
+  it('releases its GL resources when a regrid fails', () => {
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    const { unmount } = render(<BackgroundField motion />);
+    calls.checkFramebufferStatus.mockReturnValue(0);
+    for (let i = 0; i < 30; i++) { now += 300; act(() => { vi.advanceTimersByTime(300); }); }
+    expect(calls.deleteProgram).toHaveBeenCalledTimes(2);
+    unmount();
+    expect(calls.deleteProgram).toHaveBeenCalledTimes(2);
   });
 
   it('steps quality down from the measured tick interval, not CPU submit time', () => {
