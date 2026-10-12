@@ -4,6 +4,7 @@ import { useNote, useUpdateNote } from '../state/queries';
 import { S } from '../strings';
 import { Icon } from '../ui/Icon';
 import { messageOf } from '../ui/Toast';
+import { FOLDER_MAX } from '../screens/notesList';
 
 export type SavedCapture = { id: string; state: 'queued' | 'rejected' | 'server' };
 
@@ -14,7 +15,6 @@ export const STORAGE_LABELS = {
   server: 'Saved on your server',                             // new
 } as const;
 
-export const FOLDER_MAX_LENGTH = 240;   // models.py NoteUpdate.folder
 
 type Props = { saved: SavedCapture; onOpenNote: (id: string) => void; onOpenQueue: () => void; onDismiss: () => void };
 
@@ -83,7 +83,7 @@ function ServerSaved({ id, onOpenNote }: { id: string; onOpenNote: (id: string) 
       </div>
       {changing && (
         <form className="folder-form" onSubmit={event => void move(event)}>
-          <label>Folder<input value={folder} maxLength={FOLDER_MAX_LENGTH} onChange={event => setFolder(event.target.value)} /></label>
+          <label>Folder<input value={folder} maxLength={FOLDER_MAX} onChange={event => setFolder(event.target.value)} /></label>
           <button type="submit" className="secondary" disabled={update.isPending}>Move</button>
           <button type="button" className="quiet-button" onClick={() => { setChanging(false); setError(null); }}>Cancel</button>
         </form>

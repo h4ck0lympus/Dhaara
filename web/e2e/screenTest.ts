@@ -1,5 +1,7 @@
 import type { BrowserContext, BrowserType, Locator, Page } from '@playwright/test';
 import { expect, PNG_1PX } from './fixtures';
+import { note } from './nowSeed';
+import type { NoemaServer } from './server';
 
 export const MB = 1024 * 1024;
 export const PNG = Buffer.from(PNG_1PX, 'base64');   // native_storage_check.py:24
@@ -75,3 +77,10 @@ export function beforeUnloadArmed(page: Page): Promise<boolean> {
     return event.defaultPrevented;
   });
 }
+
+export type CreatedNote = { id: string; title: string; folder: string; body: string; raw: string; version: number; task_id: string | null };
+
+export const createNote = (noema: NoemaServer, raw: string) => note(noema, raw) as Promise<CreatedNote>;
+
+export const editNote = (noema: NoemaServer, from: CreatedNote, changes: Partial<Pick<CreatedNote, 'title' | 'folder' | 'body'>>) =>
+  noema.api<CreatedNote>('PUT', `/api/notes/${from.id}`, { title: from.title, folder: from.folder, body: from.body, ...changes, expected_version: from.version });

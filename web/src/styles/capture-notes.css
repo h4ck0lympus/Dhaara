@@ -49,7 +49,7 @@
 .note-navigation button[aria-pressed=true] { color: var(--text); background: var(--surface); font-weight: 600; }
 .note-navigation .count { margin-left: auto; font-size: 12px; }
 .list-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.pane-toggle { display: none; }
+.notes-layout .pane-toggle { display: none; }   /* beats .quiet-button in ui.css */
 .note-row { display: flex; flex-direction: column; gap: 4px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
 .note-row-title { font-size: 16px; }
 .note-row-meta { font-size: 13px; color: var(--muted); }
@@ -89,7 +89,7 @@
 /* Breakpoints match the Phase 2a shell (02-screens-core.md shell.css): 649.98 px and 999.98 px. */
 @media (min-width: 650px) and (max-width: 999.98px) and (orientation: landscape) {
   .notes-layout { grid-template-columns: 155px minmax(0, 1fr); gap: 20px; }
-  .pane-toggle { display: inline-flex; }
+  .notes-layout .pane-toggle { display: inline-flex; }
   .notes-layout.pane-closed { grid-template-columns: minmax(0, 1fr); }
   .notes-layout.pane-closed .note-navigation { display: none; }
 }
