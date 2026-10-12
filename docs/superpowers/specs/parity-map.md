@@ -79,27 +79,27 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 60 | qa/browser_check.py:132 | Note edits create revision and retain raw text | P4 | web/e2e/notes.spec.ts | planned |
 | 61 | qa/browser_check.py:133 | Original tab shows untouched capture | P4 | web/e2e/notes.spec.ts | planned |
 | 62 | qa/browser_check.py:135 | History restore adds another revision | P4 | web/e2e/notes.spec.ts | planned |
-| 63 | qa/browser_check.py:139 | Offline capture remains queued in storage adapter | P4 | web/e2e/offline.spec.ts | planned |
+| 63 | qa/browser_check.py:139 | Offline capture remains queued in storage adapter | P4 | web/e2e/capture.spec.ts | planned |
 | 64 | qa/browser_check.py:141 | Reconnect flushes queued capture to real server | P1 | web/e2e/outbox.spec.ts | planned |
 | 65 | qa/browser_check.py:144 | Note renderer does not execute untrusted HTML | P4 | web/e2e/notes.spec.ts | planned |
 | 66 | qa/browser_check.py:147 | Phone layout has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
-| 67 | qa/browser_check.py:150 | Phone capture has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
+| 67 | qa/browser_check.py:150 | Phone capture has no horizontal overflow | P4 | web/e2e/capture.spec.ts | planned |
 | 68 | qa/browser_check.py:152 | Tablet layout has no horizontal overflow | P4 | web/e2e/layout.spec.ts | planned |
 | 69 | qa/browser_check.py:154 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | planned |
 | 70 | qa/native_storage_check.py:156 | Real loopback navigation and native service worker control | P1 | web/e2e/sw.spec.ts | planned |
 | 71 | qa/native_storage_check.py:160 | Older committed draft cannot label newer input as saved | P2 | web/src/local/drafts.test.ts | planned |
 | 72 | qa/native_storage_check.py:166 | Unsaved draft never ingested into server notebook | P4 | web/e2e/capture.spec.ts | planned |
 | 73 | qa/native_storage_check.py:175 | Draft text and exact Blob bytes survive browser process restart | P4 | web/e2e/capture.spec.ts | planned |
-| 74 | qa/native_storage_check.py:179 | Service worker opens actual capture UI offline with last snapshot | P4 | web/e2e/offline.spec.ts | planned |
-| 75 | qa/native_storage_check.py:184 | Explicit offline Save atomically queues original and resets stored draft | P4 | web/e2e/offline.spec.ts | planned |
-| 76 | qa/native_storage_check.py:193 | Queued attachment capture survives offline browser restart | P4 | web/e2e/offline.spec.ts | planned |
+| 74 | qa/native_storage_check.py:179 | Service worker opens actual capture UI offline with last snapshot | P4 | web/e2e/capture.spec.ts | planned |
+| 75 | qa/native_storage_check.py:184 | Explicit offline Save atomically queues original and resets stored draft | P4 | web/e2e/capture.spec.ts | planned |
+| 76 | qa/native_storage_check.py:193 | Queued attachment capture survives offline browser restart | P4 | web/e2e/capture.spec.ts | planned |
 | 77 | qa/native_storage_check.py:197 | Reconnect receives matching real server acknowledgment | P1 | web/e2e/outbox.spec.ts | planned |
 | 78 | qa/native_storage_check.py:204 | Reconnect delivers one original note and exact attachment bytes | P1 | web/e2e/outbox.spec.ts | planned |
 | 79 | qa/native_storage_check.py:215 | Aborted atomic Save keeps persisted draft and rolls back queue insertion | P4 | web/e2e/capture.spec.ts | planned |
 | 80 | qa/native_storage_check.py:218 | Reload recovers original draft after transaction abort | P4 | web/e2e/capture.spec.ts | planned |
 | 81 | qa/native_storage_check.py:224 | Native abort after request success still rolls back both stores | P2 | web/src/local/drafts.test.ts | planned |
 | 82 | qa/native_storage_check.py:230 | Injected quota failure has persistent truthful UI and retains editor text | P4 | web/e2e/capture.spec.ts | planned |
-| 83 | qa/native_storage_check.py:233 | Recovery control fits phone viewport | P4 | web/e2e/layout.spec.ts | planned |
+| 83 | qa/native_storage_check.py:233 | Recovery control fits phone viewport | P4 | web/e2e/capture.spec.ts | planned |
 | 84 | qa/native_storage_check.py:238 | Retry commits recovered edit through native IndexedDB | P4 | web/e2e/capture.spec.ts | planned |
 | 85 | qa/native_storage_check.py:254 | Lost server acknowledgment retains queued capture ID | P1 | web/e2e/outbox.spec.ts | planned |
 | 86 | qa/native_storage_check.py:266 | Browser/server restart retries lost acknowledgment without duplicate notes | P1 | web/e2e/outbox.spec.ts | planned |
