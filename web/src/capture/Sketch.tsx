@@ -146,6 +146,11 @@ export function SketchDialog({ onClose }: { onClose: () => void }) {
         toast('The sketch could not be exported. Try again.', { tone: 'error' });
         return;
       }
+      if (captureDraftStore.getSnapshot().saving) {   // a save began after the click
+        setAdding(false);
+        setNotice(S.finishingLocalSave);
+        return;
+      }
       try {
         const rejections = await captureDraftStore.addFiles([new File([blob], 'sketch.png', { type: 'image/png' })]);
         toastRejections(rejections);

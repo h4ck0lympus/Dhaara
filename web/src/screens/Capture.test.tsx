@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { S } from '../strings';
 
-const { save, connectionGet } = vi.hoisted(() => ({ save: vi.fn(), connectionGet: vi.fn() }));
+const { save, connectionGet, addFiles, busy } = vi.hoisted(() => ({ save: vi.fn(), connectionGet: vi.fn(), addFiles: vi.fn(async () => []), busy: { saving: false } }));
 vi.mock('../domain/connection', () => ({ connection: { get: connectionGet } }));
 vi.mock('../local/drafts', () => ({
   useCaptureDraft: () => ({ draft: { id: 'd1', raw: 'note', files: [], task_id: '' }, saveState: 'saved', saving: false }),
-  captureDraftStore: { getSnapshot: () => ({ saving: false, draft: { id: 'd1' } }), subscribe: () => () => {}, save },
+  captureDraftStore: { getSnapshot: () => ({ saving: busy.saving, draft: { id: 'd1' } }), subscribe: () => () => {}, save, addFiles },
 }));
 vi.mock('../local/db', () => ({ outboxGet: vi.fn(async () => undefined), isOutboxItem: vi.fn(() => false) }));
 vi.mock('../local/outbox', () => ({ subscribeOutbox: vi.fn(() => () => {}) }));
@@ -24,7 +24,7 @@ vi.mock('../ui/Toast', () => ({ toast: vi.fn() }));
 import { toast } from '../ui/Toast';
 import { CaptureScreen } from './Capture';
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); busy.saving = false; });
 
 describe('CaptureScreen after-save toast', () => {
   it.each([
@@ -35,5 +35,26 @@ describe('CaptureScreen after-save toast', () => {
     render(<CaptureScreen />);
     fireEvent.click(screen.getByRole('button', { name: /Save note/ }));
     await waitFor(() => expect(toast).toHaveBeenCalledWith(message));
+  });
+});
+
+describe('CaptureScreen drop', () => {
+  const dropFile = () => {
+    const file = new File(['x'], 'a.png', { type: 'image/png' });
+    const { container } = render(<CaptureScreen />);
+    fireEvent.drop(container.querySelector('.writing-canvas') as Element, { dataTransfer: { files: [file] } });
+    return file;
+  };
+
+  it('adds a dropped file', () => {
+    const file = dropFile();
+    expect(addFiles).toHaveBeenCalledWith([file]);
+  });
+
+  it('says so instead of silently losing a file dropped while a save is in flight', () => {
+    busy.saving = true;
+    dropFile();
+    expect(addFiles).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(S.finishingLocalSave);
   });
 });

@@ -191,6 +191,7 @@ test.describe('Note view', () => {
     await page.getByRole('button', { name: 'Edit' }).click();
     await noteField(page).fill('Edited organized note');
     await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();   // edit closed: Original would otherwise hit the leave-edit confirm
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(page.locator('.original-block')).toContainText('Keep the original intact.');
     await page.getByRole('button', { name: 'Note', exact: true }).click();

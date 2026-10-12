@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { connection } from '../domain/connection';
 import { S } from '../strings';
 import { z } from '../zod';
-import { ApiError, api, call, normaliseError, onUnauthorized } from './client';
+import { ApiError, api, call, isConflict, normaliseError, onUnauthorized } from './client';
 
 const Ok = z.object({ ok: z.literal(true) });
 const fetchMock = vi.fn<typeof fetch>();
@@ -133,5 +133,16 @@ describe('normaliseError', () => {
     for (const text of ['Internal Server Error', '', '{"error":"x"}', '{"detail":[]}', 'null', '{"detail":5}']) {
       expect(normaliseError(502, text), text).toBe('Request failed (502)');
     }
+  });
+});
+
+describe('isConflict', () => {
+  it('is true only for an HTTP 409 ApiError', () => {
+    expect(isConflict(new ApiError('http', 'changed', 409))).toBe(true);
+    expect(isConflict(new ApiError('http', 'bad', 400))).toBe(false);
+    expect(isConflict(new ApiError('network', 'down', null))).toBe(false);
+    expect(isConflict(new Error('x'))).toBe(false);
+    expect(isConflict(null)).toBe(false);
+    expect(isConflict('409')).toBe(false);
   });
 });

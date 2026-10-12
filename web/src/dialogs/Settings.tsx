@@ -12,7 +12,7 @@ import '../styles/capture-notes.css';
 
 export const DISPLAY_NAME_MAX = 60;   // models.py SettingsInput.display_name
 export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;   // models.py:134
-export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // server.py 422
+export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // noema/store.py:369 Problem(400)
 export const SETTINGS_TEXT = {
   title: 'Your workspace',   // app.js:457
   offline: 'Settings load from your server. Reconnect to change them.',   // new
@@ -100,7 +100,7 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
     };
     input.addEventListener('change', commit);
     return () => input.removeEventListener('change', commit);
-  });
+  }, [form?.companion_size]);
 
   async function saveName(event: FormEvent) {
     event.preventDefault();
@@ -310,7 +310,8 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
           </div>
           <div className="full">
             <button type="submit" className="secondary" disabled={createToken.isPending || needsTask}>Create token</button>
-            {(needsTask || tokenError) && <p className="field-error" role="alert">{needsTask ? AGENT_TASK_REQUIRED : tokenError}</p>}
+            {tokenError && <p className="field-error" role="alert">{tokenError}</p>}
+            {needsTask && <p className="field-error" role="status">{AGENT_TASK_REQUIRED}</p>}
           </div>
         </form>
         {created && (

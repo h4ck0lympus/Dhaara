@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import type { ApiError } from '../api/client';
+import { isConflict } from '../api/client';
 import type { Note } from '../api/schemas';
 import { age, noteMarkdownExport } from '../domain/format';
 import { useNavigationGuard, type NavigationGuard } from '../routes/guards';
@@ -31,7 +31,7 @@ type EditForm = { title: string; folder: string; body: string; baseVersion: numb
 type FormError = { message: string; conflict: boolean };
 
 function errorOf(error: unknown): FormError {
-  const conflict = (error as Partial<ApiError>).status === 409;
+  const conflict = isConflict(error);
   return { message: conflict ? S.noteConflict : messageOf(error), conflict };
 }
 
@@ -72,7 +72,7 @@ export function NoteViewScreen() {
 function NotePage({ note, refetch }: { note: Note; refetch: () => Promise<Note | undefined> }) {
   const [view, setView] = useState<'note' | 'original'>('note');
   const [edit, setEdit] = useState<EditForm | null>(null);
-    const [formError, setFormError] = useState<FormError | null>(null);
+  const [formError, setFormError] = useState<FormError | null>(null);
   const update = useUpdateNote();
   const apply = useApplySuggestion();
   const process = useProcessNote();
@@ -184,8 +184,8 @@ function NotePage({ note, refetch }: { note: Note; refetch: () => Promise<Note |
         </p>
         <div className="note-toolbar">
           <div className="segmented" role="group" aria-label="Note views">
-            <button type="button" aria-pressed={view === 'note'} onClick={() => show('note')}>Note</button>
-            <button type="button" aria-pressed={view === 'original'} onClick={() => show('original')}>Original</button>
+            <button type="button" aria-pressed={view === 'note'} disabled={update.isPending} onClick={() => show('note')}>Note</button>
+            <button type="button" aria-pressed={view === 'original'} disabled={update.isPending} onClick={() => show('original')}>Original</button>
             {/* app.js:252: History is the third tab; it opens over the note, so an open edit stays intact. */}
             <button type="button" onClick={() => openDialog({ kind: 'note-history', noteId: note.id })}>History</button>
           </div>
@@ -235,7 +235,7 @@ function NotePage({ note, refetch }: { note: Note; refetch: () => Promise<Note |
           <details key={suggestion.id} className="suggestion">
             <summary>{NOTE_TEXT.suggestion}</summary>
             <div className="note-body"><Markdown text={suggestion.body} /></div>
-            <button type="button" className="secondary" disabled={apply.isPending} onClick={() => void applySuggestion(suggestion.id)}>Use this version</button>
+            <button type="button" className="secondary" disabled={apply.isPending || editing} onClick={() => void applySuggestion(suggestion.id)}>Use this version</button>
           </details>
         ))}
         {note.attachments.length > 0 && (

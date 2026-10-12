@@ -8,22 +8,25 @@ vi.mock('../ui/Toast', async importOriginal => ({ ...(await importOriginal<typeo
 import type { Settings, Snapshot } from '../api/schemas';
 import { queryKeys } from '../state/queries';
 import { S } from '../strings';
-import { installDialogPolyfill, jsonResponse, renderWithClient, stubFetch, type StubCall } from '../test/harness';
+import { jsonResponse, renderWithClient, stubFetch, type StubCall } from '../test/harness';
 import { makeSnapshot, makeTask } from '../test/fixtures';
 import { toast } from '../ui/Toast';
+import { polyfillDialog } from '../ui/testing';
 import { SETTINGS_TEXT, SettingsDialog } from './Settings';
 
 let snapshot: Snapshot;
 let patchStatus: number;
 let stateStatus: number;
 let calls: StubCall[];
+let tokenList: { id: string; name: string; scope: 'agent' | 'observer'; created_at: string }[] = [];
 
-beforeAll(installDialogPolyfill);
+beforeAll(polyfillDialog);
 
 beforeEach(() => {
   snapshot = makeSnapshot({ tasks: [makeTask('t1', { title: 'Two Sum' })] });
   snapshot = { ...snapshot, settings: { ...snapshot.settings, display_name: 'Ada' } };
   patchStatus = 200;
+  tokenList = [];
   stateStatus = 200;
   calls = stubFetch(call => {
     if (call.url.startsWith('/api/state')) return stateStatus === 200 ? jsonResponse(200, snapshot) : jsonResponse(stateStatus, { detail: 'Service unavailable' });
@@ -32,7 +35,8 @@ beforeEach(() => {
         ? jsonResponse(200, { ...snapshot.settings, ...(call.body as Partial<Settings>) })
         : jsonResponse(patchStatus, { detail: 'Settings storage failed' });
     }
-    if (call.url === '/api/tokens' && call.method === 'GET') return jsonResponse(200, []);
+    if (call.url === '/api/tokens' && call.method === 'GET') return jsonResponse(200, tokenList);
+    if (call.url.startsWith('/api/tokens/') && call.method === 'DELETE') return jsonResponse(500, { detail: 'Revoke failed' });
     if (call.url === '/api/tokens' && call.method === 'POST') {
       const body = call.body as { scope: 'agent' | 'observer'; task_ids: string[] };
       return jsonResponse(201, { id: 'tok1', token: 'secret-token-value-0123456789', scope: body.scope, task_ids: body.task_ids });
@@ -120,6 +124,15 @@ describe('SettingsDialog', () => {
     renderWithClient(<SettingsDialog onClose={() => {}} section="agents" />, seed(snapshot));
     await waitFor(() => expect(calls.filter(call => call.url === '/api/tokens' && call.method === 'GET').length).toBeGreaterThanOrEqual(2));
     expect(screen.queryByText('secret-token-value-0123456789')).toBeNull();
+  });
+
+  it('a failing revoke shows its own error with the default (agent, no task) form state', async () => {
+    tokenList = [{ id: 'tok9', name: 'Old agent', scope: 'agent', created_at: '2026-01-01T00:00:00Z' }];
+    renderWithClient(<SettingsDialog onClose={() => {}} section="agents" />, seed(snapshot));
+    expect(screen.queryByRole('alert')).toBeNull();   // the task guidance is not an error
+    fireEvent.click(await screen.findByRole('button', { name: 'Revoke' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('Revoke failed');
+    expect(screen.getByText('Choose at least one task for an agent token')).toBeTruthy();
   });
 
   it('loads tokens only when the agents section is open', async () => {

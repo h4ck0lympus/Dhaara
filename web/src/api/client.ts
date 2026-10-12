@@ -18,6 +18,10 @@ export class ApiError extends Error {
   }
 }
 
+export function isConflict(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409;
+}
+
 export function normaliseError(status: number, bodyText: string): string {
   let body: unknown = null;
   try {

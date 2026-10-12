@@ -70,7 +70,12 @@ export function CaptureScreen() {
   }, [pendingId]);
 
   async function addFiles(files: File[]) {
-    if (files.length) toastRejections(await captureDraftStore.addFiles(files));
+    if (!files.length) return;
+    if (captureDraftStore.getSnapshot().saving) {
+      toast(S.finishingLocalSave);   // addFiles accepts nothing while a save is in flight
+      return;
+    }
+    toastRejections(await captureDraftStore.addFiles(files));
   }
 
   async function save() {

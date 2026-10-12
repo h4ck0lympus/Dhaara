@@ -50,6 +50,14 @@ describe('installPreloadErrorHandler', () => {
     await vi.waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
   });
 
+  it('does not claim the drafts are saved when saving them failed', async () => {
+    vi.mocked(captureDraftStore.persist).mockRejectedValueOnce(new Error('quota'));
+    uninstall = installPreloadErrorHandler();
+    fire();
+    await vi.waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+    expect(toast).toHaveBeenCalledWith(S.draftsNotSaved, { tone: 'error', action: { label: S.reload, onClick: expect.any(Function) } });
+  });
+
   it('does not overwrite an in-flight save or a draft that has not loaded', async () => {
     state.capture = { saving: true, recovered: true };
     state.task.recovered = false;

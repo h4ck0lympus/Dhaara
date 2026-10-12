@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { ApiError } from '../api/client';
+import { isConflict } from '../api/client';
 import { useNote, useUpdateNote } from '../state/queries';
 import { S } from '../strings';
 import { Icon } from '../ui/Icon';
@@ -64,7 +64,7 @@ function ServerSaved({ id, onOpenNote }: { id: string; onOpenNote: (id: string) 
       await update.mutateAsync({ id, body: { title: current.title, folder: next, body: current.body, expected_version: current.version } });
       setChanging(false);
     } catch (caught) {
-      setError({ message: messageOf(caught), conflict: (caught as ApiError).status === 409 });
+      setError({ message: messageOf(caught), conflict: isConflict(caught) });
     }
   }
 

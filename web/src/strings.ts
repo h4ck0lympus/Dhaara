@@ -91,6 +91,7 @@ export const S = {
   closeConfirm: 'Close Noema? An unfinished recording or unsaved note edit may be lost. Cancel to stop/save or copy it first.', // 604
   closeDraftFailed: 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.', // 608
   closeCheckpointFailed: 'Could not checkpoint your draft. Keep Noema open and retry the local save.', // 612
+  draftsNotSaved: 'Could not save your drafts on this device.', // new
   updateReady: 'Noema was updated. Your drafts are saved on this device.', // new
   reload: 'Reload', // new
 } as const;

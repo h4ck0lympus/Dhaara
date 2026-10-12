@@ -51,4 +51,21 @@ describe('SketchDialog', () => {
     expect(addFiles).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('re-checks saving inside toBlob: stays open and says so when a save began meanwhile', async () => {
+    let finish: BlobCallback = () => {};
+    HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback) { finish = callback; };
+    const real = captureDraftStore.getSnapshot();
+    const snapshot = vi.spyOn(captureDraftStore, 'getSnapshot').mockReturnValue({ ...real, saving: false });
+    const addFiles = vi.spyOn(captureDraftStore, 'addFiles').mockResolvedValue([]);
+    const onClose = vi.fn();
+    render(<SketchDialog onClose={onClose} />);
+    stroke();
+    fireEvent.click(add());
+    snapshot.mockReturnValue({ ...real, saving: true });
+    finish(new Blob(['x'], { type: 'image/png' }));
+    expect((await screen.findByRole('status')).textContent).toBe(S.finishingLocalSave);
+    expect(addFiles).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

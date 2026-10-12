@@ -2,7 +2,7 @@ import { useState, type JSX } from 'react';
 import { dateLabel } from '../domain/format';
 import { useNote, useNoteHistory, useRestoreNote } from '../state/queries';
 import { Dialog } from '../ui/Dialog';
-import { toast } from '../ui/Toast';
+import { messageOf, toast } from '../ui/Toast';
 
 export function NoteHistoryDialog({ onClose, noteId }: { onClose: () => void; noteId: string }): JSX.Element {
   const note = useNote(noteId);
@@ -19,7 +19,8 @@ export function NoteHistoryDialog({ onClose, noteId }: { onClose: () => void; no
       onClose();
       toast('Restored as a new revision.');   // app.js:511
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError(messageOf(caught));
+      void note.refetch();   // a 409 means currentVersion is stale; mirrors NoteView
     }
   }
 

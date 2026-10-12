@@ -25,15 +25,6 @@ export function stubFetch(route: (call: StubCall) => Response | undefined): Stub
   return calls;
 }
 
-export function installDialogPolyfill(): void {
-  if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
-    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) { this.open = true; };
-  }
-  if (typeof HTMLDialogElement.prototype.close !== 'function') {
-    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) { this.open = false; };
-  }
-}
-
 export function renderWithClient(ui: ReactElement, seed?: (queryClient: QueryClient) => void): RenderResult & { queryClient: QueryClient } {
   const queryClient = createQueryClient();
   seed?.(queryClient);

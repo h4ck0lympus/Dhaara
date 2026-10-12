@@ -5,7 +5,7 @@ import { captureDraftStore } from '../local/drafts';
 import { discardItem, retryItem, useOutboxItems } from '../local/outbox';
 import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
-import { toast } from '../ui/Toast';
+import { messageOf, toast } from '../ui/Toast';
 
 const UNREADABLE = 'This queued item cannot be read. It stays in this browser’s storage until you discard it.';
 
@@ -21,7 +21,7 @@ export function OutboxDialog({ onClose }: { onClose: () => void }): JSX.Element 
     try {
       await action();
     } catch (error) {
-      toast(error instanceof Error ? error.message : String(error), { tone: 'error' });
+      toast(messageOf(error), { tone: 'error' });
     } finally {
       await reload().catch(() => {});
     }

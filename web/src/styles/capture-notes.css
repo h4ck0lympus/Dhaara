@@ -103,5 +103,4 @@
   .canvas-tools { align-items: flex-end; }
   .note-page { padding: 16px; }
   .settings-form { grid-template-columns: 1fr; }
-  .capture-screen :is(button, select, a), .notes-screen :is(button, select, a), .note-screen :is(button, select, a, input) { min-height: 44px; min-width: 44px; }
 }
