@@ -433,3 +433,55 @@ test.describe('Offline Capture', () => {
     expect(errors).toEqual([]);
   });
 });
+
+test.describe('Sketch', () => {
+  test('Sketch offers pen, eraser, undo and a text tool', async ({ page, noema }) => {
+    await gotoApp(page, noema, '#/capture');
+    await page.getByRole('button', { name: 'Sketch' }).click();
+    const dialog = page.getByRole('dialog', { name: 'A quick sketch' });
+    await expect(dialog.getByText('Draw while you talk. Your recording continues.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Add to capture' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Draw something first.' })).toBeVisible();
+
+    const canvas = dialog.getByLabel('Drawing canvas');
+    const box = (await canvas.boundingBox())!;
+    const inkIn = (x0: number, y0: number, x1: number, y1: number) => canvas.evaluate((element: HTMLCanvasElement, area) => {
+      const scale = element.width / element.getBoundingClientRect().width;
+      const [ax, ay, bx, by] = area.map(value => Math.round(value * scale));
+      const pixels = element.getContext('2d')!.getImageData(ax, ay, Math.max(1, bx - ax), Math.max(1, by - ay)).data;
+      for (let index = 3; index < pixels.length; index += 4) if (pixels[index] > 0) return true;
+      return false;
+    }, [x0, y0, x1, y1]);
+    const stroke = async (y: number) => {
+      await page.mouse.move(box.x + 20, box.y + y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + y, { steps: 8 });
+      await page.mouse.up();
+    };
+
+    await stroke(60);
+    expect(await inkIn(90, 58, 110, 62)).toBe(true);
+    await dialog.getByRole('button', { name: 'Undo' }).click();
+    expect(await inkIn(90, 58, 110, 62)).toBe(false);
+    await expect(dialog.getByRole('button', { name: 'Undo' })).toBeDisabled();
+
+    await stroke(60);
+    await dialog.getByRole('button', { name: 'Eraser' }).click();
+    await expect(dialog.getByRole('button', { name: 'Eraser' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(dialog.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'false');
+    await stroke(60);
+    expect(await inkIn(90, 58, 110, 62)).toBe(false);
+
+    await dialog.getByRole('button', { name: 'Text' }).click();
+    await dialog.getByLabel('Sketch text').fill('ptr');
+    const shifted = (await canvas.boundingBox())!;   // the text input shifts the layout
+    await page.mouse.click(shifted.x + 60, shifted.y + 150);
+    expect(await inkIn(60, 134, 100, 152)).toBe(true);
+
+    await dialog.getByRole('button', { name: 'Add to capture' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('img', { name: 'sketch.png' })).toBeVisible();
+    const draft = (await readLocalDb(page)).draft as { files: { name: string }[] };
+    expect(draft.files.map(file => file.name)).toEqual(['sketch.png']);
+  });
+});
