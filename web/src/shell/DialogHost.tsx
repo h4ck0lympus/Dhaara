@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { SettingsDialog } from '../dialogs/Settings';
 import { SketchDialog } from '../capture/Sketch';
 import { NoteHistoryDialog } from '../dialogs/NoteHistory';
 import { OutboxDialog } from '../dialogs/Outbox';
@@ -14,7 +15,8 @@ export function DialogHost(): JSX.Element | null {
     case 'sketch': return <SketchDialog onClose={closeDialog} />;
     case 'outbox': return <OutboxDialog onClose={closeDialog} />;
     case 'note-history': return <NoteHistoryDialog onClose={closeDialog} noteId={request.noteId} />;
-    case 'settings': case undefined: return null; // Task 13 adds the settings arm
+    case 'settings': return <SettingsDialog onClose={closeDialog} section={request.section} />;
+    case undefined: return null;
     default: {
       const unhandled: never = request;
       return unhandled;

@@ -75,6 +75,18 @@ describe('installModalLinks', () => {
     expect(router).not.toHaveBeenCalled();
   });
 
+  it('opens #settings as a dialog without changing the underlying route', () => {
+    const open = vi.fn(), router = vi.fn();
+    cleanups.push(installModalLinks(() => ({ href: '/capture', state: null }), open));
+    window.addEventListener('popstate', router);
+    cleanups.push(() => window.removeEventListener('popstate', router));
+    history.pushState(null, '', '#settings');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(open).toHaveBeenCalledWith({ kind: 'settings' });
+    expect(location.hash).toBe('#/capture');
+    expect(router).not.toHaveBeenCalled();
+  });
+
   it('lets ordinary navigation reach the router', () => {
     const open = vi.fn(), router = vi.fn();
     cleanups.push(installModalLinks(() => ({ href: '/notes', state: null }), open));
