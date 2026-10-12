@@ -10,6 +10,8 @@ import { captureDraftStore } from './local/drafts';
 import { taskDraftStore } from './local/taskDraft';
 import { installLegacyHashRewrite, installModalLinks, rewriteLegacyHash } from './routes/legacy';
 import { createAppRouter, openModalLink } from './routes/router';
+import { installCheckpointClose } from './shell/checkpoint';
+import { installPreloadErrorHandler } from './shell/preloadError';
 import { registerServiceWorker } from './shell/serviceWorker';
 import { requestUnlock } from './shell/unlock';
 import { createQueryClient } from './state/queryClient';
@@ -31,6 +33,8 @@ async function start(): Promise<void> {
   if (cached.status === 'fulfilled' && cached.value) qc.setQueryData(queryKeys.snapshot(null), cached.value);
   installConnectionListeners();
   installRefetchTriggers(qc);
+  installPreloadErrorHandler();
+  installCheckpointClose();
   const result = await boot();
   if (result.kind === 'ready') {
     qc.setQueryData(queryKeys.snapshot(null), result.snapshot);
