@@ -136,19 +136,19 @@ test('SIGTERM runs the close checkpoint and stops the owned service', async () =
 test('command-line errors exit 2 before any window or directory exists; --help exits 0', async () => {
   const profile = tempDir('noema-cli-profile-');
   const dataDir = path.join(tempDir('noema-cli-data-'), 'never-created');
-  const LOOPBACK = 'Noema: Use a literal loopback HTTP URL, e.g. http://127.0.0.1:8765';
+  const LOOPBACK = 'Dhara: Use a literal loopback HTTP URL, e.g. http://127.0.0.1:8765';
   const cases: [string[], Record<string, string>, string][] = [
     [['--server', 'http://localhost:8765'], {}, LOOPBACK],
     [['--server', 'http://[::ffff:127.0.0.1]:8765'], {}, LOOPBACK],
     [['--server', 'http://127.0.0.1:8765/?'], {}, LOOPBACK],
-    [['--bogus'], {}, 'Noema: Unknown argument; use --help. No token file is needed by the webview.'],
-    [['--server'], {}, 'Noema: --server needs a URL'],
-    [['--startup-timeout', '61'], {}, 'Noema: Use a startup timeout from 0.1 to 60 seconds'],
-    [['--startup-timeout', 'soon'], {}, 'Noema: Invalid startup timeout'],
-    [['--data-dir', dataDir], {}, 'Noema: --data-dir requires explicit --manage-service; external mode never owns a service'],
-    [['--manage-service'], {}, 'Noema: Managed mode requires an explicit --data-dir; no implicit real notebook'],
+    [['--bogus'], {}, 'Dhara: Unknown argument; use --help. No token file is needed by the webview.'],
+    [['--server'], {}, 'Dhara: --server needs a URL'],
+    [['--startup-timeout', '61'], {}, 'Dhara: Use a startup timeout from 0.1 to 60 seconds'],
+    [['--startup-timeout', 'soon'], {}, 'Dhara: Invalid startup timeout'],
+    [['--data-dir', dataDir], {}, 'Dhara: --data-dir requires explicit --manage-service; external mode never owns a service'],
+    [['--manage-service'], {}, 'Dhara: Managed mode requires an explicit --data-dir; no implicit real notebook'],
     // The test port is ignored without NOEMA_ELECTRON_TEST=1.
-    [['--manage-service', '--data-dir', dataDir, '--server', 'http://127.0.0.1:9100'], { NOEMA_ELECTRON_TEST_PORT: '9100' }, 'Noema: Managed mode uses http://127.0.0.1:8765 only'],
+    [['--manage-service', '--data-dir', dataDir, '--server', 'http://127.0.0.1:9100'], { NOEMA_ELECTRON_TEST_PORT: '9100' }, 'Dhara: Managed mode uses http://127.0.0.1:8765 only'],
   ];
   for (const [args, env, message] of cases) {
     const result = await runElectron(['--profile', profile, ...args], env);
@@ -156,7 +156,7 @@ test('command-line errors exit 2 before any window or directory exists; --help e
   }
   expect(fs.existsSync(dataDir)).toBe(false);
   const badProfile = await runElectron(['--profile', '']);
-  expect([badProfile.code, badProfile.stderr.includes('Noema: Choose a dedicated profile directory')]).toEqual([2, true]);
+  expect([badProfile.code, badProfile.stderr.includes('Dhara: Choose a dedicated profile directory')]).toEqual([2, true]);
   const help = await runElectron(['--help']);
   expect(help.code).toBe(0);
   expect(help.stdout).toContain('--manage-service --data-dir');

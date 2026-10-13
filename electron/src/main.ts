@@ -6,7 +6,7 @@ import { installCloseHandler } from './close.js';
 import { ManagedService, managedPort, prepareWorkspace, type LifecycleError } from './lifecycle.js';
 import { installNavigationGuards } from './navigation.js';
 import { installPermissions, PERMISSION_PROMPTS } from './permissions.js';
-import { prepareProfile, resolveProfile } from './profile.js';
+import { adoptLegacyProfile, legacyProfile, prepareProfile, resolveProfile } from './profile.js';
 import { IPC_STARTUP_CANCEL, IPC_STARTUP_RETRY, IPC_STARTUP_STATUS, SERVICE_DOWN, SERVICE_UP, STARTUP_TEXT, type StartupStatus } from './protocol.js';
 
 const DIST = path.dirname(fileURLToPath(import.meta.url));
@@ -35,17 +35,19 @@ function readOptions(): { options: CliOptions; profile: string } {
   try {
     const options = parseArgs(userArgv(process.argv, process.defaultApp === true), process.cwd(), REPO_ROOT, process.env);
     if (options === 'help') exitWith(0, HELP_TEXT);
-    const profile = resolveProfile(options.profile, process.env, process.cwd());
+    const resolved = resolveProfile(options.profile, process.env, process.cwd());
+    // An explicit --profile is never moved; the default location adopts the pre-rename one once (rename spec §4.6), before setPath and the lock.
+    const profile = options.profile === null ? adoptLegacyProfile(resolved, legacyProfile(process.env), (line) => process.stderr.write(`${line}\n`)) : resolved;
     prepareProfile(profile);
     return { options, profile };
   } catch (error) {
-    exitWith(2, `Noema: ${error instanceof Error ? error.message : String(error)}`);
+    exitWith(2, `Dhara: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 function createWindow(origin: string, onApproved: () => void): BrowserWindow {
   const win = new BrowserWindow({
-    title: 'Noema',
+    title: 'Dhara',
     width: 1200,
     height: 800,
     minWidth: 380,

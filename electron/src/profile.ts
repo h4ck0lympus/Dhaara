@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { absolutePath, ensurePrivateDir, hasFinalComponent } from './paths.js';
 
@@ -9,12 +10,34 @@ export const PROFILE_MESSAGES = {
   protect: 'Cannot protect profile',
 } as const;
 
-export function resolveProfile(option: string | null, env: NodeJS.ProcessEnv, cwd: string): string {
-  if (option !== null) return absolutePath(option, cwd);
+function dataHome(env: NodeJS.ProcessEnv): string {
   const xdg = env.XDG_DATA_HOME;
   const base = xdg && path.isAbsolute(xdg) ? xdg : env.HOME ? path.join(env.HOME, '.local/share') : null;
   if (base === null) throw new Error(PROFILE_MESSAGES.noHome);
-  return path.join(base, 'noema', 'electron');
+  return base;
+}
+
+export function resolveProfile(option: string | null, env: NodeJS.ProcessEnv, cwd: string): string {
+  if (option !== null) return absolutePath(option, cwd);
+  return path.join(dataHome(env), 'dhara', 'electron');
+}
+
+/** The pre-rename default profile directory (rename spec §4.6); the dated follow-up deletes this and adoptLegacyProfile. */
+export function legacyProfile(env: NodeJS.ProcessEnv): string {
+  return path.join(dataHome(env), 'noema', 'electron');   // rename-shim: old default location
+}
+
+/** Moves the old default profile to the new path once (same filesystem, atomic). If the rename fails, the old path stays in use and one line is logged. */
+export function adoptLegacyProfile(profile: string, legacy: string, log: (line: string) => void): string {
+  if (fs.existsSync(profile) || !fs.existsSync(legacy)) return profile;
+  try {
+    fs.mkdirSync(path.dirname(profile), { recursive: true, mode: 0o700 });
+    fs.renameSync(legacy, profile);
+    return profile;
+  } catch (error) {
+    log(`Dhara: could not move the profile from ${legacy} to ${profile} (${(error as NodeJS.ErrnoException).code ?? 'error'}); using the old location`);
+    return legacy;
+  }
 }
 
 export function prepareProfile(profile: string): void {

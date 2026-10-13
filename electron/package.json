@@ -1,5 +1,6 @@
 {
-  "name": "noema-electron",
+  "name": "dhara-desktop",
+  "productName": "Dhara",
   "version": "0.1.0",
   "private": true,
   "type": "module",
