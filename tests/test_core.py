@@ -8,10 +8,10 @@ from pathlib import Path
 from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
-from noema.server import create_app
-from noema.store import Problem,now
-from noema.models import TokenInput,ContextInput,RuleInput,RunEvent
-from noema.worker import validate_organized,basic_filing
+from dhara.server import create_app
+from dhara.store import Problem,now
+from dhara.models import TokenInput,ContextInput,RuleInput,RunEvent
+from dhara.worker import validate_organized,basic_filing
 
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=')
 ADMIN='a'*40

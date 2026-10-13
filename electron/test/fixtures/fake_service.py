@@ -26,7 +26,7 @@ def write_pids(*pids):
 
 if mode == 'pdeathsig':
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-    from noema.desktop_service import set_parent_death_signal
+    from dhara.desktop_service import set_parent_death_signal
     set_parent_death_signal()
     write_pids(os.getpid())  # only after prctl, so a test never kills the owner too early
     time.sleep(60)

@@ -18,7 +18,7 @@ import uvicorn
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from noema.server import create_app
+from dhara.server import create_app
 
 
 def main():

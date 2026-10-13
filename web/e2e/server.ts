@@ -13,7 +13,7 @@ const STARTUP_MS = 15_000;
 // run.py always serves web/dist; an injected dist goes through create_app(dist_dir=…) directly.
 const SERVE_DIST = [
   'import sys, uvicorn',
-  'from noema.server import create_app',
+  'from dhara.server import create_app',
   "uvicorn.run(create_app(sys.argv[2], dist_dir=sys.argv[3]), host='127.0.0.1', port=int(sys.argv[1]), access_log=False)",
 ].join('\n');
 

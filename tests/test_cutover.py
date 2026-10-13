@@ -12,7 +12,9 @@ DELETED = ['public', 'desktop', 'experiments/ui-ab/hosts/wry',
 STALE = re.compile(r"""['"](?:\.{1,2}/)*(?:public/|public['"]|desktop/)"""
                    r"""|['"][^'"\n]*(?:hosts/wry|hosts/companion|now_state\.test\.cjs)""")
 
-SCANNED = ['run.py', 'noema', 'tools', 'tests', 'electron/src', 'electron/test', 'electron/e2e',
+SCANNED = ['run.py', 'dhara',
+           'noema',   # rename-shim: the one-file shim package
+           'tools', 'tests', 'electron/src', 'electron/test', 'electron/e2e',
            'web/src', 'web/e2e', 'web/scripts', 'qa']
 TEXT_SUFFIXES = {'.py', '.ts', '.tsx', '.mts', '.cts', '.mjs', '.js', '.json'}
 # These two files name the deleted paths on purpose, as the things they forbid.

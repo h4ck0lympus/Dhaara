@@ -19,9 +19,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from noema.desktop_service import (EXIT_LEASE, EXIT_LOCKED, EXIT_PORT, STRIPPED_ENV, bind_listener,
+from dhara.desktop_service import (EXIT_LEASE, EXIT_LOCKED, EXIT_PORT, STRIPPED_ENV, bind_listener,
                                    read_lease, workspace_lock)
-from noema.server import create_app
+from dhara.server import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = 'a' * 64
@@ -121,7 +121,7 @@ def test_bind_listener_refuses_a_live_listener():
 
 @linux
 def test_set_parent_death_signal_requests_sigterm():
-    code = ('import ctypes; from noema.desktop_service import set_parent_death_signal; set_parent_death_signal(); '
+    code = ('import ctypes; from dhara.desktop_service import set_parent_death_signal; set_parent_death_signal(); '
             'value = ctypes.c_int(); ctypes.CDLL(None).prctl(2, ctypes.byref(value), 0, 0, 0); print(value.value)')
     result = subprocess.run([sys.executable, '-c', code], cwd=ROOT, capture_output=True, text=True, check=True, timeout=30)
     assert int(result.stdout) == signal.SIGTERM  # PR_GET_PDEATHSIG

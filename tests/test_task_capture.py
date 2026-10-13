@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from noema.models import TaskCapture
-from noema.store import Store, SCHEMA
+from dhara.models import TaskCapture
+from dhara.store import Store, SCHEMA
 from test_core import env, edit_task, capture
 
 
