@@ -8,7 +8,7 @@ import { jsonResponse, renderWithClient, stubFetch, type StubCall } from '../tes
 import { makeNote } from '../test/fixtures';
 import { STORAGE_LABELS, SavedNotice } from './SavedNotice';
 
-const CONFLICT = 'This note changed on another screen. Your draft has not been overwritten. Reopen to compare.';   // store.py:268
+const CONFLICT = 'This note changed on another screen. Your draft has not been overwritten. Reload the latest version to compare.';   // store.py:268
 let note: Note;
 let putStatus: number;
 let calls: StubCall[];

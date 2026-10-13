@@ -2,7 +2,6 @@ import type { NoteSummary } from '../api/schemas';
 
 export const SEARCH_DEBOUNCE_MS = 300;   // app.js:454
 export const SEARCH_MAX_LENGTH = 500;    // server.py:215
-export const FOLDER_MAX = 240;           // models.py NoteUpdate.folder
 
 export function foldersOf(notes: NoteSummary[]): string[] {
   return [...new Set(notes.map(note => note.folder))].sort();   // app.js:230

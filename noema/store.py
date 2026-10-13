@@ -265,7 +265,7 @@ class Store:
         with self.db() as c:
             row = c.execute('SELECT * FROM notes WHERE id=?', (note_id,)).fetchone()
             if not row: raise Problem(404, 'Note not found')
-            if row['version'] != data['expected_version']: raise Problem(409, 'This note changed on another screen. Your draft has not been overwritten. Reopen to compare.')
+            if row['version'] != data['expected_version']: raise Problem(409, 'This note changed on another screen. Your draft has not been overwritten. Reload the latest version to compare.')
             version = row['version'] + 1
             stamp = now()
             c.execute('UPDATE notes SET title=?,body=?,folder=?,version=?,mode=?,updated_at=? WHERE id=?',

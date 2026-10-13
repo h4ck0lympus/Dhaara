@@ -2,6 +2,7 @@
 import { S } from '../strings';
 import type { StoredFile } from './db';
 
+export const FOLDER_MAX = 240; // models.py NoteUpdate.folder
 export const MAX_FILES = 12;
 export const MAX_FILE_BYTES = 32 * 1024 * 1024;
 export const MAX_TOTAL_BYTES = 60 * 1024 * 1024; // total must be < this; headroom under the server's 64 MB body cap

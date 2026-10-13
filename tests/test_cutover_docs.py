@@ -30,11 +30,24 @@ REQUIRED = {
         'qa/device_fixture.py --port 8765',
         'sha256sum -c --quiet SHA256SUMS',
     ],
+    'docs/SECURITY.md': [
+        '## Opt-in Linux managed service boundary (protocol 2)',
+        '## Electron desktop shell boundary',
+        '`sandbox: true`, `contextIsolation: true`',
+        'it is\ntreated as credential storage',
+        'Decisions are remembered for the app session\nonly',
+    ],
+    'docs/API.md': [
+        '`{protocol: 2, instance: PUBLIC_RANDOM_ID, pid: PROCESS_ID}`',
+        'zero or more `attachments` file parts',
+        '`#/task/<id>`',
+    ],
 }
 
 # Current-instruction documents must not tell anyone to run the deleted shell or UI.
-STALE_INSTRUCTIONS = ['cargo run', 'cargo build', 'desktop/target', 'public/app.js', 'companion.html']
-CURRENT_INSTRUCTION_DOCS = ['README.md', 'docs/DESKTOP.md', 'docs/PHYSICAL_SWAY_ACCEPTANCE.md']
+STALE_INSTRUCTIONS = ['cargo run', 'cargo build', 'desktop/target', 'public/app.js', 'companion.html',
+                      'protocol: 1', 'zero or more `files`']
+CURRENT_INSTRUCTION_DOCS = ['README.md', 'docs/DESKTOP.md', 'docs/PHYSICAL_SWAY_ACCEPTANCE.md', 'docs/API.md']
 
 
 def text(name):

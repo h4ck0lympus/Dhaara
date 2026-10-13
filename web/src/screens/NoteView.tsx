@@ -8,7 +8,7 @@ import { openDialog } from '../shell/dialogs';
 import { OfflineNotice } from '../shell/OfflineNotice';
 import { useApplySuggestion, useNote, useProcessNote, useUpdateNote } from '../state/queries';
 import { S } from '../strings';
-import { FOLDER_MAX } from './notesList';
+import { FOLDER_MAX } from '../local/limits';
 import { Markdown } from '../ui/Markdown';
 import { messageOf, toast } from '../ui/Toast';
 import '../styles/capture-notes.css';

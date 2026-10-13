@@ -4,7 +4,7 @@ import { useNote, useUpdateNote } from '../state/queries';
 import { S } from '../strings';
 import { Icon } from '../ui/Icon';
 import { messageOf } from '../ui/Toast';
-import { FOLDER_MAX } from '../screens/notesList';
+import { FOLDER_MAX } from '../local/limits';
 
 export type SavedCapture = { id: string; state: 'queued' | 'rejected' | 'server' };
 

@@ -8,13 +8,14 @@ The full authenticated OpenAPI JSON is available at `GET /api/openapi` to the ad
 
 ## Managed desktop identity
 
-Opt-in Linux managed instances expose `GET /api/desktop-instance` without login:
-`{protocol: 1, instance: PUBLIC_RANDOM_ID, pid: PROCESS_ID}`. Host/Origin guards
-and no-store still apply. This identity grants no authority, reveals no token or
-workspace path, and is 404 for external `run.py` instances. The desktop compares
-it with the private child acknowledgement and inherited listener/workspace lock;
-the endpoint by itself or `/api/health` is not service ownership proof. No stop/
-restart HTTP endpoint was added. See [lifecycle policy](DESKTOP.md).
+Opt-in Linux managed instances (lifecycle protocol 2) expose
+`GET /api/desktop-instance` without login:
+`{protocol: 2, instance: PUBLIC_RANDOM_ID, pid: PROCESS_ID}`, exactly these three
+keys and never the workspace path. Host/Origin guards and no-store still apply.
+It grants no authority and is 404 for external `run.py` instances. The Electron
+shell compares it with the child's one-line stdout acknowledgement before it
+loads the origin; the endpoint alone, or `/api/health`, is not proof of
+ownership. No stop/restart HTTP endpoint exists. See [lifecycle policy](DESKTOP.md).
 
 ## Run lifecycle
 
@@ -81,6 +82,8 @@ only the first entry and opens `/#task/<id>` for the existing full task dialog;
 opening it does not select focus, complete work or enable observation. An empty
 list does not prove that all tracked work is complete.
 
+The React UI rewrites the legacy `#task/<id>` and `#settings` forms to `#/task/<id>` and `#/settings` on load and on every hash change.
+
 ## Main app endpoints
 
 The UI already exercises these; direct scripting is optional.
@@ -92,7 +95,7 @@ The UI already exercises these; direct scripting is optional.
 | `POST /api/tasks`, `PUT /api/tasks/{id}` | Create/update task; update includes `expected_version`. |
 | `POST /api/task-captures` | Explicit one-input task intent; immutable original plus idempotent atomic task insertion. |
 | `POST /api/focus` | Set/clear focus and manual pin. |
-| `POST /api/captures` | Multipart `payload` JSON plus zero or more `files`; capture ID makes retries safe. |
+| `POST /api/captures` | Multipart `payload` JSON plus zero or more `attachments` file parts (at most 12); capture ID makes retries safe. |
 | `GET /api/notes/{id}`, `PUT /api/notes/{id}` | Read/update note; update includes `expected_version`. |
 | `GET /api/notes/{id}/history` | Prior revisions. |
 | `POST /api/notes/{id}/restore/{version}` | Restore as a new version; includes `expected_version`. |

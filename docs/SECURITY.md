@@ -9,38 +9,38 @@ Versioned corrections, manual priority and pins are not overwritten by retries.
 
 This is a personal local development app, not a production security audit or multi-user isolation system.
 
-## Opt-in Linux managed service boundary
+## Opt-in Linux managed service boundary (protocol 2)
 
 External mode is still the default and never stops the user's backend. Explicit
-`--manage-service --data-dir PATH` owns only a newly spawned child group. Rust
-holds both the profile lock and a canonical-workspace service lock, prebinds the
-stable literal-loopback listener, and passes it plus the same locked file to
-Python via private descriptors. Python acknowledges workspace/public random
-instance/PID after Uvicorn startup; Rust verifies both that bounded pipe response
-and the HTTP identity on its own listener before navigating the webview. A port
-occupant is not contacted, authenticated to, killed or reused. Manual Linux
-`run.py` launches use the same workspace lock; arbitrary custom ASGI embeddings
-are not claimed to participate in launcher exclusion.
+`--manage-service --data-dir PATH` owns only the child it spawns, in that
+child's own process group. Electron creates the workspace with mode 0700 and
+canonicalises it. Python takes the `.noema-service.lock` flock, binds
+127.0.0.1:8765 itself (`SO_REUSEADDR`, never `SO_REUSEPORT`) and, once serving,
+prints one acknowledgement line with exactly `protocol` (2), `instance`, `pid`,
+`workspace` and `port`. Electron accepts it only with exactly those keys and
+values, then requires `GET /api/desktop-instance` to return exactly
+`{protocol: 2, instance, pid}` before it loads the origin. The identity grants
+no authority. A port occupant is
+never contacted, authenticated to or killed (exit 11). The instance id is a
+fresh 64-hex value sent on stdin, which stays open as the lifetime lease.
+Manual Linux `run.py` launches use the same workspace lock; arbitrary custom
+ASGI embeddings are not claimed to participate in launcher exclusion.
 
-`GET /api/desktop-instance` exposes only protocol, public non-authorizing
-instance ID and PID in managed mode (404 in external mode). It grants no API
-access and exposes no workspace path/admin token. Host/Origin checks and
-no-store apply. Rust does not read admin credentials; private pipe contents are
-not forwarded to logs or frontend. Child stderr is discarded and error text is
-fixed/bounded rather than dumping exception text. This is a diagnostics tradeoff;
-run the existing external launcher explicitly for local dependency diagnostics.
-Inherited model/speech/remote-model and integration/admin-token configuration is
-removed in managed mode. Existing local workspace token/session handling remains.
+`GET /api/desktop-instance` exposes only protocol, the public non-authorizing
+instance id and PID in managed mode (404 in external mode); never the workspace
+path or a token. Host/Origin checks and no-store apply. The child environment is
+stripped of `NOEMA_MODEL`, `NOEMA_SPEECH_MODEL`, `NOEMA_TOKEN`,
+`NOEMA_ACCESS_TOKEN`, `NOEMA_ALLOWED_HOSTS`, `NOEMA_ALLOW_REMOTE_MODEL` and
+`NOEMA_DATA_DIR`; child stderr is discarded and user messages are fixed text.
 
-Normal close checkpoints before lease closure and bounded owned-group signals/
-reaping. Linux shell death closes the lease independently of Rust destructors.
-Before exec, a Linux parent-death TERM signal and parent-PID race check also
-cover startup before Python can install its lease watcher (real process test).
-SIGTERM/SIGKILL cleanup is tested with actual processes; abrupt close cannot
-checkpoint the newest edits. No sandbox against hostile same-user processes,
-detached descendants, power-loss guarantee, external-agent termination, login
-service or daemon is introduced. [Desktop policy](DESKTOP.md) records exact
-limits; physical launch/quit/relaunch remains pending.
+Python sets `PR_SET_PDEATHSIG(SIGTERM)` and exits if its parent is not
+`--owner-pid` before it reads the lease, so it cannot outlive an owner that died
+during startup. Stdin EOF, including after an owner SIGKILL, triggers group
+shutdown. Normal close runs the page checkpoint, closes stdin, waits 5 s, then
+sends SIGTERM and SIGKILL to the group; cleanup also runs after any observed
+exit. This is not a sandbox against hostile same-user processes or deliberately
+detached descendants, and an abrupt close cannot checkpoint the newest edits.
+Physical launch/quit/relaunch on Sway remains pending.
 
 The native Sway continuation adds no token scope or observation authority.
 Local pause gates only that explicitly launched helper's future polls; another
@@ -74,26 +74,33 @@ remains task-scoped; UI fixtures never use production credentials/data. Explicit
 replacement/clearing of pinned focus asks confirmation; inferred metadata
 still obeys the backend's existing pinned-focus protection.
 
-The Rust webview shell accepts only literal loopback HTTP base URLs and blocks
-top-level navigation away from that exact origin. It uses the web app's existing
-loopback session bootstrap, not a native token-file reader. Native IPC only
-permits that origin to approve window closing (an additional report message
-and a programmatic Retry-button message exist only in explicit QA builds);
-no production command/filesystem bridge is exposed.
-Explicit frontend new-window HTTP(S) links open in the user's browser; URL
-credentials and non-web schemes are rejected. Downloads are restricted to
-the service origin and its Blob URLs. Webview network/proxy behavior is that
-of the system engine, not the retired Rust HTTP client's proxy-disabled policy.
+## Electron desktop shell boundary
 
-A dedicated persistent profile contains sensitive, unencrypted local drafts,
-cookies and cache. New Linux profiles/lock files use restrictive modes; existing
-profile permissions are not rewritten, and Windows ACLs are not validated.
-An OS file lock prevents two shells sharing the profile simultaneously. Linux
-microphone/camera/notification requests prompt; geolocation and display capture
-are denied. Device permission flows and non-Linux behavior need physical testing.
-Close checkpoints do not guarantee recovery of active recordings, unsaved note
-edits, abrupt crashes or browser storage eviction. No observation, model
-authority, public hosting, installer or OS keychain integration was added.
+The renderer runs with `sandbox: true`, `contextIsolation: true` and
+`nodeIntegration: false`; devtools are off in packaged builds. Linux needs the
+setuid `chrome-sandbox`; the shell is never run with `--no-sandbox`. `--server`
+accepts only a literal loopback IP over http with no credentials, path, query
+or fragment. Navigation, redirects and frame navigation are allowed only to that
+exact origin, and URL parse errors deny. New windows are always denied; http(s)
+links with a host and no credentials open in the user's browser. `<webview>` is
+denied. Downloads are allowed only from the origin and its `blob:` URLs. The page
+preload exposes one call, `window.ipc.postMessage`, and main accepts only
+`noema:close-approved` from the main frame at the origin. No command, filesystem
+or token bridge exists; the page uses the same loopback session bootstrap as a
+browser.
+
+Audio-only microphone requests and notification requests from the main frame at
+the origin show a native prompt; video, display capture, geolocation and
+everything else are denied. Decisions are remembered for the app session
+only and cleared on restart, by design.
+
+The profile (`$XDG_DATA_HOME/noema/electron` or `~/.local/share/noema/electron`,
+mode 0700) holds the session cookie, IndexedDB drafts and outbox, and cache; it is
+treated as credential storage and is not encrypted. Chromium's single-instance
+lock guards it; a second launch focuses the first window and exits. Old
+Rust/WebKit profiles are left untouched, and their unsent captures are not
+readable by Chromium (accepted). Close checkpoints do not recover active
+recordings, abrupt crashes or storage eviction.
 
 ## Defaults and implemented protections
 

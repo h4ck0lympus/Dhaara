@@ -70,11 +70,11 @@ describe('api', () => {
   });
 
   it('normalises HTTP errors by body shape', async () => {
-    respond(409, '{"detail":"This note changed on another screen. Your draft has not been overwritten. Reopen to compare."}');
+    respond(409, '{"detail":"This note changed on another screen. Your draft has not been overwritten. Reload the latest version to compare."}');
     expect(await failure(api('/notes/n1', Ok, { method: 'PUT', body: {} }))).toMatchObject({
       kind: 'http',
       status: 409,
-      message: 'This note changed on another screen. Your draft has not been overwritten. Reopen to compare.',
+      message: 'This note changed on another screen. Your draft has not been overwritten. Reload the latest version to compare.',
     });
     respond(500, 'Internal Server Error', 'text/plain');
     expect(await failure(api('/state', Ok))).toMatchObject({ kind: 'http', status: 500, message: 'Request failed (500)' });
