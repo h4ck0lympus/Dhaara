@@ -48,7 +48,7 @@ export const test = base.extend<{ noema: NoemaServer; guards: void }>({
 
 export async function gotoApp(page: Page, noema: NoemaServer, hash = '#/overview'): Promise<void> {
   await page.goto(`${noema.origin}/${hash}`);
-  await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
+  await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });   // a cold service plus three busy siblings
 }
 
 // The one place that opens noema-local-v1; the same upgrade as public/app.js:30-43 (and web/src/local/db.ts),

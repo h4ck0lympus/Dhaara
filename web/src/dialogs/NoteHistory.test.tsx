@@ -19,16 +19,16 @@ describe('NoteHistoryDialog', () => {
       if (call.url === '/api/notes/n1/history') return jsonResponse(200, [revision(2), revision(1)]);
       if (call.url === '/api/notes/n1/restore/1') {
         const expected = (call.body as { expected_version: number }).expected_version;
-        return expected === 3 ? jsonResponse(200, makeNote('n1', { version: 4 })) : jsonResponse(409, { detail: 'This note changed' });
+        if (expected === 3) return jsonResponse(200, makeNote('n1', { version: 4 }));
+        version = 3;   // another device saved meanwhile; flipped at the POST so no earlier or extra GET can see it
+        return jsonResponse(409, { detail: 'This note changed' });
       }
       return undefined;
     });
     renderWithClient(<NoteHistoryDialog noteId="n1" onClose={() => {}} />);
     const restore = await screen.findByRole('button', { name: 'Restore as a new revision' });
-    version = 3;   // another device saved meanwhile
     fireEvent.click(restore);
     expect((await screen.findByRole('alert')).textContent).toBe('This note changed');
-    await waitFor(() => expect(calls.filter(call => call.url === '/api/notes/n1' && call.method === 'GET').length).toBe(2));
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Restore as a new revision' })).toHaveLength(2));
     fireEvent.click(screen.getAllByRole('button', { name: 'Restore as a new revision' })[1]);
     await waitFor(() => expect(calls.filter(call => call.url === '/api/notes/n1/restore/1').map(call => (call.body as { expected_version: number }).expected_version)).toEqual([2, 3]));

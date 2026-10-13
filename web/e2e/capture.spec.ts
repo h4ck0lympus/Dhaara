@@ -152,6 +152,7 @@ test.describe('Capture', () => {
 
   test('An empty Save is refused with the existing message and queues nothing', async ({ page, noema }) => {   // app.js:402
     await gotoApp(page, noema, '#/capture');
+    await expect(saveButton(page)).toBeEnabled();
     await saveButton(page).click();
     await expect(page.getByRole('alert').filter({ hasText: S.writeSomething })).toBeVisible();
     expect((await readLocalDb(page)).outbox).toEqual([]);
