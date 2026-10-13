@@ -86,7 +86,7 @@ class Worker:
             return validate_organized(json.loads(response.json()['response']))
 
     def transcribe(self,note_id):
-        if not self.speech_model: raise ValueError('Set DHARA_SPEECH_MODEL to a downloaded faster-whisper model first. Your recording is saved.')
+        if not self.speech_model: raise ValueError('Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path. Your recording is saved.')
         with self.store.db() as c:
             audio=[dict(r) for r in c.execute("SELECT * FROM attachments WHERE note_id=? AND mime LIKE 'audio/%' ORDER BY rowid",(note_id,))]
         if not audio: raise ValueError('This capture has no audio recording')

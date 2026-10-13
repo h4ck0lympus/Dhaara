@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
-p.add_argument('size',choices=['tiny','base','small','medium','large-v3'])
+p.add_argument('size',choices=['tiny','tiny.en','base','base.en','small','small.en','medium','medium.en','large-v3'],help='.en models are English-only: faster and more accurate for English notes on a CPU')
 p.add_argument('--output')
 a=p.parse_args()
 try:from faster_whisper.utils import download_model

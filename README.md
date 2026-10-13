@@ -142,12 +142,20 @@ Within the same Python environment:
 
 ```bash
 python -m pip install -e '.[speech]'
-python tools/download_speech_model.py small
-export DHARA_SPEECH_MODEL="$PWD/.data/models/whisper-small"
-python run.py --open
+python tools/download_speech_model.py base.en
+export DHARA_SPEECH_MODEL="$PWD/.data/models/whisper-base.en"
+python run.py --open          # or: python run.py --desktop
 ```
 
-The helper downloads a model only when you explicitly run it. You may choose `tiny`, `base`, `small`, `medium`, or `large-v3`; smaller is not automatically good enough for technical speech. Model downloads can be substantial. On PowerShell, set `$env:DHARA_SPEECH_MODEL` to the full model-directory path.
+No GPU is needed: transcription runs on the CPU, and `base.en` keeps up with real time on a
+recent laptop. The helper downloads a model only when you explicitly run it. You may choose
+`tiny`, `base`, `small`, `medium` or `large-v3`, or the English-only `tiny.en`, `base.en`,
+`small.en`, `medium.en` (faster and more accurate for English notes); smaller is not automatically
+good enough for technical speech. Model downloads can be substantial. On PowerShell, set
+`$env:DHARA_SPEECH_MODEL` to the full model-directory path. Managed mode (the Electron shell
+starting the service, and the packaged build) strips `DHARA_SPEECH_MODEL` from the service's
+environment, so speech is configured this way in external mode only; a workspace setting for it
+is a follow-on (`docs/PROGRESS.md`).
 
 Transcription runs in a separate CPU process using INT8 and four threads, with local model files only. The process exits when done. Audio and original typed content survive a transcription failure. You can retry through the note's **Transcribe recording** button.
 

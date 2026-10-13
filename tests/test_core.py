@@ -345,3 +345,8 @@ def test_request_marker_dual_read(env):
  assert c.post('/api/tasks',json={'title':'No marker'}).status_code==403
  assert c.post('/api/tasks',json={'title':'Old marker'},headers={'X-Noema-Request':'1'}).status_code==201   # rename-shim: old header accepted for one release
  assert c.post('/api/tasks',json={'title':'New marker'},headers={'X-Dhara-Request':'1'}).status_code==201
+
+def test_transcribe_off_names_the_setup_commands(env):
+    c,s,w=env;n=capture(c);r=c.post(f"/api/notes/{n['id']}/transcribe");assert r.status_code==409
+    detail=r.json()['detail']
+    for needle in ('pip install -e ".[speech]"','tools/download_speech_model.py base.en','DHARA_SPEECH_MODEL','CPU','Your recording is saved'):assert needle in detail,detail
