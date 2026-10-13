@@ -63,7 +63,7 @@ describe('sw-precache.mjs', () => {
     const hash = createHash('sha256').update(urls.join('\n'));
     for (const name of ['index.html', 'assets/index-AbCd1234.js', 'icon.svg', 'manifest.webmanifest']) hash.update(readFileSync(join(dist, name)));
     const [header, ...rest] = readFileSync(join(dist, 'sw.js'), 'utf8').split('\n');
-    expect(header).toBe(`const CACHE="noema-shell-${hash.digest('hex').slice(0, 12)}";const PRECACHE=${JSON.stringify(urls)};`);
+    expect(header).toBe(`const CACHE="dhara-shell-${hash.digest('hex').slice(0, 12)}";const PRECACHE=${JSON.stringify(urls)};`);
     expect(rest.join('\n')).toBe(SHELL['sw.js']);
   });
 
@@ -73,7 +73,7 @@ describe('sw-precache.mjs', () => {
     run('sw-precache.mjs', before);
     run('sw-precache.mjs', after);
     const cacheOf = (dist: string) => readFileSync(join(dist, 'sw.js'), 'utf8').split('"')[1];
-    expect(cacheOf(before)).toMatch(/^noema-shell-[0-9a-f]{12}$/);
+    expect(cacheOf(before)).toMatch(/^dhara-shell-[0-9a-f]{12}$/);
     expect(cacheOf(after)).not.toBe(cacheOf(before));
   });
 

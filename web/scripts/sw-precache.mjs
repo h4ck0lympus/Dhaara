@@ -15,7 +15,7 @@ if (!names.includes('index.html')) fail(`No index.html in ${dist}; run vite buil
 const urls = names.map((name) => (name === 'index.html' ? '/' : `/${name}`)).sort();
 const hash = createHash('sha256').update(urls.join('\n'));
 for (const url of urls) hash.update(readFileSync(join(dist, url === '/' ? 'index.html' : url.slice(1))));
-const cache = `noema-shell-${hash.digest('hex').slice(0, 12)}`;
+const cache = `dhara-shell-${hash.digest('hex').slice(0, 12)}`;
 
 const swPath = join(dist, 'sw.js');
 const worker = readFileSync(swPath, 'utf8');

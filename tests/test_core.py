@@ -44,7 +44,7 @@ def make_dist(root):
     (root/'assets').mkdir(parents=True)
     (root/'index.html').write_text('<!doctype html><title>Noema</title><div id="root"></div>')
     (root/'assets'/SHELL_ASSET).write_text('export {};')
-    (root/'sw.js').write_text('const CACHE="noema-shell-000000000000";const PRECACHE=["/"];\n')
+    (root/'sw.js').write_text('const CACHE="dhara-shell-000000000000";const PRECACHE=["/"];\n')
     (root/'manifest.webmanifest').write_text('{"id":"/","start_url":"/","scope":"/"}')
     (root/'icon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
     return root

@@ -11,7 +11,7 @@ const ROUTES = ['#/overview', '#/capture', '#/notes', '#/note/offline-check', '#
 
 function readPrecache(dist: string): { cache: string; urls: string[] } {
   const header = readFileSync(join(dist, 'sw.js'), 'utf8').split('\n', 1)[0];
-  const match = /^const CACHE="(noema-shell-[0-9a-f]{12})";const PRECACHE=(\[.*\]);$/.exec(header);
+  const match = /^const CACHE="(dhara-shell-[0-9a-f]{12})";const PRECACHE=(\[.*\]);$/.exec(header);
   if (!match) throw new Error(`${dist}/sw.js has no precache header; run npm --prefix web run build`);
   return { cache: match[1], urls: JSON.parse(match[2]) as string[] };
 }
@@ -149,7 +149,7 @@ test('two consecutive builds purge the older shell cache', async ({ page }) => {
   }
 });
 
-test('takes over a page controlled by the v1 service worker and deletes noema-shell-v1', async ({ page }) => {
+test('takes over a page controlled by the v1 service worker and deletes noema-shell-v1', async ({ page }) => {   // rename-shim: the v1 worker's cache name
   const { cache } = readPrecache(WEB_DIST);
   const port = await getFreePort();
   const v1 = await serveV1(port);
@@ -162,7 +162,8 @@ test('takes over a page controlled by the v1 service worker and deletes noema-sh
   try {
     await page.goto(`http://127.0.0.1:${port}/`);
     await waitForController(page);
-    await expect.poll(() => page.evaluate(() => caches.keys())).toContain('noema-shell-v1');
+    await expect.poll(() => page.evaluate(() => caches.keys())).toContain('noema-shell-v1');   // rename-shim: the v1 worker's cache name
+    await page.evaluate(() => caches.open('dhara-shell-stale'));   // an older build of the renamed worker is purged too
     await closeV1();
     v1Open = false;
 
