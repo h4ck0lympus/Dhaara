@@ -12,7 +12,7 @@ const context = (stale: boolean): NonNullable<Snapshot['context']> => ({
 });
 const settings = (observation_enabled: boolean) => ({ ...makeSnapshot().settings, observation_enabled });
 
-describe('nowState (tests/now_state.test.cjs)', () => {
+describe('nowState (verbatim port of the legacy Now-state cases)', () => {
   it('empty connected workspace is new, not complete', () => {
     expect(nowState(makeSnapshot(), true).mode).toBe('new');
   });

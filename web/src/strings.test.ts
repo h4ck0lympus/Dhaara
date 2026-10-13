@@ -1,10 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { S } from './strings';
 
-const APP_JS = fileURLToPath(new URL('../../public/app.js', import.meta.url));
-const NEW_KEYS = new Set(['unexpectedResponse', 'unsupportedType', 'totalTooLarge', 'updateReady', 'draftsNotSaved', 'reload', 'noteConflict']);
 const snapshot = (tasks: number, notes: number, attention: number, runs: string[]) => ({
   tasks: Array.from({ length: tasks }, () => ({})),
   notes: Array.from({ length: notes }, () => ({})),
@@ -89,14 +85,6 @@ describe('S', () => {
       reload: 'Reload',
       noteConflict: 'This note changed on the server. Your edits were not overwritten — Reload latest replaces them with the newest version; Keep editing keeps them.',
     });
-  });
-
-  // public/ is deleted at cutover (P6); the check has already pinned every carried-over string by then.
-  it.skipIf(!existsSync(APP_JS))('copies every carried-over string verbatim from public/app.js', () => {
-    const source = readFileSync(APP_JS, 'utf8');
-    for (const [key, value] of Object.entries(S)) {
-      if (typeof value === 'string' && !NEW_KEYS.has(key)) expect(source, key).toContain(value);
-    }
   });
 
   it('summarises status exactly like app.js:107', () => {

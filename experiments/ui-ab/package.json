@@ -6,10 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit && vite build && tsc -p hosts/electron/tsconfig.json",
     "preview": "python3 scripts/serve.py --port 8793",
-    "a": "python3 scripts/launch.py a",
-    "b": "python3 scripts/launch.py b",
-    "check": "node --test scripts/bridge.test.mjs scripts/companion.test.mjs scripts/field.test.mjs",
-    "start": "python3 scripts/launch.py b"
+    "check": "node --test scripts/bridge.test.mjs scripts/field.test.mjs"
   },
   "dependencies": {
     "react": "19.3.0",
