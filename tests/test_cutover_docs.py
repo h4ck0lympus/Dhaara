@@ -139,3 +139,103 @@ def test_test_report_records_a_green_final_gate():
     assert re.search(r'[Ss]ource revision `[0-9a-f]{40}`', section)
     for command in GATE_COMMANDS:   # three consecutive runs, each cell the tool's own summary and wall time
         assert re.search(rf'^\| `{re.escape(command)}` \| [^|]+ \| [^|]+ \| [^|]+ \| PASS \|$', section, re.M), command
+
+PARITY = 'docs/superpowers/specs/parity-map.md'
+TRACE = 'docs/superpowers/specs/handbook-trace.md'
+TEST_PATH = re.compile(r'\b((?:web|electron|tests)/[\w./-]+\.(?:ts|tsx|py))\b')
+CELL_SPLIT = re.compile(r'(?<!\\)\|')  # a `\|` inside a cell is content, not a column break
+
+# handbook-trace.md has exactly one row per spec §4.7 bullet (01-foundation.md Task 1 Step 8).
+SPEC_4_7_TRACE_IDS = ([f'R{n}' for n in range(1, 10)] + [f'U{n}' for n in range(1, 26)]
+                      + ['C1', 'C2', 'C3', 'T1'])
+
+
+def is_separator(line):
+    return re.match(r'^\|\s*:?-{3,}', line.strip()) is not None
+
+
+def cells_of(line):
+    return [cell.strip() for cell in CELL_SPLIT.split(line.strip().strip('|'))]
+
+
+def status_rows(name):
+    """(status, row) for every row of every table that has a Status column."""
+    lines = text(name).splitlines()
+    rows, status_at = [], None
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped.startswith('|'):
+            status_at = None
+        elif index + 1 < len(lines) and is_separator(lines[index + 1]):
+            columns = [cell.lower() for cell in cells_of(stripped)]
+            status_at = columns.index('status') if 'status' in columns else None
+        elif status_at is not None and not is_separator(stripped):
+            cells = cells_of(stripped)
+            rows.append((cells[status_at].lower() if status_at < len(cells) else '', stripped))
+    return rows
+
+
+def test_parity_rows_are_green_or_approved_drops():
+    rows = status_rows(PARITY)
+    assert rows, 'parity-map.md has no table with a Status column'
+    assert [row for status, row in rows if status != 'green' and not status.startswith('drop (approved)')] == []
+
+
+def test_handbook_trace_rows_are_green():
+    rows = status_rows(TRACE)
+    assert rows, 'handbook-trace.md has no table with a Status column'
+    assert [row for status, row in rows if status != 'green'] == []
+
+
+@pytest.mark.parametrize('name', [PARITY, TRACE])
+def test_green_rows_name_an_existing_test(name):
+    def names_only_existing_tests(row):
+        paths = TEST_PATH.findall(row)
+        return bool(paths) and all((ROOT / path).is_file() for path in paths)
+    assert [row for status, row in status_rows(name) if status == 'green' and not names_only_existing_tests(row)] == []
+
+
+TITLE_TOKEN = re.compile(r'"([^"]+)"|`(test_\w+)`|\b((?:web|electron|tests)/[\w./-]+\.(?:ts|tsx|py))\b')
+
+
+def cited_titles(cell):
+    """(path, title) pairs: each quoted title or `test_*` name belongs to the nearest path before it."""
+    pairs, current = [], None
+    for match in TITLE_TOKEN.finditer(cell):
+        quoted, name, path = match.groups()
+        if path:
+            current = path
+        else:
+            pairs.append((current, quoted or name))
+    return pairs
+
+
+def defines_test(path, title):
+    if path is None or not (ROOT / path).is_file():
+        return False
+    source = (ROOT / path).read_text(encoding='utf-8')
+    variants = {title, title.replace("'", "\\'")}
+    return f'def {title}(' in source or any(q + v + q in source for v in variants for q in ("'", '"', '`'))
+
+
+@pytest.mark.parametrize('name', [PARITY, TRACE])
+def test_green_rows_cite_existing_test_titles(name):
+    """Spec §8 rule: a green row's test exists under its title, not just its file."""
+    missing = []
+    for status, row in status_rows(name):
+        if status != 'green':
+            continue
+        cells = cells_of(row)
+        test_cell = cells[4]   # parity: Target test file; trace: Test (file › title)
+        pairs = cited_titles(test_cell)
+        # A parity row that cites no title uses its label as the title. Computed labels (code spans) are rendered by a
+        # parametrized test and the pageErrors rows by an auto fixture, so neither has a literal title to find.
+        if not pairs and name == PARITY and not cells[2].startswith('`') and 'auto fixture' not in test_cell:
+            pairs = [(path, cells[2].replace('\\|', '|')) for path in TEST_PATH.findall(test_cell)]
+        missing += [f'{cells[0]}: {path} › {title}' for path, title in pairs if not defines_test(path, title)]
+    assert missing == []
+
+
+def test_every_spec_4_7_bullet_has_a_green_trace_row():
+    green_ids = {cells_of(row)[0] for status, row in status_rows(TRACE) if status == 'green'}
+    assert [row_id for row_id in SPEC_4_7_TRACE_IDS if row_id not in green_ids] == []
