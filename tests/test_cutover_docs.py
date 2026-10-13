@@ -15,11 +15,26 @@ REQUIRED = {
         'physical Sway acceptance (handbook §24 Stage A) is still pending',
         'AI-assigned automatic priority',
     ],
+    'docs/DESKTOP.md': [
+        '# Electron desktop shell',
+        'npm --prefix electron start -- --server http://127.0.0.1:8765',
+        'lifecycle protocol 2',
+        '~/.local/share/noema/electron',
+        'chrome-sandbox',
+        'Decisions last for the app session only',
+        'Treat it as credential storage',
+    ],
+    'docs/PHYSICAL_SWAY_ACCEPTANCE.md': [
+        '**Stage A (handbook §24): PENDING',
+        'electron/node_modules/electron/dist/electron electron/',
+        'qa/device_fixture.py --port 8765',
+        'sha256sum -c --quiet SHA256SUMS',
+    ],
 }
 
 # Current-instruction documents must not tell anyone to run the deleted shell or UI.
 STALE_INSTRUCTIONS = ['cargo run', 'cargo build', 'desktop/target', 'public/app.js', 'companion.html']
-CURRENT_INSTRUCTION_DOCS = ['README.md']
+CURRENT_INSTRUCTION_DOCS = ['README.md', 'docs/DESKTOP.md', 'docs/PHYSICAL_SWAY_ACCEPTANCE.md']
 
 
 def text(name):

@@ -1,12 +1,10 @@
 # Physical Sway acceptance
 
-**Phase A: BLOCKED ON DEVICE. Phase B: implemented as opt-in Linux development
-mode, physical lifecycle checks PENDING. Default remains external.** Live Sway IPC is
-reachable, but no physical mouse/keyboard/microphone control channel is
-available to the assistant. A person must execute this one fixture workflow.
-Do not substitute headless tests or mark the gate passed from screenshots.
-The user's revised gate permits independent managed-mode implementation. It
-does not change any A row's status or authorize default promotion.
+**Stage A (handbook §24): PENDING — the next validation gate.** The React +
+Electron cutover does not satisfy it. Managed mode is an opt-in Linux
+development mode; its physical lifecycle checks are PENDING. Default remains
+external. A person must execute this one fixture workflow on the actual Sway
+session. Do not substitute headless tests or mark the gate passed from screenshots.
 
 ## Session and source checkpoint
 
@@ -24,25 +22,28 @@ Noema is untracked in `/home/p4nic/code`; the parent's HEAD is not its revision.
 [Previous final-source manifest](../qa/device-acceptance/source-after.sha256)
 identifies the historical preparation handoff (64 files), verified unchanged
 before lifecycle edits. The [managed-mode implementation manifest](../qa/managed-service/source-after.sha256)
-is also preserved, along with the later screenshot handoff. The **current**
-task-capture handoff is [source manifest](../qa/task-capture/source-after.sha256).
-Run `sha256sum -c qa/task-capture/source-after.sha256` from
-the repository root before recording device results. Data, credentials,
-profiles, binaries and generated evidence are excluded from source manifests.
+is also preserved, along with the later screenshot and task-capture handoffs.
+The **current** source identity is the repository's `SHA256SUMS`, regenerated at
+the React + Electron cutover. Run `sha256sum -c --quiet SHA256SUMS` from the
+repository root before recording device results. Earlier manifests are history.
+It covers tracked files only (tracked binaries included); data, credentials,
+profiles and untracked generated evidence are excluded.
 
 ## Isolated manual launch
 
 Run from `/home/p4nic/code/noema` in Bash terminals on the actual Sway session.
-The normal development executable was rebuilt without the QA feature:
+Build the interface and the shell once (Node 22, `.nvmrc`):
 
 ```bash
-PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --locked --manifest-path desktop/Cargo.toml -j 2
+npm --prefix web ci && npm --prefix web run build
+npm --prefix electron ci && npm --prefix electron run build
 ```
 
-That temporary extracted SDK exists on this machine; elsewhere use the system
-development prerequisites in [DESKTOP.md](DESKTOP.md). No package installation
-or shipped installer is claimed. The following commands are **handoff commands,
-not an executed physical workflow**.
+The commands below start the Electron binary directly
+(`electron/node_modules/electron/dist/electron`), so `$!` is the shell's own PID
+for the session recorder and the sampler. No package installation or shipped
+installer is claimed. The following commands are **handoff commands, not an
+executed physical workflow**.
 
 Terminal 1 — create fresh private files; launch the existing service explicitly:
 
@@ -66,12 +67,13 @@ another fixed fixture port using `qa/device_fixture.py --port PORT`, replacing
 18765 consistently in all commands. Never stop a conflicting service. The port
 and profile must stay unchanged through fixture reconnect/restart tests.
 
-Terminal 2 — paste the generated path when prompted; force native Wayland:
+Terminal 2 — paste the generated path when prompted. On a Sway session Electron
+runs as a native Wayland client; the session recorder below confirms it:
 
 ```bash
 read -r -p 'Fixture path from terminal 1: ' NOEMA_FIXTURE
 if [[ -f "$NOEMA_FIXTURE/fixture-port.txt" ]]; then
-  GDK_BACKEND=wayland desktop/target/debug/noema-desktop \
+  electron/node_modules/electron/dist/electron electron/ \
     --server http://127.0.0.1:18765 --profile "$NOEMA_FIXTURE/profile" &
   NOEMA_SHELL_PID=$!
   printf 'Shell PID: %s\n' "$NOEMA_SHELL_PID"
@@ -111,20 +113,25 @@ framework or a claim that A passed. Use the existing fixture helper, recorder
 and sampler. **All four checks below remain BLOCKED ON DEVICE.** No separate
 backend terminal should be needed in managed mode.
 
+Managed mode always serves `http://127.0.0.1:8765`, because IndexedDB, the
+outbox and the service worker belong to that origin. Prepare the fixture on that
+port. If your own service holds 8765, preparation refuses; stop your own service
+deliberately first. Never stop an occupant you have not identified.
+
 ```bash
-NOEMA_MANAGED_FIXTURE="$(.venv/bin/python qa/device_fixture.py)"
+NOEMA_MANAGED_FIXTURE="$(.venv/bin/python qa/device_fixture.py --port 8765)"
 printf 'Keep this fixture path for relaunch: %s\n' "$NOEMA_MANAGED_FIXTURE"
-GDK_BACKEND=wayland desktop/target/debug/noema-desktop --manage-service \
+electron/node_modules/electron/dist/electron electron/ --manage-service \
   --data-dir "$NOEMA_MANAGED_FIXTURE/data" \
   --python /home/p4nic/code/noema/.venv/bin/python \
-  --server http://127.0.0.1:18765 --profile "$NOEMA_MANAGED_FIXTURE/profile"
+  --profile "$NOEMA_MANAGED_FIXTURE/profile"
 ```
 
 1. **Launch:** wait for verified startup and the existing UI. Using the actual
    keyboard, enter a synthetic unsaved Capture draft. Record `xdg_shell` using
    the existing session recorder and the actual shell PID; this alone does not
-   prove input. Do not enable observation/recording. Use another deliberately
-   fixed fixture port if preparation reports 18765 occupied; never stop its occupant.
+   prove input. Do not enable observation/recording. Managed mode has no other
+   port: if preparation reports 8765 occupied, stop; never stop its occupant.
 2. **Hide, close, reopen:** physically hide/restore with your Sway binding;
    backend remains available. Close normally; the draft checkpoints and the
    fixture backend becomes unavailable. Rerun the exact same command/path/
@@ -137,7 +144,7 @@ GDK_BACKEND=wayland desktop/target/debug/noema-desktop --manage-service \
    click Retry and confirm no reload/loss/duplicates. Never kill a port occupant
    or unrelated Python/agent process. Report if attribution is uncertain.
 4. **External unchanged:** close managed mode, start the same fixture manually
-   using the original two-terminal commands, omit `--manage-service`, then
+   using the original two-terminal commands with 18765 replaced by 8765, then
    close the shell. Confirm the external backend/browser remains available.
    Record observed outcomes and any platform-dependent failure reproduction.
 
@@ -160,7 +167,7 @@ report does not pass A4.2 or demonstrate physical Sway resource behavior.
 | A2.8 | Ctrl-C only the fixture service in terminal 1; inspect truthful offline/stale UI. Edit and Save a synthetic capture offline. Restart service with the same data path/port, Retry if needed; verify drafts, queued upload and exactly one copy of the offline capture. | BLOCKED |
 | A3.1 | With permission to interact with the desktop, launch helper below. Physically click kitten/menu; retain keyboard focus in a synthetic work window; outside clicks reach it. Check Cat/Dot/Hidden, 32/40 sizes and helper-local pause/resume with server permission off. Hidden restores by helper restart. | BLOCKED |
 | A3.2 | Check popup bounds/placement on both actual monitors and chosen workspaces, main-window hide/restore and helper reopen. Record observed scales, not presumed HiDPI support. | BLOCKED |
-| A3.3 | Activate Open task / Observation settings without intercepting dispatch. Record which OS browser/application opens, correct fixture origin and saved task/dialog. Native links currently use `webbrowser.open`, not a Rust deep-link registration. | BLOCKED |
+| A3.3 | Activate Open task / Observation settings without intercepting dispatch. Record which OS browser/application opens, correct fixture origin and saved task/dialog. Native links currently use `webbrowser.open`, not a desktop-shell deep-link registration. | BLOCKED |
 | A3.4 | Only with explicit metadata consent: create a competing title-to-task rule, focus only a synthetic terminal/window, permit metadata, wait for two polls, verify pin retained and fresh report. Pause helper, distinguish its pause from global permission/report age, resume, then disable global permission before leaving fixture windows. | BLOCKED |
 | A4.1 | Explicitly deny microphone permission and check usable error/retry state. Then, by your action, allow and record ~5 seconds of non-sensitive speech; Stop, Save, replay, normal restart and replay saved attachment. No model download/transcription; unavailable physical microphone remains BLOCKED. | BLOCKED |
 | A4.2 | Sample full attributable app set during open-idle, hidden-idle, editing/saving and companion + explicitly permitted metadata observation, following the periods below. | BLOCKED |
@@ -244,8 +251,8 @@ read -r -p 'Current fixture shell PID: ' NOEMA_SHELL_PID
 ```
 
 The sampler follows descendants and retains known children after reparenting,
-using PID + Linux start ticks to reject PID reuse. Verify the selected set
-includes the relevant WebKit processes. Already-reparented/shared broker
+using PID + Linux start ticks to reject PID reuse. Chromium's GPU, renderer
+and utility processes are descendants of the Electron main process and are included from the shell root. Already-reparented/shared broker
 processes not discovered from roots are excluded; add an explicitly attributed
 `--root webview-1=PID` (and `webview-2`, etc.) when necessary. If the full set
 cannot be attributed, record incomplete coverage, not a complete-app result.
