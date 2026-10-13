@@ -23,6 +23,7 @@ import uvicorn
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from dhara.server import create_app
+from dhara.env import strip
 
 OUTPUT = ROOT / 'qa' / 'now-ui'
 
@@ -102,8 +103,7 @@ def seed(client, store, kind):
 
 def main(capture_screenshots=True):
     OUTPUT.mkdir(exist_ok=True)
-    os.environ.pop('NOEMA_MODEL', None)
-    os.environ.pop('NOEMA_SPEECH_MODEL', None)
+    strip(os.environ, ('MODEL', 'SPEECH_MODEL'))
     checks, errors = [], []
     def check(label, valid=True):
         assert valid, label

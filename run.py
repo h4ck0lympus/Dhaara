@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run Noema without a frontend build. Does not enable screen observation."""
 import argparse
+from dhara.env import env
 import os
 import webbrowser
 from threading import Timer
@@ -17,13 +18,13 @@ if __name__=='__main__':
     if args.desktop_managed:
         from dhara.desktop_service import managed
         raise SystemExit(managed(args))
-    if args.host not in ('127.0.0.1','::1','localhost') and (not os.getenv('NOEMA_ACCESS_TOKEN') or not os.getenv('NOEMA_ALLOWED_HOSTS')):
+    if args.host not in ('127.0.0.1','::1','localhost') and (not env('ACCESS_TOKEN') or not env('ALLOWED_HOSTS')):
         parser.error('Remote binding requires NOEMA_ACCESS_TOKEN and NOEMA_ALLOWED_HOSTS. Use HTTPS before microphone capture or exposing private notes.')
     from pathlib import Path
     from dhara.desktop_service import workspace_lock
     from dhara.server import create_app
     import uvicorn
-    root=Path(args.data_dir or os.getenv('NOEMA_DATA_DIR',str(Path(__file__).resolve().parent/'.data')))
+    root=Path(args.data_dir or env('DATA_DIR',str(Path(__file__).resolve().parent/'.data')))
     try: service_lock=workspace_lock(root)
     except ValueError as error: parser.error(str(error))
     app=create_app(root)

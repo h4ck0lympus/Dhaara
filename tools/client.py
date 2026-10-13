@@ -2,13 +2,16 @@
 import json
 import os
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tools/ scripts run from anywhere; dhara/ is beside them
+from dhara.env import env
 from urllib.request import Request, build_opener, ProxyHandler
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 
 class Client:
     def __init__(self,url='http://127.0.0.1:8765',token=None):
-        self.url=url.rstrip('/');self.token=token or os.getenv('NOEMA_TOKEN','')
+        self.url=url.rstrip('/');self.token=token or env('TOKEN','')
         if not self.token: raise ValueError('Set NOEMA_TOKEN to a task-scoped agent token or observer token from Settings.')
         parsed=urlsplit(self.url)
         if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password:

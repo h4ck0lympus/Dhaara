@@ -9,6 +9,7 @@ import threading
 from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
+from .env import env
 from .store import ident, now, Problem
 
 FOLDERS = ['Inbox','Security / CTFs','Security / Reverse Engineering','Programming / Algorithms','Learning / Neural Networks','Work / Learning','Applications / Learning','Personal']
@@ -50,7 +51,7 @@ class Worker:
     def __init__(self, store, model='', ollama_url='http://127.0.0.1:11434', speech_model=''):
         self.store,self.model,self.ollama_url,self.speech_model = store,model,ollama_url.rstrip('/'),speech_model
         self.stop_event=threading.Event(); self.thread=None
-        if model and urlsplit(ollama_url).hostname not in ('localhost','127.0.0.1','::1') and os.getenv('NOEMA_ALLOW_REMOTE_MODEL')!='1':
+        if model and urlsplit(ollama_url).hostname not in ('localhost','127.0.0.1','::1') and env('ALLOW_REMOTE_MODEL')!='1':
             raise ValueError('Remote model host requires NOEMA_ALLOW_REMOTE_MODEL=1. Notes would leave this machine.')
 
     def start(self):

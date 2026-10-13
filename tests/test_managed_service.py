@@ -19,8 +19,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from dhara.desktop_service import (EXIT_LEASE, EXIT_LOCKED, EXIT_PORT, STRIPPED_ENV, bind_listener,
+from dhara.desktop_service import (EXIT_LEASE, EXIT_LOCKED, EXIT_PORT, STRIPPED_ENV, STRIPPED_NAMES, bind_listener,
                                    read_lease, workspace_lock)
+from dhara.env import PREFIXES
 from dhara.server import create_app
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,10 +31,12 @@ linux = pytest.mark.skipif(sys.platform != 'linux', reason='Managed mode is Linu
 
 
 def test_stripped_env_matches_the_electron_owner_list():
-    # electron/src/lifecycle.ts strips the same variables before spawning (spec §6.4.2); no other cross-check exists.
-    ts = (ROOT / 'electron/src/lifecycle.ts').read_text()
-    block = re.search(r'export const STRIPPED_ENV = \[(.*?)\] as const', ts, re.S).group(1)
-    assert set(re.findall(r"'(NOEMA_\w+)'", block)) == set(STRIPPED_ENV)
+    # electron/src/env.ts strips the same names under both prefixes before spawning (spec §6.4.2, rename spec §4.1).
+    ts = (ROOT / 'electron/src/env.ts').read_text()
+    names = re.search(r'export const STRIPPED_NAMES = \[(.*?)\] as const', ts, re.S).group(1)
+    assert set(re.findall(r"'(\w+)'", names)) == set(STRIPPED_NAMES)
+    assert re.search(r"export const PREFIX = '(\w+)'", ts).group(1) == PREFIXES[0]
+    assert re.search(r"export const LEGACY_PREFIX = '(\w+)'", ts).group(1) == PREFIXES[1]
 
 
 def free_port():
@@ -59,7 +62,7 @@ def launch(data, port, owner=None, host='127.0.0.1', cwd=None):
 
 
 def test_public_handshake_does_not_authorize_api(tmp_path, monkeypatch):
-    for key in ('NOEMA_ACCESS_TOKEN', 'NOEMA_MODEL', 'NOEMA_SPEECH_MODEL'):
+    for key in STRIPPED_ENV:
         monkeypatch.delenv(key, raising=False)
     identity = {'protocol': 2, 'instance': 'b' * 64, 'pid': 123}
     app = create_app(tmp_path, start_worker=False, desktop_identity=identity)

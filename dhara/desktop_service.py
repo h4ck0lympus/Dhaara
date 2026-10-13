@@ -8,13 +8,15 @@ import socket
 import sys
 import threading
 
+from .env import PREFIXES
+
 EXIT_LOCKED = 10
 EXIT_PORT = 11
 EXIT_LEASE = 12
 PR_SET_PDEATHSIG = 1
 # Managed development mode never enables optional models, remote access or another data dir.
-STRIPPED_ENV = ('NOEMA_MODEL', 'NOEMA_SPEECH_MODEL', 'NOEMA_TOKEN', 'NOEMA_ACCESS_TOKEN',
-                'NOEMA_ALLOWED_HOSTS', 'NOEMA_ALLOW_REMOTE_MODEL', 'NOEMA_DATA_DIR')
+STRIPPED_NAMES = ('MODEL', 'SPEECH_MODEL', 'TOKEN', 'ACCESS_TOKEN', 'ALLOWED_HOSTS', 'ALLOW_REMOTE_MODEL', 'DATA_DIR')
+STRIPPED_ENV = tuple(prefix + name for prefix in PREFIXES for name in STRIPPED_NAMES)
 
 
 def workspace_lock(root):

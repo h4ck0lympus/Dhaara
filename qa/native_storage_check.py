@@ -21,6 +21,8 @@ import httpx
 from playwright.sync_api import Error as PlaywrightError, expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from dhara.env import env, strip
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=')
 RAW = 'free_slot(0x1234) may leave a pointer. Not confirmed; changing size did not help.'
 READ = """async ({store, key}) => {
@@ -71,10 +73,8 @@ class Server:
             self.port = sock.getsockname()[1]
         self.url = f'http://127.0.0.1:{self.port}'
         self.token = secrets.token_urlsafe(32)
-        self.env = os.environ.copy()
-        self.env['NOEMA_ACCESS_TOKEN'] = self.token
-        self.env.pop('NOEMA_MODEL', None)
-        self.env.pop('NOEMA_SPEECH_MODEL', None)
+        self.env = strip(os.environ.copy(), ('MODEL', 'SPEECH_MODEL'))
+        self.env['DHARA_ACCESS_TOKEN'] = self.token
         self.client = httpx.Client(base_url=self.url, headers={
             'Authorization': 'Bearer ' + self.token, 'X-Noema-Request': '1'
         }, timeout=10, trust_env=False)
@@ -108,7 +108,7 @@ class Server:
 
 
 def run(capture_screenshots=True):
-    output = Path(os.getenv('NOEMA_QA_OUTPUT', str(ROOT/'qa/continuation/native-storage')))
+    output = Path(env('QA_OUTPUT', str(ROOT/'qa/continuation/native-storage')))
     output.mkdir(parents=True, exist_ok=True)
     checks, errors = [], []
 

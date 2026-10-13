@@ -42,10 +42,11 @@ export function getFreePort(): Promise<number> {
 }
 
 function childEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
-  // Inherited NOEMA_* (models, tokens, data dir, allowed hosts) must never leak into a test service.
+  // Inherited DHARA_* (models, tokens, data dir, allowed hosts) must never leak into a test service, and neither may the
+  // pre-rename names, which the service still reads as a fallback.
   const env: NodeJS.ProcessEnv = {};
-  for (const [key, value] of Object.entries(process.env)) if (!key.startsWith('NOEMA_')) env[key] = value;
-  return { ...env, NOEMA_ACCESS_TOKEN: E2E_TOKEN, ...extra };
+  for (const [key, value] of Object.entries(process.env)) if (!/^(DHARA|NOEMA)_/.test(key)) env[key] = value;   // rename-shim: both prefixes
+  return { ...env, DHARA_ACCESS_TOKEN: E2E_TOKEN, ...extra };
 }
 
 export async function startNoema(options: StartOptions = {}): Promise<NoemaServer> {

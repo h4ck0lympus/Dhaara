@@ -6,12 +6,11 @@ import http from 'node:http';
 import path from 'node:path';
 import type { Readable, Writable } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
+import { env as readEnv, STRIPPED_ENV } from './env.js';
 import { ensurePrivateDir, hasFinalComponent } from './paths.js';
 
 export const DEFAULT_MANAGED_PORT = 8765, STOP_GRACE_MS = 5_000, TERM_GRACE_MS = 1_000, ACK_MAX_BYTES = 4_096;
-export const STRIPPED_ENV = [
-  'NOEMA_MODEL', 'NOEMA_SPEECH_MODEL', 'NOEMA_TOKEN', 'NOEMA_ACCESS_TOKEN', 'NOEMA_ALLOWED_HOSTS', 'NOEMA_ALLOW_REMOTE_MODEL', 'NOEMA_DATA_DIR',
-] as const;
+export { STRIPPED_ENV };
 
 export type LifecycleCode = 'workspace' | 'workspace-locked' | 'port-in-use' | 'invalid-lease' | 'python-missing' | 'early-exit'
   | 'startup-exit' | 'timeout' | 'identity' | 'cancelled' | 'crashed';
@@ -40,10 +39,10 @@ export const MESSAGES = {
   cancelled: 'Managed startup was cancelled.',
 } as const;
 
-/** 8765 always; a test-only override needs NOEMA_ELECTRON_TEST=1 and is unreachable from the CLI (spec §6.4.2). */
-export function managedPort(env: NodeJS.ProcessEnv): number {
-  if (env.NOEMA_ELECTRON_TEST !== '1') return DEFAULT_MANAGED_PORT;
-  const raw = env.NOEMA_ELECTRON_TEST_PORT ?? '';
+/** 8765 always; a test-only override needs ELECTRON_TEST=1 under either prefix and is unreachable from the CLI (spec §6.4.2). */
+export function managedPort(source: NodeJS.ProcessEnv): number {
+  if (readEnv('ELECTRON_TEST', source) !== '1') return DEFAULT_MANAGED_PORT;
+  const raw = readEnv('ELECTRON_TEST_PORT', source) ?? '';
   const port = Number(raw);
   return /^[0-9]+$/.test(raw) && port >= 1024 && port <= 65535 ? port : DEFAULT_MANAGED_PORT;
 }

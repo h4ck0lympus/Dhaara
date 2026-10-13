@@ -44,11 +44,11 @@ test('fonts load from content-hashed asset URLs', async ({ page, noema }) => {
 });
 
 test('base app runs with no model and capture disabled by default', async () => {
-  const inherited = process.env.NOEMA_MODEL;
-  process.env.NOEMA_MODEL = 'inherited-model-must-be-stripped';
+  const inherited = process.env.NOEMA_MODEL;   // rename-shim: an inherited legacy name must be stripped too
+  process.env.NOEMA_MODEL = 'inherited-model-must-be-stripped';   // rename-shim: an inherited legacy name must be stripped too
   const noema = await startNoema().finally(() => {
-    if (inherited === undefined) delete process.env.NOEMA_MODEL;
-    else process.env.NOEMA_MODEL = inherited;
+    if (inherited === undefined) delete process.env.NOEMA_MODEL;   // rename-shim: an inherited legacy name must be stripped too
+    else process.env.NOEMA_MODEL = inherited;   // rename-shim: an inherited legacy name must be stripped too
   });
   try {
     const state = await noema.api<StateBody>('GET', '/api/state');

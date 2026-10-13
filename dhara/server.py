@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from starlette.staticfiles import StaticFiles
 from . import __version__
 from .models import *
+from .env import env
 from .store import Store, Problem, ident, jd, now
 from .worker import Worker
 
@@ -58,11 +59,11 @@ def detect_mime(data: bytes, declared: str):
 
 
 def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_identity=None, dist_dir=None):
-    root=Path(data_dir or os.getenv('NOEMA_DATA_DIR',str(ROOT/'.data')))
+    root=Path(data_dir or env('DATA_DIR',str(ROOT/'.data')))
     dist=Path(dist_dir) if dist_dir is not None else ROOT/'web'/'dist'
     store=Store(root)
     token_file=root/'admin.token'
-    admin=admin_token or os.getenv('NOEMA_ACCESS_TOKEN')
+    admin=admin_token or env('ACCESS_TOKEN')
     if not admin:
         if token_file.exists(): admin=token_file.read_text().strip()
         else:
@@ -70,8 +71,8 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             fd=os.open(token_file,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
             with os.fdopen(fd,'w') as f: f.write(admin)
     if len(admin)<24: raise ValueError('NOEMA_ACCESS_TOKEN must be at least 24 characters')
-    worker=Worker(store,os.getenv('NOEMA_MODEL',''),os.getenv('NOEMA_OLLAMA_URL','http://127.0.0.1:11434'),os.getenv('NOEMA_SPEECH_MODEL',''))
-    allowed_hosts={'localhost','127.0.0.1','::1','testserver'}|{x.strip() for x in os.getenv('NOEMA_ALLOWED_HOSTS','').split(',') if x.strip()}
+    worker=Worker(store,env('MODEL',''),env('OLLAMA_URL','http://127.0.0.1:11434'),env('SPEECH_MODEL',''))
+    allowed_hosts={'localhost','127.0.0.1','::1','testserver'}|{x.strip() for x in env('ALLOWED_HOSTS','').split(',') if x.strip()}
 
     @asynccontextmanager
     async def lifespan(app):

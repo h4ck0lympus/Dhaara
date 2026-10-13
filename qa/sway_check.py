@@ -19,6 +19,7 @@ import uvicorn
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from dhara.server import create_app
+from dhara.env import strip
 
 
 def main():
@@ -80,9 +81,9 @@ def main():
                 token.raise_for_status()
                 observer_token = token.json()['token']
             env = os.environ.copy()
-            for key in ('SWAYSOCK', 'WAYLAND_DISPLAY', 'DISPLAY', 'NOEMA_TOKEN',
-                        'NOEMA_ACCESS_TOKEN', 'NOEMA_MODEL', 'NOEMA_SPEECH_MODEL'):
+            for key in ('SWAYSOCK', 'WAYLAND_DISPLAY', 'DISPLAY'):
                 env.pop(key, None)
+            strip(env, ('TOKEN', 'ACCESS_TOKEN', 'MODEL', 'SPEECH_MODEL'))
             env.update(XDG_RUNTIME_DIR=str(runtime), WLR_BACKENDS='headless',
                        WLR_HEADLESS_OUTPUTS='2', WLR_LIBINPUT_NO_DEVICES='1',
                        WLR_RENDERER='pixman', GDK_BACKEND='wayland',

@@ -6,6 +6,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
+import { LEGACY_PREFIX, PREFIX } from '../src/env.js';
 import { LifecycleError, MESSAGES, prepareWorkspace } from '../src/lifecycle.js';
 import { ELECTRON_ROOT, FAKE, PYTHON, REPO_ROOT, RUN_PY, admin, freePort, live, readPids, rejection, serviceFactory, tempDir, until, workspace } from './helpers.js';
 
@@ -17,8 +18,7 @@ afterEach(() => {
 
 function withoutSecrets(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   const env = { ...process.env, ...extra };
-  delete env.NOEMA_ACCESS_TOKEN;
-  delete env.NOEMA_DATA_DIR;
+  for (const name of ['ACCESS_TOKEN', 'DATA_DIR']) for (const prefix of [PREFIX, LEGACY_PREFIX]) delete env[prefix + name];
   return env;
 }
 
@@ -200,10 +200,14 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const port = await freePort();
     const env = {
       ...process.env,
-      NOEMA_MODEL: 'must-not-start',
-      NOEMA_SPEECH_MODEL: 'must-not-download',
-      NOEMA_ACCESS_TOKEN: 'inherited-secret-not-used-'.repeat(2),
-      NOEMA_DATA_DIR: path.join(root, 'not-selected'),
+      DHARA_MODEL: 'must-not-start',
+      DHARA_SPEECH_MODEL: 'must-not-download',
+      DHARA_ACCESS_TOKEN: 'inherited-secret-not-used-'.repeat(2),
+      DHARA_DATA_DIR: path.join(root, 'not-selected'),
+      NOEMA_MODEL: 'must-not-start',                                   // rename-shim: the legacy names are stripped too
+      NOEMA_SPEECH_MODEL: 'must-not-download',                         // rename-shim: the legacy names are stripped too
+      NOEMA_ACCESS_TOKEN: 'inherited-secret-not-used-'.repeat(2),      // rename-shim: the legacy names are stripped too
+      NOEMA_DATA_DIR: path.join(root, 'not-selected-legacy'),          // rename-shim: the legacy names are stripped too
     };
     await service({ port, workspace: ws, env }).start();
     const state = await admin(ws, port, '/state');
@@ -211,6 +215,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     expect(state.capabilities.speech).toBe(false);
     expect(state.settings.observation_enabled).toBe(false);
     expect(fs.existsSync(path.join(root, 'not-selected'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'not-selected-legacy'))).toBe(false);
   });
 
   it('serves a symlinked workspace through its canonical path', async () => {

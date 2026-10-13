@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from dhara.server import create_app
+from dhara.env import PREFIXES
 from dhara.store import Problem,now
 from dhara.models import TokenInput,ContextInput,RuleInput,RunEvent
 from dhara.worker import validate_organized,basic_filing
@@ -17,7 +18,7 @@ PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42m
 ADMIN='a'*40
 @pytest.fixture
 def env(tmp_path,monkeypatch):
-    monkeypatch.delenv('NOEMA_MODEL',raising=False);monkeypatch.delenv('NOEMA_SPEECH_MODEL',raising=False)
+    for key in (prefix+name for prefix in PREFIXES for name in ('MODEL','SPEECH_MODEL')): monkeypatch.delenv(key,raising=False)
     app=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
     with TestClient(app) as c:
         c.headers.update({'Authorization':'Bearer '+ADMIN,'X-Noema-Request':'1'})
