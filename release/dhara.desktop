@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Dhara
+Comment=Local-first learning notes and an attention queue for parallel agent work
+Exec=dhara
+Icon=dhara
+Terminal=false
+Categories=Office;

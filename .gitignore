@@ -13,3 +13,5 @@ web/test-results/
 web/playwright-report/
 electron/node_modules/
 electron/dist/
+release/out/
+release/cache/

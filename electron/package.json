@@ -12,7 +12,8 @@
     "start": "npm run build && electron .",
     "unit": "vitest run",
     "e2e": "playwright test",
-    "test": "npm run build && npm run unit && npm run e2e"
+    "test": "npm run build && npm run unit && npm run e2e",
+    "package": "bash ../release/build.sh"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
