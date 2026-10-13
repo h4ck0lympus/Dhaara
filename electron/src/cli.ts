@@ -40,6 +40,12 @@ export const HELP_TEXT = [
   'Browser and old webview drafts are NOT migrated into this separate Electron profile.',
 ].join('\n');
 
+/** The packaged shell manages its bundled service by default (parseArgs), so its help says so. */
+export function helpText(packaged: PackagedFacts | null): string {
+  if (packaged === null) return HELP_TEXT;
+  return HELP_TEXT.replace('Default: external service; start Python separately.', `Default: managed service on ${path.join(packaged.dataHome, 'dhara', 'workspace')}; --server <url> connects to an external service.`);
+}
+
 /** Arguments after the app path: Chromium/Node switches placed before it are never Dhara's. */
 export function userArgv(argv: readonly string[], defaultApp: boolean): string[] {
   if (!defaultApp) return argv.slice(1);

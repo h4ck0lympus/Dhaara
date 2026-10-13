@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { CliError, DEFAULT_SERVER, HELP_TEXT, parseArgs, userArgv, validateServer } from '../src/cli.js';
+import { CliError, DEFAULT_SERVER, HELP_TEXT, helpText, parseArgs, userArgv, validateServer } from '../src/cli.js';
 
 const CWD = '/home/user/launch';
 const REPO = '/repo';
@@ -79,6 +79,14 @@ describe('parseArgs (main.rs:12-108)', () => {
   it('returns help, but only after earlier arguments parsed', () => {
     expect(parse(['--help'])).toBe('help');
     expect(HELP_TEXT).toContain('--manage-service --data-dir');
+    expect(helpText(null)).toBe(HELP_TEXT);
+  });
+
+  it('packaged --help states the managed default and keeps every other line', () => {
+    const text = helpText({ resourcesPath: '/r', dataHome: '/xdg' });
+    expect(text.split('\n')[1]).toBe('Default: managed service on /xdg/dhara/workspace; --server <url> connects to an external service.');
+    expect(text).not.toContain('Default: external service');
+    expect(text.split('\n').filter((_, i) => i !== 1)).toEqual(HELP_TEXT.split('\n').filter((_, i) => i !== 1));
     expect(cliError(() => parse(['--bogus', '--help']))).toBe('Unknown argument; use --help. No token file is needed by the webview.');
   });
 

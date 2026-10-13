@@ -59,3 +59,9 @@ test('the AppImage runs the bundled service sandboxed on a private workspace, an
   await expect.poll(() => live(identity.pid), { timeout: 10_000 }).toBe(false);
   expect(spawnSync('flock', ['--nonblock', path.join(dataDir, '.dhara-service.lock'), 'true']).status).toBe(0);   // the lock is released
 });
+
+test('the AppImage --help states the managed default', () => {
+  const help = spawnSync(APPIMAGE!, ['--help'], { encoding: 'utf8', env: { ...process.env, XDG_DATA_HOME: '/xdg-help' } });
+  expect(help.status).toBe(0);
+  expect(help.stdout).toContain('Default: managed service on /xdg-help/dhara/workspace; --server <url> connects to an external service.');
+});
