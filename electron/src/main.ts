@@ -1,12 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, session, WebContentsView, type IpcMainEvent } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HELP_TEXT, parseArgs, userArgv, type CliOptions } from './cli.js';
+import { helpText, parseArgs, userArgv, type CliOptions } from './cli.js';
 import { installCloseHandler } from './close.js';
 import { ManagedService, managedPort, prepareWorkspace, type LifecycleError } from './lifecycle.js';
 import { installNavigationGuards } from './navigation.js';
 import { installPermissions, PERMISSION_PROMPTS } from './permissions.js';
-import { adoptLegacyProfile, legacyProfile, prepareProfile, resolveProfile } from './profile.js';
+import { adoptLegacyProfile, dataHome, legacyProfile, prepareProfile, resolveProfile } from './profile.js';
 import { IPC_STARTUP_CANCEL, IPC_STARTUP_RETRY, IPC_STARTUP_STATUS, SERVICE_DOWN, SERVICE_UP, STARTUP_TEXT, type StartupStatus } from './protocol.js';
 
 const DIST = path.dirname(fileURLToPath(import.meta.url));
@@ -33,8 +33,10 @@ function exitWith(code: 0 | 2, message: string): never {
 
 function readOptions(): { options: CliOptions; profile: string } {
   try {
-    const options = parseArgs(userArgv(process.argv, process.defaultApp === true), process.cwd(), REPO_ROOT, process.env);
-    if (options === 'help') exitWith(0, HELP_TEXT);
+    // Packaged (the AppImage): managed by default on a workspace under the data home, with the bundled service (packaging spec §4).
+    const packaged = app.isPackaged ? { resourcesPath: process.resourcesPath, dataHome: dataHome(process.env) } : null;
+    const options = parseArgs(userArgv(process.argv, process.defaultApp === true), process.cwd(), REPO_ROOT, process.env, packaged);
+    if (options === 'help') exitWith(0, helpText(packaged));
     const resolved = resolveProfile(options.profile, process.env, process.cwd());
     // An explicit --profile is never moved; the default location adopts the pre-rename one once (rename spec §4.6), before setPath and the lock.
     const profile = options.profile === null ? adoptLegacyProfile(resolved, legacyProfile(process.env), (line) => process.stderr.write(`${line}\n`)) : resolved;   // rename-shim: adopts the pre-rename profile directory once

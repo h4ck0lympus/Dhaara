@@ -349,4 +349,4 @@ def test_request_marker_dual_read(env):
 def test_transcribe_off_names_the_setup_commands(env):
     c,s,w=env;n=capture(c);r=c.post(f"/api/notes/{n['id']}/transcribe");assert r.status_code==409
     detail=r.json()['detail']
-    for needle in ('pip install -e ".[speech]"','tools/download_speech_model.py base.en','DHARA_SPEECH_MODEL','CPU','Your recording is saved'):assert needle in detail,detail
+    for needle in ('pip install -e ".[speech]"','tools/download_speech_model.py base.en','DHARA_SPEECH_MODEL','CPU','the packaged build does not include speech','Your recording is saved'):assert needle in detail,detail

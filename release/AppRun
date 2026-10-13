@@ -1,0 +1,6 @@
+#!/bin/sh
+# The launcher runs as plain Node inside the bundled Electron and starts the real process itself (packaging spec §3, §5).
+# $APPDIR is set by the AppImage runtime; an extracted tree (--appimage-extract) runs this file directly, hence the fallback.
+APPDIR="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+export ELECTRON_RUN_AS_NODE=1
+exec "$APPDIR/usr/lib/dhara/dhara" "$APPDIR/usr/lib/dhara/resources/launch.cjs" "$@"

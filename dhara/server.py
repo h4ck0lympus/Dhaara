@@ -295,7 +295,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/notes/{note_id}/transcribe')
     def transcribe(note_id):
-        if not worker.speech_model: raise Problem(409,'Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path. Your recording is saved.')
+        if not worker.speech_model: raise Problem(409,'Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path (the packaged build does not include speech). Your recording is saved.')
         return store.enqueue(note_id,'transcribe')
 
     @app.get('/api/attachments/{file_id}')

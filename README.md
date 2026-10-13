@@ -31,6 +31,18 @@ This is a **runnable local development release**, not just a UI mockup. The serv
 
 Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. Python 3.12.3 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
 
+### Install (Linux x86_64 AppImage)
+
+Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`;
+see [docs/DESKTOP.md](docs/DESKTOP.md), "Packaged build"), make it executable and
+run it. It starts the bundled service on `~/.local/share/dhara/workspace`
+(`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. Only
+when user namespaces are unavailable and no root-owned setuid sandbox helper is
+found does it print a one-time `sudo chown`/`chmod` line for a copy of
+Chromium's sandbox helper under `~/.local/share/dhara/`; after that it runs
+sandboxed; it never runs without the sandbox. Contributors: the development flow below (a browser, or
+`npm --prefix electron start`) is unchanged and needs no AppImage.
+
 ### Linux / macOS
 
 From the extracted `dhara` directory:

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { CliError, DEFAULT_SERVER, HELP_TEXT, parseArgs, userArgv, validateServer } from '../src/cli.js';
+import { CliError, DEFAULT_SERVER, HELP_TEXT, helpText, parseArgs, userArgv, validateServer } from '../src/cli.js';
 
 const CWD = '/home/user/launch';
 const REPO = '/repo';
@@ -79,6 +79,14 @@ describe('parseArgs (main.rs:12-108)', () => {
   it('returns help, but only after earlier arguments parsed', () => {
     expect(parse(['--help'])).toBe('help');
     expect(HELP_TEXT).toContain('--manage-service --data-dir');
+    expect(helpText(null)).toBe(HELP_TEXT);
+  });
+
+  it('packaged --help states the managed default and keeps every other line', () => {
+    const text = helpText({ resourcesPath: '/r', dataHome: '/xdg' });
+    expect(text.split('\n')[1]).toBe('Default: managed service on /xdg/dhara/workspace; --server <url> connects to an external service.');
+    expect(text).not.toContain('Default: external service');
+    expect(text.split('\n').filter((_, i) => i !== 1)).toEqual(HELP_TEXT.split('\n').filter((_, i) => i !== 1));
     expect(cliError(() => parse(['--bogus', '--help']))).toBe('Unknown argument; use --help. No token file is needed by the webview.');
   });
 
@@ -157,5 +165,49 @@ describe('parseArgs (main.rs:12-108)', () => {
 
   it('lets the last repeated flag win, as main.rs did', () => {
     expect((parse(['--server', 'http://127.0.0.1:1', '--server', 'http://127.0.0.1:2']) as { server: string }).server).toBe('http://127.0.0.1:2');
+  });
+});
+
+describe('parseArgs in a packaged build (packaging spec §4)', () => {
+  const FACTS = { resourcesPath: '/app/usr/lib/dhara/resources', dataHome: '/home/user/.local/share' };
+  const SERVICE = '/app/usr/lib/dhara/resources/service/dhara-service/dhara-service';
+  const packaged = (argv: string[], env: NodeJS.ProcessEnv = {}) => parseArgs(argv, CWD, REPO, env, FACTS);
+
+  it('defaults to managed mode on a private workspace with the bundled service', () => {
+    expect(packaged([])).toEqual({
+      server: DEFAULT_SERVER,
+      profile: null,
+      manageService: true,
+      dataDir: '/home/user/.local/share/dhara/workspace',
+      python: SERVICE,
+      entryPoint: '',
+      startupTimeoutMs: 15_000,
+    });
+  });
+
+  it('lets --data-dir alone choose the workspace', () => {
+    expect(packaged(['--data-dir', '/notes'])).toMatchObject({ manageService: true, dataDir: '/notes', python: SERVICE, entryPoint: '' });
+    expect(packaged(['--data-dir', 'notes'])).toMatchObject({ dataDir: '/home/user/launch/notes' });
+  });
+
+  it('--server switches to external mode exactly as today', () => {
+    expect(packaged(['--server', 'http://127.0.0.1:9000'])).toMatchObject({ server: 'http://127.0.0.1:9000', manageService: false, dataDir: null });
+    expect(cliError(() => packaged(['--server', 'http://127.0.0.1:9000', '--data-dir', 'x'])))
+      .toBe('--data-dir requires explicit --manage-service; external mode never owns a service');
+  });
+
+  it('an explicit --manage-service keeps every managed rule and still runs the bundled service', () => {
+    expect(cliError(() => packaged(['--manage-service']))).toBe('Managed mode requires an explicit --data-dir; no implicit real notebook');
+    expect(cliError(() => packaged(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100']))).toBe('Managed mode uses http://127.0.0.1:8765 only');
+    expect(packaged(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100'], { DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: '9100' }))
+      .toMatchObject({ server: 'http://127.0.0.1:9100', manageService: true, dataDir: '/home/user/launch/ws', python: SERVICE, entryPoint: '' });
+  });
+
+  it('--python and --entry-point still win', () => {
+    expect(packaged(['--python', 'py', '--entry-point', 'run.py'])).toMatchObject({ python: '/home/user/launch/py', entryPoint: '/home/user/launch/run.py' });
+  });
+
+  it('null facts keep today\'s defaults', () => {
+    expect(parseArgs([], CWD, REPO, {}, null)).toEqual(parse([]));
   });
 });

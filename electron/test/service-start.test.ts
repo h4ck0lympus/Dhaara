@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MESSAGES, STRIPPED_ENV } from '../src/lifecycle.js';
-import { FAKE, fakeEnv, freePort, live, readPids, rejection, serviceFactory, tempDir, workspace } from './helpers.js';
+import { FAKE, PYTHON, fakeEnv, freePort, live, readPids, rejection, serviceFactory, tempDir, workspace } from './helpers.js';
 
 const service = serviceFactory();
 
@@ -27,6 +27,19 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
     expect(dump.env).toEqual(expect.arrayContaining(['PATH', 'DHARA_KEEP_ME', 'DHARA_FAKE_MODE']));
     expect(handle).toEqual({ pid: dump.pid, instance: handle.instance, origin: `http://127.0.0.1:${port}` });
     expect(managed.state).toBe('running');
+  });
+
+  it('spawns [python, ...args] when the entry point is empty, as for a frozen service (packaging spec §4)', async () => {
+    const dir = tempDir();
+    const frozen = path.join(dir, 'dhara-service');   // a stand-in for the PyInstaller binary: its own entry point
+    fs.writeFileSync(frozen, `#!/bin/sh\nexec ${JSON.stringify(PYTHON)} ${JSON.stringify(FAKE)} "$@"\n`, { mode: 0o755 });
+    const envfile = path.join(dir, 'env.json');
+    const port = await freePort();
+    const ws = workspace();
+    const managed = service({ port, workspace: ws, python: frozen, entryPoint: '', env: fakeEnv('env-dump', { DHARA_FAKE_ENVFILE: envfile }) });
+    await managed.start();
+    const dump = JSON.parse(fs.readFileSync(envfile, 'utf8')) as { argv: string[] };
+    expect(dump.argv).toEqual(['--desktop-managed', '--host', '127.0.0.1', '--port', String(port), '--data-dir', ws, '--owner-pid', String(process.pid)]);
   });
 
   it('shares one attempt between concurrent calls and returns the running handle on Retry', async () => {

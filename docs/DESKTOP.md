@@ -132,6 +132,68 @@ SIGKILL, stdin EOF makes Python shut down its group (it SIGTERMs its process gro
 once and SIGKILLs it 8 s later only if the service is still running); `PR_SET_PDEATHSIG` covers the moment before the watcher starts. Separately launched agents, browsers and the Sway
 helper are never in that group.
 
+## Packaged build (AppImage)
+
+`release/build.sh` (alias `npm --prefix electron run package`) produces
+`release/out/Dhara-<version>-x86_64.AppImage`: the Electron shell, the Python
+service frozen with PyInstaller (one directory, `web/dist` inside it) and the
+launcher in one file. It needs Node 22.23.3 on PATH
+(`export PATH=$HOME/.nvm/versions/node/v22.23.3/bin:$PATH`), the repository `.venv`
+and, the first time, internet access: it downloads `appimagetool` 1.9.1 and the
+static AppImage runtime 20251108 into `release/cache/` and verifies both against
+the SHA-256 values in the script. The version comes from `electron/package.json`
+and must equal `pyproject.toml`'s; the build fails otherwise. Nothing is installed
+system-wide, and the build is not part of the test gate. Its `npm ci` replaces
+`electron/node_modules`, so run `node electron/scripts/link-sandbox.mjs` again
+before `npm --prefix electron test`.
+
+```bash
+release/build.sh
+./release/out/Dhara-0.1.0-x86_64.AppImage
+```
+
+Defaults inside the AppImage (every flag in the table above still wins): managed
+mode on the workspace `$XDG_DATA_HOME/dhara/workspace` (default
+`~/.local/share/dhara/workspace`, created with mode 0700), the bundled service
+instead of `.venv/bin/python run.py`, and the usual profile directory.
+`--data-dir PATH` opens another workspace; `--server URL` switches to external
+mode exactly as in a development build. Deleting the AppImage never touches
+notes. A second instance on the same workspace is refused by the lock as usual.
+
+Chromium's sandbox: the rule from [SECURITY.md](SECURITY.md) holds, the shell
+is never run with `--no-sandbox`, and the launcher refuses that flag (exit 3).
+Ubuntu 24.04 restricts unprivileged user namespaces, so Electron needs its
+root-owned setuid helper, which cannot live inside the AppImage (FUSE mounts
+ignore setuid). On start the launcher uses `CHROME_DEVEL_SANDBOX` when it is
+set, needs nothing when `unshare -Urpn true` works (the user, pid and net
+namespaces Chromium's namespace sandbox creates), and otherwise uses the first
+root-owned setuid file among `$XDG_DATA_HOME/dhara/chrome-sandbox` (default
+`~/.local/share/dhara/chrome-sandbox`) and `/opt/google/chrome/chrome-sandbox`.
+When none exists it copies the bundled helper to
+`$XDG_DATA_HOME/dhara/chrome-sandbox` (default
+`~/.local/share/dhara/chrome-sandbox`; the image is unmounted when
+the launcher exits, so the line names that copy, not a path inside the
+AppImage), prints the one-time line with the real path and exits 3:
+
+```
+sudo chown root:root ~/.local/share/dhara/chrome-sandbox && sudo chmod 4755 ~/.local/share/dhara/chrome-sandbox
+```
+
+If your home directory is mounted `nosuid`, install that file as
+`/opt/google/chrome/chrome-sandbox` instead.
+
+Chromium honours that helper only when the binary belongs to the running user,
+so the image is built with the builder's user id inside it and runs sandboxed
+for that user; another user id gets one line telling them to extract it once
+(`--appimage-extract`) and start `squashfs-root/AppRun`. The `.deb` follow-on
+installs a root-owned helper beside the binary and needs none of this.
+
+Not included: the speech extra (`capabilities.speech` is false and
+`POST /api/notes/<id>/transcribe` answers 409 saying so) and the Sway kitten
+companion; Ollama stays an external service. The AppImage runtime is static, so
+`libfuse2` is not required; without FUSE, start it with
+`APPIMAGE_EXTRACT_AND_RUN=1` or extract it once with `--appimage-extract`.
+
 ## Close checkpoint
 
 Closing the window asks the page to checkpoint. A capture save still in flight
@@ -181,6 +243,10 @@ headless Sway with its own `XDG_RUNTIME_DIR` and Xwayland disabled, so it never
 touches your session. That suite does not satisfy physical Sway acceptance
 (handbook §24 Stage A). Results are in
 [TEST_REPORT.md](TEST_REPORT.md).
+`electron/e2e/packaged.spec.ts` runs the AppImage from `release/out/` when one
+exists, and the `[packaged]` cases of `tests/test_managed_service.py` run the
+frozen service; both are skipped with a reason otherwise, so a gate run that
+must show no skipped count (TEST_REPORT.md) builds the package first.
 
 ## Sway companion
 
