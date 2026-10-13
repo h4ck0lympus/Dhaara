@@ -139,3 +139,11 @@ establish recovery after physical disk damage, power loss or browser eviction.
 Private site data remains unencrypted, and clearing it still removes unsent
 captures. Multiple tabs still share an unsaved draft. No new remote access,
 screen observation or model authority was added.
+
+## Compatibility with Noema-era installs
+
+Kept for one release after the 2026-10-12 rename; `git grep -n 'rename-shim:'` lists every line.
+
+- **Session cookie.** Login sets `dhara_session`. A `noema_session` cookie written before the rename still authenticates until it expires (14 days); the next login or `POST /api/session` writes the new cookie and clears the old one, and `DELETE /api/session` clears both.
+- **Request marker.** `POST /api/session` and every cookie-authenticated non-GET request accept `X-Dhara-Request: 1` or `X-Noema-Request: 1`. The web client, `tools/client.py` and `tools/agent.py` send only the new header.
+- **Tokens and settings.** `DHARA_TOKEN`, `DHARA_ACCESS_TOKEN`, `DHARA_ALLOWED_HOSTS`, `DHARA_MODEL`, `DHARA_SPEECH_MODEL`, `DHARA_ALLOW_REMOTE_MODEL` and `DHARA_DATA_DIR` are read first; the `NOEMA_*` names are a logged fallback. The agent wrapper strips both sets from the wrapped command, and the managed service strips both from its own environment.

@@ -217,7 +217,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 198 | tests/test_managed_service.py:230 | test_public_handshake_does_not_authorize_api | P6 | tests/test_managed_service.py | green |
 | 199 | tests/test_managed_service.py:244 | test_separately_wrapped_agent_survives_owned_quit | P6 | electron/test/service-parity.test.ts › "lets a separately wrapped agent survive an owned quit (:244)" | green |
 | 200 | tests/test_managed_service.py:281 | test_invalid_identity_never_loads_workspace | P6 | electron/test/service-start.test.ts › "%s fails identity, stops the service and never writes the workspace" | green |
-| 201 | tests/test_managed_service.py:292 | test_managed_disables_inherited_optional_features | P6 | electron/test/service-parity.test.ts › "disables inherited optional features and never uses NOEMA_DATA_DIR (:292)" | green |
+| 201 | tests/test_managed_service.py:292 | test_managed_disables_inherited_optional_features | P6 | electron/test/service-parity.test.ts › "disables inherited optional features and never uses DHARA_DATA_DIR (:292)" | green |
 | 202 | tests/test_managed_service.py:307 | test_owner_death_before_python_lease_watcher | P6 | electron/test/service-parity.test.ts › "owner SIGKILL before the lease watcher still stops Python through PDEATHSIG (:307)" | green |
 
 ## B. public/app.js strings

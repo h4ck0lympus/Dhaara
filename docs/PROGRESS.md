@@ -120,8 +120,9 @@ migration does not satisfy it; follow [the device checklist](PHYSICAL_SWAY_ACCEP
    cp -a -n /home/p4nic/code/noema-cutover-backup/desktop/. desktop/
    cp -a -n /home/p4nic/code/noema-cutover-backup/tests/now_state.test.cjs tests/
    ```
-3. Browsers: old and new UIs share `dhara-local-v1` version 1, so the old UI in a
-   browser keeps its queued captures. The reinstalled v1 service worker deletes
+3. Browsers: the Dhara build moves the pre-rename browser database into `dhara-local-v1`
+   on its first load and deletes the old one, so the pre-migration UI finds no
+   queued captures: flush them first (docs/DESKTOP.md, compatibility section). The reinstalled v1 service worker deletes
    nothing of v1's; the v2 `dhara-shell-<hash>` caches are only stale storage.
 
 ## Previous continuation: frictionless task capture (historical)

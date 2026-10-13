@@ -183,3 +183,15 @@ apart from its sprite path, `tools/assets/cat.png`. It still opens `/#task/<id>`
 and `/#settings` in your browser; the React UI rewrites those to `#/task/<id>`
 and `#/settings`. The browser kitten preview was removed. Main-window hide does
 not launch or control the helper.
+
+## Compatibility with Noema-era installs
+
+Dhara was Noema until 2026-10-12. These shims keep an existing install working and are removed one release later; `git grep -n 'rename-shim:'` lists every line involved.
+
+- **Profile directory.** On the first launch without `--profile`, `$XDG_DATA_HOME/noema/electron` (default `~/.local/share/noema/electron`) is renamed to `…/dhara/electron`. If the rename fails (for example a different filesystem), the old directory stays in use and one `Dhara:` line is printed to stderr. The single-instance lock follows the directory. An explicit `--profile` is never moved.
+- **Local browser data.** On the first page load the database `noema-local-v1` is copied record by record into `dhara-local-v1` (queued captures keep their ids and upload once), then deleted. If anything fails, both databases stay as they were and the page shows "Local data could not be migrated; keep this page open and retry" — or "Close other Dhara tabs and retry the local save." when another tab still holds the old database — with a Retry button. A rollback to the pre-rename UI (`docs/PROGRESS.md`, rollback step 3) cannot see `dhara-local-v1`: flush queued captures first.
+- **Service worker.** The `dhara-shell-<hash>` worker deletes every `noema-shell-*` cache and every older `dhara-shell-*` cache when it activates.
+- **Workspace lock.** The service holds `.dhara-service.lock`; a stale `.noema-service.lock` is ignored.
+- **Notebook file.** On the first start after a clean close, `<data>/noema.sqlite3` is renamed to `<data>/dhara.sqlite3` (same directory). If `noema.sqlite3-wal` or `-shm` exists (the previous run did not close cleanly) or the rename fails, the old file is opened as-is and one line is logged; the next clean start retries. If both files exist nothing is moved: `dhara.sqlite3` is opened and the old file is left in place.
+- **Environment.** Every `NOEMA_*` variable is still read when the `DHARA_*` one is unset, with one deprecation line per process. Managed launch strips both prefixes from the service's environment.
+- **Python.** `from noema.server import create_app` still works and emits a `DeprecationWarning`; new scripts import `dhara`.

@@ -194,7 +194,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     }
   });
 
-  it('disables inherited optional features and never uses NOEMA_DATA_DIR (:292)', async () => {  // rename-keep: the frozen parity docs cite this title
+  it('disables inherited optional features and never uses DHARA_DATA_DIR (:292)', async () => {
     const root = tempDir();
     const ws = prepareWorkspace(path.join(root, 'selected'), '/');
     const port = await freePort();

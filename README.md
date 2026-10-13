@@ -1,5 +1,7 @@
 # Dhara · 0.1.0
 
+Dhara (formerly Noema; the product handbook still uses the old name) — धारा, "stream". Existing installs keep their data, cookies, tokens and settings; the compatibility sections at the end of [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/SECURITY.md](docs/SECURITY.md) list what is still read under the old names for one release.
+
 See [the maintained progress record](docs/PROGRESS.md) for what is built,
 what has been tested, remaining milestones and the next concrete step.
 
