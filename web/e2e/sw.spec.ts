@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, type Page } from '@playwright/test';
 import { expect, expectFontsLoaded, guardContext, PNG_1PX, test } from './fixtures';
-import { getFreePort, REPO, startNoema, WEB_DIST } from './server';
+import { getFreePort, REPO, startDhara, WEB_DIST } from './server';
 
 const ROUTES = ['#/overview', '#/capture', '#/notes', '#/note/offline-check', '#/plan'];
 
@@ -17,7 +17,7 @@ function readPrecache(dist: string): { cache: string; urls: string[] } {
 }
 
 function copyDist(): string {
-  const dist = mkdtempSync(join(tmpdir(), 'noema-dist-'));
+  const dist = mkdtempSync(join(tmpdir(), 'dhara-dist-'));
   cpSync(WEB_DIST, dist, { recursive: true });
   return dist;
 }
@@ -32,7 +32,7 @@ async function shellVisible(page: Page): Promise<void> {
 
 function serveV1(port: number): Promise<Server> {
   const files: Record<string, [string | Buffer, string]> = {
-    '/': ['<!doctype html><title>Noema v1</title><main data-quiet><h1>v1</h1></main><script type="module" src="/static/app.js"></script>', 'text/html'],
+    '/': ['<!doctype html><title>Dhara v1</title><main data-quiet><h1>v1</h1></main><script type="module" src="/static/app.js"></script>', 'text/html'],
     '/sw.js': [readFileSync(join(REPO, 'web/e2e/v1/sw.js')), 'application/javascript'],
     '/static/app.js': ["navigator.serviceWorker.register('/sw.js');", 'application/javascript'],
     '/static/styles.css': ['', 'text/css'],
@@ -51,7 +51,7 @@ function serveV1(port: number): Promise<Server> {
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
 }
 
-test('Real loopback navigation and native service worker control', async ({ page, noema }) => {
+test('Real loopback navigation and native service worker control', async ({ page, dhara }) => {
   const { cache, urls } = readPrecache(WEB_DIST);
   expect(urls).toEqual(expect.arrayContaining(['/', '/manifest.webmanifest', '/icon.svg']));
   expect(urls.some((url) => /^\/assets\/.+\.js$/.test(url))).toBe(true);
@@ -59,36 +59,36 @@ test('Real loopback navigation and native service worker control', async ({ page
   expect(urls.filter((url) => url.endsWith('.otf'))).toHaveLength(4);
   expect(urls).not.toContain('/sw.js');
   expect(urls).not.toContain('/index.html');
-  await page.goto(noema.origin + '/');
+  await page.goto(dhara.origin + '/');
   await waitForController(page);
   expect(await page.evaluate(() => caches.keys())).toEqual([cache]);
   const cached = await page.evaluate(async (name) => (await (await caches.open(name)).keys()).map((request) => new URL(request.url).pathname).sort(), cache);
   expect(cached).toEqual([...urls].sort());
 });
 
-test('offline cold boot serves every route, every precached file and loaded fonts', async ({ noema }, testInfo) => {
+test('offline cold boot serves every route, every precached file and loaded fonts', async ({ dhara }, testInfo) => {
   const { urls } = readPrecache(WEB_DIST);
   const profile = testInfo.outputPath('profile');
   const warm = await chromium.launchPersistentContext(profile);
   const warmClean = await guardContext(warm);
   const first = await warm.newPage();
-  await first.goto(noema.origin + '/');
+  await first.goto(dhara.origin + '/');
   await waitForController(first);
   warmClean();
   await warm.close();
-  await noema.kill();
+  await dhara.kill();
 
   const cold = await chromium.launchPersistentContext(profile);
   const coldClean = await guardContext(cold);
   try {
     for (const hash of ROUTES) {
       const page = await cold.newPage();
-      await page.goto(`${noema.origin}/${hash}`);
+      await page.goto(`${dhara.origin}/${hash}`);
       await shellVisible(page);
       await page.close();
     }
     const page = await cold.newPage();
-    await page.goto(noema.origin + '/');
+    await page.goto(dhara.origin + '/');
     await shellVisible(page);
     await expectFontsLoaded(page); // before the fetch loop below, which adds its own resource entries
     const assets = urls.filter((url) => url.startsWith('/assets/')); // every precached JS, CSS and font file
@@ -111,9 +111,9 @@ test('offline cold boot serves every route, every precached file and loaded font
 
 test('a 5xx navigation falls back to the cached shell', async ({ page }) => {
   const dist = copyDist();
-  const noema = await startNoema({ distDir: dist });
+  const dhara = await startDhara({ distDir: dist });
   try {
-    await page.goto(noema.origin + '/');
+    await page.goto(dhara.origin + '/');
     await waitForController(page);
     rmSync(join(dist, 'index.html'));
     expect(await page.evaluate(async () => (await fetch('/')).status)).toBe(503); // non-navigation fetches pass through
@@ -121,17 +121,17 @@ test('a 5xx navigation falls back to the cached shell', async ({ page }) => {
     expect(response?.status()).toBe(200);
     await shellVisible(page);
   } finally {
-    await noema.stop();
+    await dhara.stop();
     rmSync(dist, { recursive: true, force: true });
   }
 });
 
 test('two consecutive builds purge the older shell cache', async ({ page }) => {
   const dist = copyDist();
-  const noema = await startNoema({ distDir: dist });
+  const dhara = await startDhara({ distDir: dist });
   try {
     const before = readPrecache(dist);
-    await page.goto(noema.origin + '/');
+    await page.goto(dhara.origin + '/');
     await waitForController(page);
     expect(await page.evaluate(() => caches.keys())).toEqual([before.cache]);
 
@@ -144,7 +144,7 @@ test('two consecutive builds purge the older shell cache', async ({ page }) => {
     await page.reload();
     await expect.poll(() => page.evaluate(() => caches.keys()), { timeout: 20_000 }).toEqual([after.cache]);
   } finally {
-    await noema.stop();
+    await dhara.stop();
     rmSync(dist, { recursive: true, force: true });
   }
 });
@@ -167,15 +167,15 @@ test('takes over a page controlled by the v1 service worker and deletes noema-sh
     await closeV1();
     v1Open = false;
 
-    const noema = await startNoema({ port });
+    const dhara = await startDhara({ port });
     try {
       await page.reload();
       await expect.poll(() => page.evaluate(() => caches.keys()), { timeout: 20_000 }).toEqual([cache]);
       await page.reload();
       await shellVisible(page);
-      expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toBe(`${noema.origin}/sw.js`);
+      expect(await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toBe(`${dhara.origin}/sw.js`);
     } finally {
-      await noema.stop();
+      await dhara.stop();
     }
   } finally {
     if (v1Open) await closeV1();

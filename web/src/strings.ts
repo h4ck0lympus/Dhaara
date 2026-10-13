@@ -32,7 +32,7 @@ export const S = {
   lastKnown: 'Last known · ', // 189
   savedTo: (folder: string, processing: string): string => `Saved to ${folder}. ${processing ? 'Processing queued.' : 'Original preserved.'}`, // 128
   queueReadFailed: 'Cannot read the local capture queue. Keep this page open and retry the local save.', // 135
-  closeOtherTabs: 'Close other Noema tabs and retry the local save.', // 40
+  closeOtherTabs: 'Close other Dhara tabs and retry the local save.', // 40
   tooManyFiles: 'Keep each capture to 12 attachments.', // 398
   fileTooLarge: (name: string): string => `${name} exceeds 32 MB.`, // 398
   unsupportedType: 'Use a PNG, JPEG or WebP image, or a WAV, Ogg, WebM, MP4 or MP3 recording.', // new; server allowlist server.py:40-48
@@ -69,8 +69,8 @@ export const S = {
   noteConflict: 'This note changed on the server. Your edits were not overwritten — Reload latest replaces them with the newest version; Keep editing keeps them.',
   taskReopened: 'Task reopened.', // 499
   taskCompleted: 'Task completed.', // 499
-  unlockTitle: 'Unlock Noema', // 302
-  unlockHelp: 'This server needs your access token. On the host machine, it is in the selected data directory’s admin.token file or your NOEMA_ACCESS_TOKEN setting.', // 302
+  unlockTitle: 'Unlock Dhara', // 302
+  unlockHelp: 'This server needs your access token. On the host machine, it is in the selected data directory’s admin.token file or your DHARA_ACCESS_TOKEN setting.', // 302
   accessToken: 'Access token', // 302
   unlock: 'Unlock', // 302
   outboxTitle: 'Captures on this device', // 482
@@ -84,15 +84,15 @@ export const S = {
   confirmReplaceDraft: 'Replace the current unsaved Capture draft? The queued capture remains safe.', // 541
   openedCopy: 'Opened a copy. The queued original still exists.', // 542
   confirmDiscard: 'Permanently discard this unsent capture and its local attachments?', // 544
-  notificationTitle: 'Noema reminder', // 98
+  notificationTitle: 'Dhara reminder', // 98
   notificationFallback: 'A task needs your attention.', // 98
   notificationsUnsupported: 'This browser does not expose notifications here. Reminders still appear in Needs you.', // 535
   closeSaveInFlight: 'A capture save is still finishing. Try closing again shortly.', // 603
-  closeConfirm: 'Close Noema? An unfinished recording or unsaved note edit may be lost. Cancel to stop/save or copy it first.', // 604
+  closeConfirm: 'Close Dhara? An unfinished recording or unsaved note edit may be lost. Cancel to stop/save or copy it first.', // 604
   closeDraftFailed: 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.', // 608
-  closeCheckpointFailed: 'Could not checkpoint your draft. Keep Noema open and retry the local save.', // 612
+  closeCheckpointFailed: 'Could not checkpoint your draft. Keep Dhara open and retry the local save.', // 612
   draftsNotSaved: 'Could not save your drafts on this device.', // new
-  updateReady: 'Noema was updated. Your drafts are saved on this device.', // new
+  updateReady: 'Dhara was updated. Your drafts are saved on this device.', // new
   migrationFailed: 'Local data could not be migrated; keep this page open and retry.', // rename spec §4.4
   reload: 'Reload', // new
 } as const;

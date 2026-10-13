@@ -59,7 +59,7 @@ describe('userArgv', () => {
   });
 
   it('keeps everything after the binary in a packaged app', () => {
-    expect(userArgv(['/opt/noema', '--server', 'http://127.0.0.1:8765'], false)).toEqual(['--server', 'http://127.0.0.1:8765']);
+    expect(userArgv(['/opt/dhara', '--server', 'http://127.0.0.1:8765'], false)).toEqual(['--server', 'http://127.0.0.1:8765']);
   });
 });
 
@@ -129,12 +129,12 @@ describe('parseArgs (main.rs:12-108)', () => {
       .toBe('Managed mode uses http://127.0.0.1:8765 only');
     expect(cliError(() => parse(['--manage-service', '--data-dir', 'ws', '--server', 'http://[::1]:8765'])))
       .toBe('Managed mode uses http://127.0.0.1:8765 only');
-    expect(cliError(() => parse(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100'], { NOEMA_ELECTRON_TEST_PORT: '9100' })))
+    expect(cliError(() => parse(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100'], { DHARA_ELECTRON_TEST_PORT: '9100' })))
       .toBe('Managed mode uses http://127.0.0.1:8765 only');
   });
 
   it('accepts the test port only with the explicit test flag', () => {
-    const options = parse(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100'], { NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: '9100' });
+    const options = parse(['--manage-service', '--data-dir', 'ws', '--server', 'http://127.0.0.1:9100'], { DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: '9100' });
     expect(options).toMatchObject({ server: 'http://127.0.0.1:9100', manageService: true });
   });
 

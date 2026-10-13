@@ -29,7 +29,7 @@ describe('ManagedService stop, cancel and crash (spec §6.4.6-6.4.7)', () => {
 
   it('cancel during startup rejects with cancelled and removes the whole owned group', async () => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const managed = await fake('grandchild', { NOEMA_FAKE_PIDFILE: pidfile }, 30_000);
+    const managed = await fake('grandchild', { DHARA_FAKE_PIDFILE: pidfile }, 30_000);
     const attempt = managed.start();
     await until(() => readPids(pidfile).length === 2);
     const pids = readPids(pidfile);
@@ -42,7 +42,7 @@ describe('ManagedService stop, cancel and crash (spec §6.4.6-6.4.7)', () => {
 
   it('a startup timeout also removes an owned descendant', async () => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const managed = await fake('grandchild', { NOEMA_FAKE_PIDFILE: pidfile }, 400);
+    const managed = await fake('grandchild', { DHARA_FAKE_PIDFILE: pidfile }, 400);
     const error = await rejection(managed.start());
     expect(error.code).toBe('timeout');
     const pids = readPids(pidfile);
@@ -52,7 +52,7 @@ describe('ManagedService stop, cancel and crash (spec §6.4.6-6.4.7)', () => {
 
   it('reports a crash once, cleans the group, never restarts by itself; Retry is exactly one new spawn', async () => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const managed = await fake('grandchild', { NOEMA_FAKE_PIDFILE: pidfile, NOEMA_FAKE_ACK: '1' });
+    const managed = await fake('grandchild', { DHARA_FAKE_PIDFILE: pidfile, DHARA_FAKE_ACK: '1' });
     const first = await managed.start();
     const pids = readPids(pidfile);
     expect(pids[0]).toBe(first.pid);

@@ -94,8 +94,8 @@ describe('taskDraftStore.submit (spec §4.4 Task capture)', () => {
 
   it('unfreezes on 401 and other 4xx, clearing the pending attempt', async () => {
     await typed('Needs unlock');
-    fetchMock.mockResolvedValueOnce(json(401, { detail: 'Unlock Noema to continue' }));
-    expect(await m.store.submit()).toEqual({ ok: false, frozen: false, message: S.notConfirmed + 'Unlock Noema to continue' });
+    fetchMock.mockResolvedValueOnce(json(401, { detail: 'Unlock Dhara to continue' }));
+    expect(await m.store.submit()).toEqual({ ok: false, frozen: false, message: S.notConfirmed + 'Unlock Dhara to continue' });
     expect(m.store.getSnapshot().draft).toMatchObject({ raw: 'Needs unlock', pending: null });
     expect(await m.db.kvGet('task-draft')).toMatchObject({ pending: null });
     fetchMock.mockResolvedValueOnce(json(422, { detail: [{ msg: 'String should have at most 16000 characters' }] }));

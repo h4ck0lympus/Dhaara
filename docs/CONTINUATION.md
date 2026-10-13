@@ -4,7 +4,7 @@ This is the historical capture-recovery slice. Current milestones and source
 identity live in [PROGRESS.md](PROGRESS.md). At the React + Electron cutover the
 `public/app.js` storage code described below was ported to `web/src/local/db.ts`,
 `web/src/local/drafts.ts`, `web/src/local/outbox.ts` and `web/src/local/taskDraft.ts`
-with the same database (`noema-local-v1`, version 1), stores, record shapes,
+with the same database (`dhara-local-v1`, version 1), stores, record shapes,
 atomic Save transaction and serialised draft writes. The Electron close
 checkpoint preserves these semantics (see [DESKTOP.md](DESKTOP.md)). File
 references below are historical.
@@ -19,8 +19,8 @@ continuation of the actual v0.1.0 source, not a reconstructed v0.2.0 or a UI red
 
 ## Source and preserved data
 
-Noema is untracked inside the parent `/home/p4nic/code` Git repository. Its HEAD
-is `2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`; that is not a Noema source revision.
+Dhara is untracked inside the parent `/home/p4nic/code` Git repository. Its HEAD
+is `2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`; that is not a Dhara source revision.
 Before editing, `sha256sum -c SHA256SUMS` verified all 47 files of the original
 manifest (starting SHA256
 `062799a885090fdce1c6b1b4685331e3368e345a7342e1c36947a74465e60bbe`). That
@@ -30,11 +30,11 @@ cutover as the tracked-file manifest.
 Read the actual prompts/handbook under `docs/Noema-Documentation/`, current
 README/architecture/security/status/reports, tests and relevant source. The
 approved desktop/phone/tablet images were inspected as references and preserved.
-`docs/SCREEN_AWARENESS.md`, `noema/vision.py` and `tools/sway_screen.py` are absent;
+`docs/SCREEN_AWARENESS.md`, `dhara/vision.py` and `tools/sway_screen.py` are absent;
 v0.2.0 screen reports are historical evidence only.
 
 Existing `.data` and credentials were not used as test data, reset or migrated.
-The server database schema and browser database `noema-local-v1` version 1 are
+The server database schema and browser database `dhara-local-v1` version 1 are
 unchanged. Tests use temporary databases/profiles and synthetic content. Existing
 original notes, manual task priorities, focus pins and optional serialized
 CPU-first inference remain intact. No model is required by the new code.
@@ -62,7 +62,7 @@ CPU-first inference remain intact. No model is required by the new code.
   `qa/capture-desktop.png` and `qa/capture-mobile.png`; subsequent runs have a
   separate output directory. Archived documentation evidence was not edited.
 
-Dependency setup also created standard `noema_local.egg-info/` editable
+Dependency setup also created standard `dhara_local.egg-info/` editable
 installation metadata and updated the workspace `.venv`; these are generated
 development artifacts, not a native application installation or runtime redesign.
 
@@ -88,12 +88,12 @@ application edits; final tests used new disposable directories:
 .venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/noema-baseline-sYo3m7/post-change
 CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/browser_check.py
 CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py
-for noema_attempt in 1 2 3; do CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py || break; done
-for noema_attempt in 1 2 3; do CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py || exit; done
+for dhara_attempt in 1 2 3; do CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py || break; done
+for dhara_attempt in 1 2 3; do CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py || exit; done
 node --check public/app.js
 node --check public/companion.js
 node --check public/sw.js
-.venv/bin/python -m compileall -q noema tools run.py qa/browser_check.py qa/native_storage_check.py
+.venv/bin/python -m compileall -q dhara tools run.py qa/browser_check.py qa/native_storage_check.py
 ```
 
 Local socket tests required execution permission outside the socket-restricted
@@ -104,7 +104,7 @@ skill found no connected browser; headless Chrome was used for UI QA.
 For repeatable base-app startup, use an explicitly chosen data directory:
 
 ```bash
-.venv/bin/python run.py --data-dir /path/to/private/noema-data --open
+.venv/bin/python run.py --data-dir /path/to/private/dhara-data --open
 ```
 
 That is a handoff command, not a claim it was run against the user's data.

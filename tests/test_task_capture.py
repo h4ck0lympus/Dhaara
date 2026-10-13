@@ -76,9 +76,9 @@ def test_ambiguous_or_different_schedule_is_preserved_not_invented(env, raw):
 def test_explicit_labels_and_details_are_not_window_inference(env):
     c, s, _ = env
     s.set_meta('context', {'app': 'unrelated-editor', 'title': 'Private project'})
-    raw = 'Maybe review the cleanup path\nWorkflow: Noema\nNext action: Read the release order\nContext: Hypothesis not confirmed'
+    raw = 'Maybe review the cleanup path\nWorkflow: Dhara\nNext action: Read the release order\nContext: Hypothesis not confirmed'
     t = add(c, raw).json()
-    assert t['title'].startswith('Maybe') and t['project'] == 'Noema'
+    assert t['title'].startswith('Maybe') and t['project'] == 'Dhara'
     assert t['next_action'] == 'Read the release order'
     assert t['detail'] == 'Hypothesis not confirmed' and t['original_input'] == raw
     t = add(c, 'Review tomorrow', details={'project': 'Explicit workspace', 'priority': 'low', 'planned_on': None}).json()

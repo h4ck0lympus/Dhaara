@@ -5,14 +5,14 @@ import { test, expect } from '@playwright/test';
 import { MESSAGES } from '../src/lifecycle.js';
 import { STARTUP_TEXT } from '../src/protocol.js';
 import { live, readPids } from '../test/proc.js';
-import { closeWindow, killAll, launchNoema, openCapture, readDraft, tempDir, waitConnected } from './fixtures.js';
+import { closeWindow, killAll, launchDhara, openCapture, readDraft, tempDir, waitConnected } from './fixtures.js';
 import { FAKE, appPage, mainUrl, managedSetup, overlayBounds, ownedServices, runElectron, servicePid, startupPage } from './managed.js';
 
 test.afterEach(killAll);
 
 test('starts the owned service, loads only the verified origin, and stops the service after the close checkpoint', async () => {
   const m = await managedSetup();
-  const { app } = await launchNoema(m.args, { env: m.env });
+  const { app } = await launchDhara(m.args, { env: m.env });
   const page = await appPage(app, m.origin);
   await waitConnected(page);
   const pid = await servicePid(m.origin);
@@ -32,7 +32,7 @@ test('an occupied port shows the occupied message with Retry, never contacts the
     socket.destroy();
   });
   await new Promise<void>((resolve) => occupant.listen(m.port, '127.0.0.1', resolve));
-  const { app } = await launchNoema(m.args, { env: m.env });
+  const { app } = await launchDhara(m.args, { env: m.env });
   const startup = await startupPage(app);
   await expect(startup.locator('#status')).toHaveText(MESSAGES.portInUse);
   await expect(startup.locator('#retry')).toBeEnabled();
@@ -52,9 +52,9 @@ test('an occupied port shows the occupied message with Retry, never contacts the
 
 test('Cancel during startup stops the service and quits without a checkpoint', async () => {
   const m = await managedSetup();
-  const pidfile = path.join(tempDir('noema-cancel-'), 'pids.json');
-  const { app } = await launchNoema([...m.args, '--entry-point', FAKE, '--startup-timeout', '60'], {
-    env: { ...m.env, NOEMA_FAKE_MODE: 'hang', NOEMA_FAKE_PIDFILE: pidfile },
+  const pidfile = path.join(tempDir('dhara-cancel-'), 'pids.json');
+  const { app } = await launchDhara([...m.args, '--entry-point', FAKE, '--startup-timeout', '60'], {
+    env: { ...m.env, DHARA_FAKE_MODE: 'hang', DHARA_FAKE_PIDFILE: pidfile },
   });
   const startup = await startupPage(app);
   await expect(startup.locator('#status')).toHaveText(STARTUP_TEXT.starting);
@@ -70,9 +70,9 @@ test('Cancel during startup stops the service and quits without a checkpoint', a
 
 test('an HTTP identity mismatch never loads the origin and stops the impostor', async () => {
   const m = await managedSetup();
-  const pidfile = path.join(tempDir('noema-identity-'), 'pids.json');
-  const { app } = await launchNoema([...m.args, '--entry-point', FAKE], {
-    env: { ...m.env, NOEMA_FAKE_MODE: 'bad-http', NOEMA_FAKE_PIDFILE: pidfile },
+  const pidfile = path.join(tempDir('dhara-identity-'), 'pids.json');
+  const { app } = await launchDhara([...m.args, '--entry-point', FAKE], {
+    env: { ...m.env, DHARA_FAKE_MODE: 'bad-http', DHARA_FAKE_PIDFILE: pidfile },
   });
   const startup = await startupPage(app);
   await expect(startup.locator('#status')).toHaveText(MESSAGES.identity);
@@ -85,7 +85,7 @@ test('an HTTP identity mismatch never loads the origin and stops the impostor', 
 
 test('a crash shows the overlay over the loaded page; Quit runs the checkpoint first', async () => {
   const m = await managedSetup();
-  const first = await launchNoema(m.args, { env: m.env });
+  const first = await launchDhara(m.args, { env: m.env });
   const page = await appPage(first.app, m.origin);
   await waitConnected(page);
   const editor = await openCapture(page);
@@ -108,7 +108,7 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
   const closed = first.app.waitForEvent('close');
   await overlay.locator('#cancel').click();
   await closed;
-  const second = await launchNoema(m.args, { env: m.env, profile: first.profile });
+  const second = await launchDhara(m.args, { env: m.env, profile: first.profile });
   const reopened = await appPage(second.app, m.origin);
   await waitConnected(reopened);
   expect((await readDraft(reopened))?.raw).toBe('Typed after the crash, right before Quit.');
@@ -116,7 +116,7 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
 
 test('SIGTERM runs the close checkpoint and stops the owned service', async () => {
   const m = await managedSetup();
-  const first = await launchNoema(m.args, { env: m.env });
+  const first = await launchDhara(m.args, { env: m.env });
   const page = await appPage(first.app, m.origin);
   await waitConnected(page);
   const editor = await openCapture(page);
@@ -127,15 +127,15 @@ test('SIGTERM runs the close checkpoint and stops the owned service', async () =
   child.kill('SIGTERM');
   await exited;
   await expect.poll(() => live(pid), { timeout: 10_000 }).toBe(false);
-  const second = await launchNoema(m.args, { env: m.env, profile: first.profile });
+  const second = await launchDhara(m.args, { env: m.env, profile: first.profile });
   const reopened = await appPage(second.app, m.origin);
   await waitConnected(reopened);
   expect((await readDraft(reopened))?.raw).toBe('Typed right before SIGTERM.');
 });
 
 test('command-line errors exit 2 before any window or directory exists; --help exits 0', async () => {
-  const profile = tempDir('noema-cli-profile-');
-  const dataDir = path.join(tempDir('noema-cli-data-'), 'never-created');
+  const profile = tempDir('dhara-cli-profile-');
+  const dataDir = path.join(tempDir('dhara-cli-data-'), 'never-created');
   const LOOPBACK = 'Dhara: Use a literal loopback HTTP URL, e.g. http://127.0.0.1:8765';
   const cases: [string[], Record<string, string>, string][] = [
     [['--server', 'http://localhost:8765'], {}, LOOPBACK],
@@ -147,8 +147,8 @@ test('command-line errors exit 2 before any window or directory exists; --help e
     [['--startup-timeout', 'soon'], {}, 'Dhara: Invalid startup timeout'],
     [['--data-dir', dataDir], {}, 'Dhara: --data-dir requires explicit --manage-service; external mode never owns a service'],
     [['--manage-service'], {}, 'Dhara: Managed mode requires an explicit --data-dir; no implicit real notebook'],
-    // The test port is ignored without NOEMA_ELECTRON_TEST=1.
-    [['--manage-service', '--data-dir', dataDir, '--server', 'http://127.0.0.1:9100'], { NOEMA_ELECTRON_TEST_PORT: '9100' }, 'Dhara: Managed mode uses http://127.0.0.1:8765 only'],
+    // The test port is ignored without DHARA_ELECTRON_TEST=1.
+    [['--manage-service', '--data-dir', dataDir, '--server', 'http://127.0.0.1:9100'], { DHARA_ELECTRON_TEST_PORT: '9100' }, 'Dhara: Managed mode uses http://127.0.0.1:8765 only'],
   ];
   for (const [args, env, message] of cases) {
     const result = await runElectron(['--profile', profile, ...args], env);

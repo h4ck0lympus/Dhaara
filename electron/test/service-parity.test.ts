@@ -46,7 +46,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const identity = await (await fetch(`http://127.0.0.1:${port}/api/desktop-instance`)).json() as Record<string, unknown>;
     expect(identity.pid).toBe(pid);
     expect(Object.keys(identity).sort()).toEqual(['instance', 'pid', 'protocol']);
-    expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toContain('Noema');   // existing browser workflow
+    expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toContain('Dhara');   // existing browser workflow
     const task = await admin(ws, port, '/tasks', { method: 'POST', body: { title: 'Synthetic task', priority: 'low' } });
     const dependent = await admin(ws, port, '/tasks', { method: 'POST', body: { title: 'Synthetic dependent', dependencies: [task.id] } });
     await admin(ws, port, '/focus', { method: 'POST', body: { task_id: task.id, pinned: true } });
@@ -137,7 +137,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const port = await freePort();
     const ws = workspace();
     const pidfile = path.join(tempDir(), 'pids.json');
-    const { owner } = startOwner([PYTHON, FAKE, ws, String(port), '30000'], { ...process.env, NOEMA_FAKE_MODE: 'pdeathsig', NOEMA_FAKE_PIDFILE: pidfile });
+    const { owner } = startOwner([PYTHON, FAKE, ws, String(port), '30000'], { ...process.env, DHARA_FAKE_MODE: 'pdeathsig', DHARA_FAKE_PIDFILE: pidfile });
     await until(() => readPids(pidfile).length === 1);
     const [pid] = readPids(pidfile);
     owner.kill('SIGKILL');
@@ -175,7 +175,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const release = path.join(tempDir(), 'release');
     const code = `from pathlib import Path; import time\np=Path(${JSON.stringify(release)})\nwhile not p.exists(): time.sleep(.05)`;
     const agent = spawn(PYTHON, [path.join(REPO_ROOT, 'tools/agent.py'), '--url', `http://127.0.0.1:${port}`, '--task', task.id,
-      '--outbox', path.join(tempDir(), 'agent-outbox.sqlite3'), '--', PYTHON, '-c', code], { stdio: 'ignore', env: { ...process.env, NOEMA_TOKEN: token } });
+      '--outbox', path.join(tempDir(), 'agent-outbox.sqlite3'), '--', PYTHON, '-c', code], { stdio: 'ignore', env: { ...process.env, DHARA_TOKEN: token } });
     strays.push(agent);
     const agentExit = once(agent, 'exit');
     try {
@@ -194,7 +194,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     }
   });
 
-  it('disables inherited optional features and never uses NOEMA_DATA_DIR (:292)', async () => {
+  it('disables inherited optional features and never uses NOEMA_DATA_DIR (:292)', async () => {  // rename-keep: the frozen parity docs cite this title
     const root = tempDir();
     const ws = prepareWorkspace(path.join(root, 'selected'), '/');
     const port = await freePort();

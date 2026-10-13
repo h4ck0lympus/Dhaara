@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adoptLegacyProfile, legacyProfile, PROFILE_MESSAGES, prepareProfile, resolveProfile } from '../src/profile.js';
 
-const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'noema-profile-'));
+const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'dhara-profile-'));
 
 describe('resolveProfile (lib.rs:58-71)', () => {
   it('uses --profile, resolved against cwd', () => {

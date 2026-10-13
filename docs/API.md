@@ -2,7 +2,7 @@
 
 Base URL: `http://127.0.0.1:8765/api`.
 
-Use an agent token restricted to the relevant task, not the installation's admin token. Add `Authorization: Bearer <token>`. Helpers read it from `NOEMA_TOKEN`; the API never launches a supplied command.
+Use an agent token restricted to the relevant task, not the installation's admin token. Add `Authorization: Bearer <token>`. Helpers read it from `DHARA_TOKEN`; the API never launches a supplied command.
 
 The full authenticated OpenAPI JSON is available at `GET /api/openapi` to the admin. Example IDs below are placeholders; create a real task through the interface first.
 

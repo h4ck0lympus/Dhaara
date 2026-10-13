@@ -12,7 +12,7 @@ import '../styles/capture-notes.css';
 
 export const DISPLAY_NAME_MAX = 60;   // models.py SettingsInput.display_name
 export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;   // models.py:134
-export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // noema/store.py:369 Problem(400)
+export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // dhara/store.py:369 Problem(400)
 export const SETTINGS_TEXT = {
   title: 'Your workspace',   // app.js:457
   offline: 'Settings load from your server. Reconnect to change them.',   // new

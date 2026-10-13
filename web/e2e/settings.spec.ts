@@ -3,17 +3,17 @@ import { S } from '../src/strings';
 import { expect, gotoApp, refetch, test } from './fixtures';
 import { createNote, navLink, openRuntimeLink } from './screenTest';
 import { serverState } from './nowSeed';
-import type { NoemaServer } from './server';
+import type { DharaServer } from './server';
 
 type SettingsBody = { settings: { display_name: string; observation_enabled: boolean; motion: boolean; companion: string; companion_size: number }; context_rules: unknown[] };
 const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Your workspace' });
-const serverBody = (noema: NoemaServer) => noema.api<SettingsBody>('GET', '/api/state');
-const serverSettings = async (noema: NoemaServer) => (await serverBody(noema)).settings;
+const serverBody = (dhara: DharaServer) => dhara.api<SettingsBody>('GET', '/api/state');
+const serverSettings = async (dhara: DharaServer) => (await serverBody(dhara)).settings;
 const navSettings = (page: Page) => page.locator('aside.sidebar').getByRole('button', { name: 'Settings' });
 
 test.describe('Settings', () => {
-  test('Display name edited in Settings updates the greeting and avatar', async ({ page, noema }) => {   // handbook-trace U6
-    await gotoApp(page, noema, '#/settings');
+  test('Display name edited in Settings updates the greeting and avatar', async ({ page, dhara }) => {   // handbook-trace U6
+    await gotoApp(page, dhara, '#/settings');
     await expect(page.locator('.avatar')).toHaveCount(0);
     const dialog = settingsDialog(page);
     const name = dialog.getByLabel('Your name');
@@ -21,7 +21,7 @@ test.describe('Settings', () => {
     await expect(name).toHaveAttribute('maxlength', '60');
     await name.fill('  Ada  ');
     await dialog.getByRole('button', { name: 'Save name' }).click();
-    await expect.poll(async () => (await serverSettings(noema)).display_name).toBe('Ada');
+    await expect.poll(async () => (await serverSettings(dhara)).display_name).toBe('Ada');
     await expect(name).toHaveValue('Ada');
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
@@ -29,35 +29,35 @@ test.describe('Settings', () => {
     await expect(page.locator('.avatar')).toHaveText('A');
   });
 
-  test('A snapshot refetch never replaces the name being typed', async ({ page, noema }) => {   // spec §8 Refetch
-    await gotoApp(page, noema, '#/settings');
+  test('A snapshot refetch never replaces the name being typed', async ({ page, dhara }) => {   // spec §8 Refetch
+    await gotoApp(page, dhara, '#/settings');
     const name = settingsDialog(page).getByLabel('Your name');
     await name.fill('Half-typed');
-    await noema.api('PATCH', '/api/settings', { display_name: 'Other device' });
+    await dhara.api('PATCH', '/api/settings', { display_name: 'Other device' });
     await refetch(page);
     await expect(name).toHaveValue('Half-typed');
   });
 
-  test('Native settings URL opens actual existing dialog at startup', async ({ page, noema }) => {   // settings_link_check.py:29
-    await gotoApp(page, noema, '#settings');
+  test('Native settings URL opens actual existing dialog at startup', async ({ page, dhara }) => {   // settings_link_check.py:29
+    await gotoApp(page, dhara, '#settings');
     await expect(settingsDialog(page).getByLabel('Enable window context')).toBeVisible();
   });
 
-  test('Settings link adds no navigation screen', async ({ page, noema }) => {   // settings_link_check.py:31
-    await gotoApp(page, noema, '#settings');
+  test('Settings link adds no navigation screen', async ({ page, dhara }) => {   // settings_link_check.py:31
+    await gotoApp(page, dhara, '#settings');
     await expect(settingsDialog(page)).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveText(['Overview', 'Capture', 'Notes', 'Tasks']);
     await expect(page).toHaveURL(/#\/overview$/);
   });
 
-  test('Linked settings edits actual existing server permission', async ({ page, noema }) => {   // settings_link_check.py:34
-    await gotoApp(page, noema, '#settings');
+  test('Linked settings edits actual existing server permission', async ({ page, dhara }) => {   // settings_link_check.py:34
+    await gotoApp(page, dhara, '#settings');
     await settingsDialog(page).getByLabel('Enable window context').check();
-    await expect.poll(async () => (await serverSettings(noema)).observation_enabled).toBe(true);
+    await expect.poll(async () => (await serverSettings(dhara)).observation_enabled).toBe(true);
   });
 
-  test('Settings link preserves current Capture route and editor text', async ({ page, noema }) => {   // settings_link_check.py:44
-    await gotoApp(page, noema, '#/capture');
+  test('Settings link preserves current Capture route and editor text', async ({ page, dhara }) => {   // settings_link_check.py:44
+    await gotoApp(page, dhara, '#/capture');
     const editor = page.getByLabel('Rough learning note');
     await editor.fill('Synthetic unsaved capture for settings-link recovery.');
     await openRuntimeLink(page, 'settings');
@@ -68,20 +68,20 @@ test.describe('Settings', () => {
     await expect(page).toHaveURL(/#\/capture$/);
   });
 
-  test('Settings navigation never ingests an unsaved draft', async ({ page, noema }) => {   // settings_link_check.py:46
-    await gotoApp(page, noema, '#/capture');
+  test('Settings navigation never ingests an unsaved draft', async ({ page, dhara }) => {   // settings_link_check.py:46
+    await gotoApp(page, dhara, '#/capture');
     await page.getByLabel('Rough learning note').fill('Synthetic unsaved capture for settings-link recovery.');
     await openRuntimeLink(page, 'settings');
     await expect(settingsDialog(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await openRuntimeLink(page, '#/settings');
     await expect(settingsDialog(page)).toBeVisible();
-    expect((await serverState(noema)).notes).toEqual([]);
+    expect((await serverState(dhara)).notes).toEqual([]);
   });
 
-  test('Settings link preserves note-edit route and unsaved editor text', async ({ page, noema }) => {   // settings_link_check.py:58
-    const note = await createNote(noema, 'Synthetic saved original for editor preservation.');
-    await gotoApp(page, noema, `#/note/${note.id}`);
+  test('Settings link preserves note-edit route and unsaved editor text', async ({ page, dhara }) => {   // settings_link_check.py:58
+    const note = await createNote(dhara, 'Synthetic saved original for editor preservation.');
+    await gotoApp(page, dhara, `#/note/${note.id}`);
     await page.getByRole('button', { name: 'Edit' }).click();
     const field = page.getByLabel('Note', { exact: true });
     await field.fill('Synthetic unsaved note edit.');
@@ -93,19 +93,19 @@ test.describe('Settings', () => {
     await expect(page).toHaveURL(new RegExp(`#/note/${note.id}$`));
   });
 
-  test('Opening settings never replaces the saved note original', async ({ page, noema }) => {   // settings_link_check.py:60
-    const note = await createNote(noema, 'Synthetic saved original for editor preservation.');
-    await gotoApp(page, noema, `#/note/${note.id}`);
+  test('Opening settings never replaces the saved note original', async ({ page, dhara }) => {   // settings_link_check.py:60
+    const note = await createNote(dhara, 'Synthetic saved original for editor preservation.');
+    await gotoApp(page, dhara, `#/note/${note.id}`);
     await page.getByRole('button', { name: 'Edit' }).click();
     await page.getByLabel('Note', { exact: true }).fill('Synthetic unsaved note edit.');
     await openRuntimeLink(page, 'settings');
     await expect(settingsDialog(page)).toBeVisible();
-    const full = await noema.api<{ raw: string; version: number }>('GET', `/api/notes/${note.id}`);
+    const full = await dhara.api<{ raw: string; version: number }>('GET', `/api/notes/${note.id}`);
     expect(full).toMatchObject({ raw: 'Synthetic saved original for editor preservation.', version: 1 });
   });
 
-  test('Kitten reveals implemented size, mode and observation controls', async ({ page, noema }) => {   // now_ui_check.py:222
-    await gotoApp(page, noema, '#/settings');
+  test('Kitten reveals implemented size, mode and observation controls', async ({ page, dhara }) => {   // now_ui_check.py:222
+    await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     await expect(dialog.getByLabel('Companion mode')).toBeVisible();
     await expect(dialog.getByLabel('Companion mode').locator('option')).toHaveText(['cat', 'dot', 'hidden']);
@@ -116,8 +116,8 @@ test.describe('Settings', () => {
     await expect(dialog.getByLabel('Enable window context')).toBeVisible();
   });
 
-  test('Observation permission does not claim an active observer or screenshots', async ({ page, noema }) => {   // now_ui_check.py:235
-    await gotoApp(page, noema, '#/settings');
+  test('Observation permission does not claim an active observer or screenshots', async ({ page, dhara }) => {   // now_ui_check.py:235
+    await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     const status = dialog.locator('#observation-status');
     await expect(status).toContainText('Observation paused');
@@ -129,11 +129,11 @@ test.describe('Settings', () => {
     await expect(status).toContainText('Observation paused');
   });
 
-  test('Companion modes persist; browser reports no native connection and contains no kitten overlay', async ({ page, noema }) => {   // verify.py:71
-    await gotoApp(page, noema, '#/settings');
+  test('Companion modes persist; browser reports no native connection and contains no kitten overlay', async ({ page, dhara }) => {   // verify.py:71
+    await gotoApp(page, dhara, '#/settings');
     let dialog = settingsDialog(page);
     await dialog.getByLabel('Companion mode').selectOption('dot');
-    await expect.poll(async () => (await serverSettings(noema)).companion).toBe('dot');
+    await expect.poll(async () => (await serverSettings(dhara)).companion).toBe('dot');
     await expect(dialog.getByText('This browser does not connect to the desktop companion.')).toBeVisible();
     await page.reload();
     await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
@@ -143,8 +143,8 @@ test.describe('Settings', () => {
     await expect(page.locator('img[src*="cat"], #companion-launch, .companion')).toHaveCount(0);
   });
 
-  test('Observation and motion start off; observation, companion mode and size reach the server', async ({ page, noema }) => {   // handbook-trace R9 (capture disabled by default)
-    await gotoApp(page, noema, '#/settings');
+  test('Observation and motion start off; observation, companion mode and size reach the server', async ({ page, dhara }) => {   // handbook-trace R9 (capture disabled by default)
+    await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     const observation = dialog.getByLabel('Enable window context');
     await expect(observation).not.toBeChecked();
@@ -152,13 +152,13 @@ test.describe('Settings', () => {
     await observation.check();
     await dialog.getByLabel('Companion mode').selectOption('dot');
     await dialog.getByLabel('Companion size').fill('56');
-    await expect.poll(async () => serverSettings(noema))
+    await expect.poll(async () => serverSettings(dhara))
       .toMatchObject({ observation_enabled: true, motion: false, companion: 'dot', companion_size: 56 });
   });
 
-  test('Window-to-task rules can be added and removed', async ({ page, noema }) => {
-    await noema.api('POST', '/api/tasks', { title: 'Two Sum' });
-    await gotoApp(page, noema, '#/settings');
+  test('Window-to-task rules can be added and removed', async ({ page, dhara }) => {
+    await dhara.api('POST', '/api/tasks', { title: 'Two Sum' });
+    await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     await dialog.getByText('Window-to-task rules').click();
     await dialog.getByLabel('App ID').fill('org.mozilla.firefox');
@@ -166,14 +166,14 @@ test.describe('Settings', () => {
     await dialog.getByLabel('Task', { exact: true }).selectOption({ label: 'Two Sum' });
     await dialog.getByRole('button', { name: 'Add rule' }).click();
     await expect(dialog.getByText('org.mozilla.firefox / Two Sum → Two Sum')).toBeVisible();
-    expect((await serverBody(noema)).context_rules).toHaveLength(1);
+    expect((await serverBody(dhara)).context_rules).toHaveLength(1);
     await dialog.getByRole('button', { name: 'Remove' }).click();
-    await expect.poll(async () => (await serverBody(noema)).context_rules.length).toBe(0);
+    await expect.poll(async () => (await serverBody(dhara)).context_rules.length).toBe(0);
   });
 
-  test('A new token is shown once, survives nowhere, and can be revoked', async ({ page, noema }) => {
-    await noema.api('POST', '/api/tasks', { title: 'Two Sum' });
-    await gotoApp(page, noema, '#/settings');
+  test('A new token is shown once, survives nowhere, and can be revoked', async ({ page, dhara }) => {
+    await dhara.api('POST', '/api/tasks', { title: 'Two Sum' });
+    await gotoApp(page, dhara, '#/settings');
     let dialog = settingsDialog(page);
     await dialog.getByText('Agent & observer tokens').click();
     await dialog.getByLabel('Label').fill('Local coding agent');
@@ -196,22 +196,22 @@ test.describe('Settings', () => {
     await expect(dialog.locator('.token-value')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Revoke' }).click();
     await expect(dialog.getByText('Local coding agent · agent')).toHaveCount(0);
-    expect(await noema.api<unknown[]>('GET', '/api/tokens')).toEqual([]);
+    expect(await dhara.api<unknown[]>('GET', '/api/tokens')).toEqual([]);
   });
 
-  test('Export downloads the notebook archive; Local capture queue opens the outbox', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/settings');
+  test('Export downloads the notebook archive; Local capture queue opens the outbox', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     const download = page.waitForEvent('download');
     await dialog.getByRole('link', { name: 'Export notes & tasks' }).click();
-    expect((await download).suggestedFilename()).toBe('noema-export.zip');   // server.py:337
+    expect((await download).suggestedFilename()).toBe('dhara-export.zip');   // server.py:337
     await expect(dialog.getByText('Version 0.1.0 · local-first development build')).toBeVisible();   // app.js:465
     await dialog.getByRole('button', { name: 'Local capture queue' }).click();
     await expect(page.getByRole('dialog', { name: S.outboxTitle })).toBeVisible();
   });
 
-  test('Settings opens from the navigation on every screen', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/notes');
+  test('Settings opens from the navigation on every screen', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/notes');
     await navSettings(page).click();
     await expect(settingsDialog(page)).toBeVisible();
     await page.keyboard.press('Escape');

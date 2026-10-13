@@ -1,7 +1,7 @@
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
 import { MESSAGES } from '../src/lifecycle.js';
 import { admin, live } from '../test/proc.js';
-import { closeWindow, killAll, launchNoema, openCapture, outboxIds, readDraft, tempDir, waitConnected, windowCount } from './fixtures.js';
+import { closeWindow, killAll, launchDhara, openCapture, outboxIds, readDraft, tempDir, waitConnected, windowCount } from './fixtures.js';
 import { appPage, managedSetup, ownedServices, servicePid, startupPage, type Managed } from './managed.js';
 
 // desktop/qa/scenario.js:20: a 1×1 PNG.
@@ -26,14 +26,14 @@ let m: Managed;
 let profile: string;
 test.beforeAll(async () => {
   m = await managedSetup();
-  profile = tempDir('noema-scenario-profile-');
+  profile = tempDir('dhara-scenario-profile-');
 });
 test.afterEach(killAll);
 
 const api = <T = any>(apiPath: string, init?: { method?: string; body?: unknown }) => admin<T>(m.dataDir, m.port, apiPath, init);
 
 async function open(): Promise<{ app: ElectronApplication; page: Page }> {
-  const { app } = await launchNoema(m.args, { env: m.env, profile });
+  const { app } = await launchDhara(m.args, { env: m.env, profile });
   const page = await appPage(app, m.origin);
   await waitConnected(page);
   return { app, page };

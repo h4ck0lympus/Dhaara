@@ -3,19 +3,19 @@ import net from 'node:net';
 import path from 'node:path';
 import { _electron, test, expect, type Page } from '@playwright/test';
 import { CLOSE_TIMEOUT_MS, NOT_RESPONDING } from '../src/protocol.js';
-import { startNoema, type NoemaServer } from '../../web/e2e/server.js';
-import { ELECTRON_BIN, MAIN, closeWindow, killAll, launchNoema, messageBoxes, openCapture, readDraft, stubMessageBox, tempDir, waitConnected, windowCount } from './fixtures.js';
+import { startDhara, type DharaServer } from '../../web/e2e/server.js';
+import { ELECTRON_BIN, MAIN, closeWindow, killAll, launchDhara, messageBoxes, openCapture, readDraft, stubMessageBox, tempDir, waitConnected, windowCount } from './fixtures.js';
 
 // Verbatim from web/src/strings.ts (contract §5): S.closeSaveInFlight and S.closeDraftFailed.
 const CLOSE_SAVE_IN_FLIGHT = 'A capture save is still finishing. Try closing again shortly.';
 const CLOSE_DRAFT_FAILED = 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.';
 
-let noema: NoemaServer;
-test.beforeEach(async () => { noema = await startNoema(); });
-test.afterEach(async () => { await killAll(); await noema.stop(); });
+let dhara: DharaServer;
+test.beforeEach(async () => { dhara = await startDhara(); });
+test.afterEach(async () => { await killAll(); await dhara.stop(); });
 
 async function openApp(profile?: string) {
-  const launched = await launchNoema(['--server', noema.origin], { profile });
+  const launched = await launchDhara(['--server', dhara.origin], { profile });
   await waitConnected(launched.window);
   return launched;
 }
@@ -173,7 +173,7 @@ test('closing before the page finished loading closes at once without a checkpoi
   try {
     const { port } = silent.address() as net.AddressInfo;
     // No firstWindow() (it needs a committed page): launch directly and watch the window from the main process.
-    const profile = tempDir('noema-electron-profile-');
+    const profile = tempDir('dhara-electron-profile-');
     const app = await _electron.launch({
       executablePath: ELECTRON_BIN,
       chromiumSandbox: true,

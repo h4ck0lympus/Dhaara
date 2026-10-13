@@ -1,7 +1,7 @@
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
 import { DB_NAME } from '../src/local/db';
 import { S } from '../src/strings';
-import { startNoema, type NoemaServer } from './server';
+import { startDhara, type DharaServer } from './server';
 
 export { expect };
 
@@ -31,11 +31,11 @@ export async function guardContext(context: BrowserContext): Promise<() => void>
   };
 }
 
-export const test = base.extend<{ noema: NoemaServer; guards: void }>({
-  noema: async ({}, use) => {
-    const noema = await startNoema();
-    await use(noema);
-    await noema.stop();
+export const test = base.extend<{ dhara: DharaServer; guards: void }>({
+  dhara: async ({}, use) => {
+    const dhara = await startDhara();
+    await use(dhara);
+    await dhara.stop();
   },
   guards: [
     async ({ context }, use) => {
@@ -47,8 +47,8 @@ export const test = base.extend<{ noema: NoemaServer; guards: void }>({
   ],
 });
 
-export async function gotoApp(page: Page, noema: NoemaServer, hash = '#/overview'): Promise<void> {
-  await page.goto(`${noema.origin}/${hash}`);
+export async function gotoApp(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
+  await page.goto(`${dhara.origin}/${hash}`);
   await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });   // a cold service plus three busy siblings
 }
 

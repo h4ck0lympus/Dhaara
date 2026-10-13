@@ -5,8 +5,8 @@ import { expect, gotoApp, seedLocalDb, test } from './fixtures';
 
 test.use({ viewport: { width: 1440, height: 960 } });
 
-test('Navigation shows Overview, Capture, Notes and Tasks with matching accessible names', async ({ page, noema }) => {
-  await gotoApp(page, noema);
+test('Navigation shows Overview, Capture, Notes and Tasks with matching accessible names', async ({ page, dhara }) => {
+  await gotoApp(page, dhara);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(nav.getByRole('link')).toHaveText(['Overview', 'Capture', 'Notes', 'Tasks']);
   for (const name of ['Overview', 'Capture', 'Notes', 'Tasks']) await expect(nav.getByRole('link', { name, exact: true })).toHaveCount(1);
@@ -16,8 +16,8 @@ test('Navigation shows Overview, Capture, Notes and Tasks with matching accessib
   await expect(page.getByRole('heading', { level: 1, name: COPY.plan.title })).toBeVisible();
 });
 
-test('Desktop sidebar collapses to icons and stays collapsed after reload', async ({ page, noema }) => {
-  await gotoApp(page, noema);
+test('Desktop sidebar collapses to icons and stays collapsed after reload', async ({ page, dhara }) => {
+  await gotoApp(page, dhara);
   await page.getByRole('button', { name: 'Collapse sidebar' }).click();
   const sidebar = page.locator('.sidebar');
   await expect(sidebar).toHaveAttribute('data-collapsed', 'true');
@@ -30,8 +30,8 @@ test('Desktop sidebar collapses to icons and stays collapsed after reload', asyn
   await expect(page.locator('.sidebar')).toHaveAttribute('data-collapsed', 'false');
 });
 
-test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, noema }) => {
-  await gotoApp(page, noema);
+test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, dhara }) => {
+  await gotoApp(page, dhara);
   await page.keyboard.press('n');
   await expect(page).toHaveURL(/#\/capture$/);
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Overview' }).click();
@@ -46,8 +46,8 @@ test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, n
   await expect(page).toHaveURL(/#\/notes$/);
 });
 
-test('the status line reports offline in words and recovers', async ({ page, noema, context }) => {
-  await gotoApp(page, noema);
+test('the status line reports offline in words and recovers', async ({ page, dhara, context }) => {
+  await gotoApp(page, dhara);
   await context.setOffline(true);
   await expect(page.locator('#connection-label')).toHaveText('Offline · local drafts');
   await expect(page.getByText('Status unavailable', { exact: true })).toBeVisible();
@@ -57,25 +57,25 @@ test('the status line reports offline in words and recovers', async ({ page, noe
   await expect(page.locator('.offline-banner')).toHaveCount(0);
 });
 
-test('queued captures show in the shell as "on this device"', async ({ page, noema }) => {
-  await seedLocalDb(page, noema.origin, { outbox: [{ id: '0f8fad5b-d9cb-469f-a165-70867728950e', raw: 'Queued thought', task_id: '', files: [] }] });
+test('queued captures show in the shell as "on this device"', async ({ page, dhara }) => {
+  await seedLocalDb(page, dhara.origin, { outbox: [{ id: '0f8fad5b-d9cb-469f-a165-70867728950e', raw: 'Queued thought', task_id: '', files: [] }] });
   await failFetch(page, { path: '/api/captures', fault: { status: 503, body: '{"detail":"Injected outage"}', contentType: 'application/json' } });
-  await gotoApp(page, noema);
+  await gotoApp(page, dhara);
   await expect(page.getByRole('button', { name: '1 capture on this device' })).toBeVisible();
 });
 
-test('the avatar shows the display-name initial and is hidden without a name', async ({ page, noema }) => {
-  await gotoApp(page, noema);
+test('the avatar shows the display-name initial and is hidden without a name', async ({ page, dhara }) => {
+  await gotoApp(page, dhara);
   await expect(page.locator('.profile-button .avatar')).toHaveCount(0);
-  await noema.api('PATCH', '/api/settings', { display_name: 'vishal' });
+  await dhara.api('PATCH', '/api/settings', { display_name: 'vishal' });
   await page.reload();
   await expect(page.locator('.profile-button .avatar')).toHaveText('V');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good (morning|afternoon|evening), vishal\.$/);
 });
 
-test('Every control is keyboard reachable with a visible focus ring', async ({ page, noema }) => {
-  await noema.api('POST', '/api/tasks', { title: 'Read the ownership chapter' });
-  await gotoApp(page, noema);
+test('Every control is keyboard reachable with a visible focus ring', async ({ page, dhara }) => {
+  await dhara.api('POST', '/api/tasks', { title: 'Read the ownership chapter' });
+  await gotoApp(page, dhara);
   const seen = new Set<string>();
   for (let i = 0; i < 20; i += 1) {
     await page.keyboard.press('Tab');
@@ -92,9 +92,9 @@ test('Every control is keyboard reachable with a visible focus ring', async ({ p
   for (const name of ['Collapse sidebar', 'Overview', 'Capture', 'Notes', 'Tasks', 'Settings', 'Available time', 'Start']) expect(seen.has(name), name).toBe(true);
 });
 
-test('Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes', async ({ page, noema }) => {
+test('Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes', async ({ page, dhara }) => {
   await page.setViewportSize({ width: 1546, height: 835 });
-  await gotoApp(page, noema, '#/plan');
+  await gotoApp(page, dhara, '#/plan');
   await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
   const dialog = page.getByRole('dialog', { name: 'Add task' });
   expect(await dialog.evaluate(d => d.matches(':modal'))).toBe(true);

@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 function makeDist(files: Record<string, string>): string {
-  const dist = mkdtempSync(join(tmpdir(), 'noema-dist-'));
+  const dist = mkdtempSync(join(tmpdir(), 'dhara-dist-'));
   created.push(dist);
   for (const [name, content] of Object.entries(files)) {
     mkdirSync(dirname(join(dist, name)), { recursive: true });

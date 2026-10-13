@@ -33,7 +33,7 @@ export function AppShell(): JSX.Element {
       <Nav />
       <div className="workspace">
         <header className="topbar">
-          <span className="workspace-label"><span className="desktop-wordmark">Your workspace</span><span className="mobile-wordmark">Noema</span></span>
+          <span className="workspace-label"><span className="desktop-wordmark">Your workspace</span><span className="mobile-wordmark">Dhara</span></span>
           <StatusLine />
           <button type="button" className="profile-button" aria-label="Settings" onClick={() => openDialog({ kind: 'settings' })}>
             {letter && <span className="avatar" aria-hidden="true">{letter}</span>}

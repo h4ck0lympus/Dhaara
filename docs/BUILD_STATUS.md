@@ -1,4 +1,4 @@
-# Build status · Noema 0.1.0 + React/Electron cutover
+# Build status · Dhara 0.1.0 + React/Electron cutover
 
 The maintained [progress record and roadmap](PROGRESS.md) summarize completed
 milestones, current evidence and the next concrete step. Update it alongside
@@ -11,7 +11,7 @@ the desktop shell is Electron in `electron/`: external mode by default, Linux
 `--manage-service` (lifecycle protocol 2) as opt-in. `public/`, the Rust
 Wry/Tao shell `desktop/`, `experiments/ui-ab/hosts/wry` and
 `experiments/ui-ab/hosts/companion` were deleted; the kitten sprite moved to
-`tools/assets/cat.png`. IndexedDB `noema-local-v1` version 1 and its record
+`tools/assets/cat.png`. IndexedDB `dhara-local-v1` version 1 and its record
 shapes are unchanged. Headings, subtitles and the tagline are kept in
 `web/src/copy.ts` (owner decision 18B); the greeting uses the new
 `display_name` setting. Priority labels come from `priority_source` ("Auto ·
@@ -83,7 +83,7 @@ dependency-free, selected-process-tree resource sampler with PID/start-time
 identity, RSS/PSS/private metrics and explicit exclusions. A single
 [acceptance checklist](PHYSICAL_SWAY_ACCEPTANCE.md) provides exact launch commands
 and per-check status. No runtime, UI, backend, companion or lifecycle change.
-Noema remains untracked; before/final source manifests identify this handoff,
+Dhara remains untracked; before/final source manifests identify this handoff,
 not the parent's commit. No Git staging/commit/push was performed.
 
 Executed now: Python **88 baseline / 99 final**, Now pure state **18 baseline /
@@ -227,11 +227,11 @@ kitten/observer integration, installation and sync remain separate milestones.
 
 Current workspace update: 2026-10-08. The source is v0.1.0, verified against
 all 47 original manifest entries before edits. The parent repository HEAD is
-`2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`, but Noema is untracked there;
+`2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`, but Dhara is untracked there;
 that commit does not identify this app. The starting `SHA256SUMS` digest is
 `062799a885090fdce1c6b1b4685331e3368e345a7342e1c36947a74465e60bbe`.
 The v0.2.0 documentation evidence does not mean its screenshot/vision code is
-present. `docs/SCREEN_AWARENESS.md`, `noema/vision.py` and `tools/sway_screen.py`
+present. `docs/SCREEN_AWARENESS.md`, `dhara/vision.py` and `tools/sway_screen.py`
 are absent in the actual source.
 
 Implemented next daily-use slice: browser capture Save atomically commits
@@ -272,7 +272,7 @@ Prepared 2026-10-08. This source package is the recoverable baseline for the nex
 
 ## Starting point
 
-Prior conversation material included UI concepts and a surfaced Noema UI site. A previously referenced backend directory was not present in this build runtime. This package is a new, tested implementation of the agreed scope, not a claim that the old site was updated or that files were written to the user's laptop.
+Prior conversation material included UI concepts and a surfaced Dhara UI site. A previously referenced backend directory was not present in this build runtime. This package is a new, tested implementation of the agreed scope, not a claim that the old site was updated or that files were written to the user's laptop.
 
 ## Delivered now
 

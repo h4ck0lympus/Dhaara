@@ -37,8 +37,8 @@ class Observer:
             self.candidate=None;self.previous=None;return summary
         data=focused_context(sway_json('get_tree'))
         if not data:return summary
-        # Opening Noema itself should not replace the work context being resumed.
-        if data['app'].lower().startswith('noema') or data['title'].startswith('Noema'):return summary
+        # Opening Dhara itself should not replace the work context being resumed.
+        if data['app'].lower().startswith('dhara') or data['title'].startswith('Dhara'):return summary
         signature=json.dumps(data,sort_keys=True)
         if signature!=self.candidate:self.candidate=signature;return summary
         if signature!=self.previous or time.monotonic()-self.last_sent>=30:
@@ -53,7 +53,7 @@ def main():
     if not os.getenv('SWAYSOCK'):p.error('Run this helper inside your Sway session.')
     try:client=Client(args.url)
     except ValueError as e:p.error(str(e))
-    print('Window metadata observer enabled locally. No screenshots are taken. Pause in Noema Settings or Ctrl-C.')
+    print('Window metadata observer enabled locally. No screenshots are taken. Pause in Dhara Settings or Ctrl-C.')
     observer=Observer(client)
     while True:
         try:observer.step()

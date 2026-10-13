@@ -14,7 +14,7 @@ test = ["pytest==9.0.2"]
 speech = ["faster-whisper>=1.1,<2"]
 
 [tool.setuptools]
-packages = ["dhara", "noema"]
+packages = ["dhara", "dhara"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

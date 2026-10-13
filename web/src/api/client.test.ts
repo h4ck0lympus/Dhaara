@@ -32,7 +32,7 @@ describe('api', () => {
     await expect(api('/focus', Ok, { method: 'POST', body: { task_id: null } })).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledWith('/api/focus', {
       method: 'POST',
-      headers: { 'X-Noema-Request': '1', 'Content-Type': 'application/json' },
+      headers: { 'X-Dhara-Request': '1', 'Content-Type': 'application/json' },
       body: '{"task_id":null}',
       credentials: 'same-origin',
       signal: undefined,
@@ -46,7 +46,7 @@ describe('api', () => {
     await api('/captures', Ok, { method: 'POST', body: form });
     const init = fetchMock.mock.calls[0][1];
     expect(init?.body).toBe(form);
-    expect(init?.headers).toEqual({ 'X-Noema-Request': '1' });
+    expect(init?.headers).toEqual({ 'X-Dhara-Request': '1' });
   });
 
   it('defaults to GET with no body', async () => {
@@ -97,11 +97,11 @@ describe('api', () => {
     respond(401, '{"detail":"Invalid access token"}');
     expect(await failure(api('/session', Ok, { method: 'POST', body: { token: 'wrong' } }))).toMatchObject({ status: 401, message: 'Invalid access token' });
     expect(listener).not.toHaveBeenCalled();
-    respond(401, '{"detail":"Unlock Noema to continue"}');
+    respond(401, '{"detail":"Unlock Dhara to continue"}');
     await failure(api('/state', Ok));
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
-    respond(401, '{"detail":"Unlock Noema to continue"}');
+    respond(401, '{"detail":"Unlock Dhara to continue"}');
     await failure(api('/state', Ok));
     expect(listener).toHaveBeenCalledTimes(1);
   });

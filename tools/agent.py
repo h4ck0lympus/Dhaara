@@ -68,7 +68,7 @@ def main():
             try:code=process.wait(timeout=30);break
             except subprocess.TimeoutExpired:send('heartbeat','Process is still running; no completion claim.')
         send('completed' if code==0 else 'failed',f'Process exited with status {code}. '+('Review the result before completing the task.' if code==0 else 'Check the terminal output.'))
-        print(f'\nNoema run {run_id}: '+('ready for review' if code==0 else 'failed'))
+        print(f'\nDhara run {run_id}: '+('ready for review' if code==0 else 'failed'))
         return code if 0<=code<=255 else 1
     except KeyboardInterrupt:
         if process and process.poll() is None:

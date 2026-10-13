@@ -29,7 +29,7 @@ export function Nav(): JSX.Element {
   return (
     <aside className="sidebar" data-collapsed={collapsed ? 'true' : 'false'}>
       <div className="brand">
-        <span>Noema</span>
+        <span>Dhara</span>
         <button type="button" className="icon-button collapse-toggle" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed} onClick={toggle}><Icon name="sidebar" /></button>
       </div>

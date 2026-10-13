@@ -9,7 +9,7 @@ describe('shouldRetryQuery', () => {
     expect([0, 1, 2].map((n) => shouldRetryQuery(n, network))).toEqual([true, true, false]);
     expect([0, 1, 2].map((n) => shouldRetryQuery(n, server))).toEqual([true, true, false]);
     expect(shouldRetryQuery(0, new ApiError('http', 'Task not found', 404))).toBe(false);
-    expect(shouldRetryQuery(0, new ApiError('http', 'Unlock Noema to continue', 401))).toBe(false);
+    expect(shouldRetryQuery(0, new ApiError('http', 'Unlock Dhara to continue', 401))).toBe(false);
     expect(shouldRetryQuery(0, new ApiError('parse', 'bad', 200))).toBe(false);
     expect(shouldRetryQuery(0, new Error('other'))).toBe(false);
   });

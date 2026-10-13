@@ -4,8 +4,8 @@ import { openKind, ready } from './nowSeed';
 
 test.use({ viewport: { width: 1440, height: 960 } });
 
-test('Reconnect returns to real available work', async ({ page, context, noema }) => {
-  await openKind(page, context, noema, 'disconnected');
+test('Reconnect returns to real available work', async ({ page, context, dhara }) => {
+  await openKind(page, context, dhara, 'disconnected');
   await expect(page.locator('#integration-status')).toContainText('server disconnected');
   await context.setOffline(false);
   await ready(page, 'available');

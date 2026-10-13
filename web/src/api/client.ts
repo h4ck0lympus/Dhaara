@@ -58,7 +58,7 @@ function isAbort(error: unknown): boolean {
 }
 
 export async function api<T>(path: `/${string}`, schema: z.ZodType<T>, options: ApiOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { 'X-Noema-Request': '1' };
+  const headers: Record<string, string> = { 'X-Dhara-Request': '1' };
   let body: BodyInit | undefined;
   if (options.body instanceof FormData) body = options.body;
   else if (options.body !== undefined) {

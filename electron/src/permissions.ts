@@ -5,8 +5,8 @@ export type PermissionKind = 'media-audio' | 'notifications';
 
 // Wording from desktop/src/main.rs:263-276.
 export const PERMISSION_PROMPTS: Record<PermissionKind, string> = {
-  'media-audio': 'Allow Noema to use your microphone for a recording?',
-  notifications: 'Allow Noema to show notifications?',
+  'media-audio': 'Allow Dhara to use your microphone for a recording?',
+  notifications: 'Allow Dhara to show notifications?',
 };
 
 export function classifyPermission(

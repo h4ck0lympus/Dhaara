@@ -17,7 +17,7 @@ const SERVE_DIST = [
   "uvicorn.run(create_app(sys.argv[2], dist_dir=sys.argv[3]), host='127.0.0.1', port=int(sys.argv[1]), access_log=False)",
 ].join('\n');
 
-export type NoemaServer = {
+export type DharaServer = {
   origin: string;
   port: number;
   dataDir: string;
@@ -49,10 +49,10 @@ function childEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
   return { ...env, DHARA_ACCESS_TOKEN: E2E_TOKEN, ...extra };
 }
 
-export async function startNoema(options: StartOptions = {}): Promise<NoemaServer> {
+export async function startDhara(options: StartOptions = {}): Promise<DharaServer> {
   if (!existsSync(join(options.distDir ?? WEB_DIST, 'index.html'))) throw new Error('Run npm --prefix web run build first');
   const ownsDataDir = options.dataDir === undefined;
-  const dataDir = options.dataDir ?? mkdtempSync(join(tmpdir(), 'noema-e2e-'));
+  const dataDir = options.dataDir ?? mkdtempSync(join(tmpdir(), 'dhara-e2e-'));
   // Port 0 lets the service bind a free port itself and report it: a port probed here and bound later could be
   // taken by a sibling worker's service meanwhile, and /api/health would then answer from that sibling.
   let port = options.port ?? 0;
@@ -73,7 +73,7 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
     });
     const deadline = Date.now() + STARTUP_MS;
     while (Date.now() < deadline) {
-      if (proc.exitCode !== null || proc.signalCode !== null) throw new Error(`Noema exited during startup (${proc.exitCode ?? proc.signalCode}):\n${stderr}`);
+      if (proc.exitCode !== null || proc.signalCode !== null) throw new Error(`Dhara exited during startup (${proc.exitCode ?? proc.signalCode}):\n${stderr}`);
       if (bound) {
         port = bound;   // a restart binds the same port, so the page origin and its browser storage stay the same
         try {
@@ -85,7 +85,7 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     proc.kill('SIGKILL');
-    throw new Error(`Noema did not answer /api/health within ${STARTUP_MS} ms:\n${stderr}`);
+    throw new Error(`Dhara did not answer /api/health within ${STARTUP_MS} ms:\n${stderr}`);
   }
 
   async function terminate(signal: NodeJS.Signals): Promise<void> {
@@ -109,7 +109,7 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
         method,
         headers: {
           Authorization: `Bearer ${E2E_TOKEN}`,
-          'X-Noema-Request': '1',
+          'X-Dhara-Request': '1',
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),

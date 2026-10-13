@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { absolutePath, ensurePrivateDir, hasFinalComponent } from '../src/paths.js';
 
-const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'noema-paths-'));
+const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'dhara-paths-'));
 const mode = (file: string) => fs.statSync(file).mode & 0o777;
 
 describe('absolutePath (main.rs:79-86)', () => {

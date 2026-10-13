@@ -63,7 +63,7 @@ function showStartupFailure(message: string, retry = false): void {
   const main = document.createElement('main');
   main.dataset.quiet = '';
   const title = document.createElement('h1');
-  title.textContent = 'Noema';
+  title.textContent = 'Dhara';
   const text = document.createElement('p');
   text.setAttribute('role', 'alert');
   text.textContent = message;

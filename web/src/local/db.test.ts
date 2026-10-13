@@ -36,7 +36,7 @@ describe('openDb', () => {
     await expect(db.openDb()).resolves.toMatchObject({ name: 'dhara-local-v1' });
   });
 
-  it('reports a blocked open as "Close other Noema tabs"', async () => {
+  it('reports a blocked open as "Close other Dhara tabs"', async () => {
     const request = {} as IDBOpenDBRequest;
     vi.spyOn(indexedDB, 'open').mockReturnValueOnce(request);
     const opening = db.openDb();

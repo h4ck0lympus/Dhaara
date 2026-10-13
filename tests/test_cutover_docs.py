@@ -19,7 +19,7 @@ REQUIRED = {
         '# Electron desktop shell',
         'npm --prefix electron start -- --server http://127.0.0.1:8765',
         'lifecycle protocol 2',
-        '~/.local/share/noema/electron',
+        '~/.local/share/dhara/electron',
         'chrome-sandbox',
         'Decisions last for the app session only',
         'Treat it as credential storage',
@@ -44,7 +44,7 @@ REQUIRED = {
     ],
     'docs/ARCHITECTURE.md': [
         '## React + Electron (current)',
-        '`noema-local-v1` version 1',
+        '`dhara-local-v1` version 1',
         'lifecycle protocol 2',
     ],
     'docs/ASSETS.md': [

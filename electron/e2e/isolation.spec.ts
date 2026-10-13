@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test';
-import { startNoema, type NoemaServer } from '../../web/e2e/server.js';
-import { killAll, launchNoema, openedExternal, stubOpenExternal, tempDir, waitConnected, windowCount } from './fixtures.js';
+import { startDhara, type DharaServer } from '../../web/e2e/server.js';
+import { killAll, launchDhara, openedExternal, stubOpenExternal, tempDir, waitConnected, windowCount } from './fixtures.js';
 
-let noema: NoemaServer;
+let dhara: DharaServer;
 let app: ElectronApplication;
 let window: Page;
 let offServer: http.Server;
@@ -21,14 +21,14 @@ test.beforeAll(async () => {
   });
   await new Promise<void>((resolve) => offServer.listen(0, '127.0.0.1', resolve));
   offOrigin = `http://127.0.0.1:${(offServer.address() as AddressInfo).port}`;
-  noema = await startNoema();
-  ({ app, window } = await launchNoema(['--server', noema.origin]));
+  dhara = await startDhara();
+  ({ app, window } = await launchDhara(['--server', dhara.origin]));
   await waitConnected(window);
 });
 
 test.afterAll(async () => {
   await killAll();
-  await noema?.stop();
+  await dhara?.stop();
   offServer?.close();
 });
 
@@ -41,46 +41,46 @@ test.beforeEach(() => {
 });
 
 async function backHome(): Promise<void> {
-  await window.goto(`${noema.origin}/#/overview`);
+  await window.goto(`${dhara.origin}/#/overview`);
   await waitConnected(window);
 }
 
 test('off-origin, look-alike and credentialed navigations are blocked before any request', async () => {
-  const lookAlike = noema.origin.replace('127.0.0.1', 'localhost');
-  const credentialed = noema.origin.replace('http://', 'http://user@');
+  const lookAlike = dhara.origin.replace('127.0.0.1', 'localhost');
+  const credentialed = dhara.origin.replace('http://', 'http://user@');
   for (const target of [`${offOrigin}/`, `${lookAlike}/`, `${credentialed}/`]) {
     await window.evaluate((url) => { location.href = url; }, target);
     await window.waitForTimeout(600);
-    expect(new URL(window.url()).origin).toBe(noema.origin);
+    expect(new URL(window.url()).origin).toBe(dhara.origin);
   }
   expect(offHits).toBe(0);
 });
 
 test('a same-origin redirect to another origin is blocked', async () => {
-  await app.context().route(`${noema.origin}/redirect-probe`, (route) => route.fulfill({ status: 302, headers: { location: `${offOrigin}/` } }));
+  await app.context().route(`${dhara.origin}/redirect-probe`, (route) => route.fulfill({ status: 302, headers: { location: `${offOrigin}/` } }));
   await window.evaluate(() => { location.href = '/redirect-probe'; });
   await window.waitForTimeout(800);
   expect(offHits).toBe(0);
   expect(window.url().startsWith(offOrigin)).toBe(false);
-  await app.context().unroute(`${noema.origin}/redirect-probe`);
+  await app.context().unroute(`${dhara.origin}/redirect-probe`);
   await backHome();
 });
 
 test('subframe navigation off-origin and <webview> attach are blocked', async () => {
   const before = await app.evaluate(({ webContents }) => webContents.getAllWebContents().length);
   // A same-origin page without the server CSP, so only the Electron guards stand in the way.
-  await app.context().route(`${noema.origin}/frame-probe`, (route) => route.fulfill({
+  await app.context().route(`${dhara.origin}/frame-probe`, (route) => route.fulfill({
     status: 200,
     contentType: 'text/html',
     body: `<iframe src="${offOrigin}/frame"></iframe><webview src="${offOrigin}/webview"></webview>`,
   }));
   await window.evaluate(() => { location.href = '/frame-probe'; });
-  await window.waitForURL(`${noema.origin}/frame-probe`);
+  await window.waitForURL(`${dhara.origin}/frame-probe`);
   await window.waitForTimeout(800);
   expect(offHits).toBe(0);
   expect(window.frames().some((frame) => frame.url().startsWith(offOrigin))).toBe(false);
   expect(await app.evaluate(({ webContents }) => webContents.getAllWebContents().length)).toBe(before);
-  await app.context().unroute(`${noema.origin}/frame-probe`);
+  await app.context().unroute(`${dhara.origin}/frame-probe`);
   await backHome();
 });
 
@@ -95,7 +95,7 @@ test('popups never open in-app; only plain http(s) links reach the system browse
 });
 
 test('export and same-origin blobs download; other schemes do not', async () => {
-  const dir = tempDir('noema-downloads-');
+  const dir = tempDir('dhara-downloads-');
   await app.evaluate(({ session }, saveDir) => {
     const g = globalThis as typeof globalThis & { __downloads?: { url: string; state: string }[] };
     g.__downloads = [];

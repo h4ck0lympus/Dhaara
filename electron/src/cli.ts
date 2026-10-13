@@ -30,7 +30,7 @@ const VALUE_FLAGS: Record<string, string> = {
 };
 
 export const HELP_TEXT = [
-  'Noema Electron desktop',
+  'Dhara Electron desktop',
   'Default: external service; start Python separately.',
   '--server http://127.0.0.1:8765 --profile /path/to/private/profile',
   'Opt-in Linux development mode: --manage-service --data-dir /path/to/workspace',
@@ -40,7 +40,7 @@ export const HELP_TEXT = [
   'Browser and old webview drafts are NOT migrated into this separate Electron profile.',
 ].join('\n');
 
-/** Arguments after the app path: Chromium/Node switches placed before it are never Noema's. */
+/** Arguments after the app path: Chromium/Node switches placed before it are never Dhara's. */
 export function userArgv(argv: readonly string[], defaultApp: boolean): string[] {
   if (!defaultApp) return argv.slice(1);
   const appPath = argv.findIndex((arg, index) => index > 0 && !arg.startsWith('-'));

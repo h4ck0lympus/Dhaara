@@ -30,7 +30,7 @@ OUTPUT = ROOT / 'qa' / 'now-ui'
 
 @contextmanager
 def workspace():
-    with tempfile.TemporaryDirectory(prefix='noema-now-ui-') as directory:
+    with tempfile.TemporaryDirectory(prefix='dhara-now-ui-') as directory:
         token = secrets.token_urlsafe(32)
         app = create_app(directory, start_worker=False, admin_token=token)
         sock = socket.socket()
@@ -43,7 +43,7 @@ def workspace():
         try:
             with httpx.Client(base_url=origin, trust_env=False, timeout=15,
                               headers={'Authorization': 'Bearer ' + token,
-                                       'X-Noema-Request': '1'}) as client:
+                                       'X-Dhara-Request': '1'}) as client:
                 for _ in range(100):
                     try:
                         if client.get('/api/health').is_success:
@@ -197,8 +197,8 @@ def main(capture_screenshots=True):
                               any(x['name'] == 'Isolated UI token' for x in client.get('/api/tokens').json()))
                         page.locator('[data-action=close-modal]').click()
                         call(client, '/settings', {'observation_enabled': True}, 'PATCH')
-                        call(client, '/context/rules', {'app': 'noema-fixture', 'task_id': t['id']})
-                        call(client, '/context', {'app': 'noema-fixture', 'title': 'Fixture window metadata'})
+                        call(client, '/context/rules', {'app': 'dhara-fixture', 'task_id': t['id']})
+                        call(client, '/context', {'app': 'dhara-fixture', 'title': 'Fixture window metadata'})
                         page.reload()
                         expect(page.locator('[data-focus-kind=inferred]')).to_contain_text('Inferred from window metadata')
                         check('Inferred focus is separately labeled')
@@ -206,7 +206,7 @@ def main(capture_screenshots=True):
                         call(client, '/focus', {'task_id': pinned['id'], 'pinned': True})
                         page.reload()
                         expect(page.locator('[data-focus-kind=pinned]')).to_contain_text('Pinned by you')
-                        call(client, '/context', {'app': 'noema-fixture'})
+                        call(client, '/context', {'app': 'dhara-fixture'})
                         check('Observer metadata never overrides a pinned focus',
                               client.get('/api/state').json()['focus']['task_id'] == pinned['id'])
                         check('Now suggestion cannot silently replace pinned focus',
@@ -245,25 +245,25 @@ def main(capture_screenshots=True):
                         page.locator('[data-action=close-modal]').click()
                         # Real reduced-motion query; hidden state is explicitly injected.
                         call(client, '/settings', {'motion': True}, 'PATCH')
-                        page.add_init_script("""window.noemaMotionTicks=0;const schedule=window.setTimeout;
-                        window.setTimeout=(cb,ms,...args)=>schedule(ms===100&&cb.name==='drawAmbient'?()=>{window.noemaMotionTicks++;cb();}:cb,ms,...args);""")
+                        page.add_init_script("""window.dharaMotionTicks=0;const schedule=window.setTimeout;
+                        window.setTimeout=(cb,ms,...args)=>schedule(ms===100&&cb.name==='drawAmbient'?()=>{window.dharaMotionTicks++;cb();}:cb,ms,...args);""")
                         page.reload()
-                        page.wait_for_function('()=>window.noemaMotionTicks>1')
+                        page.wait_for_function('()=>window.dharaMotionTicks>1')
                         check('Dot field never paints over the reading surface',page.evaluate("""()=>{
                           const c=document.querySelector('#ambient'),r=document.querySelector('#view').getBoundingClientRect(),scale=c.width/innerWidth;
                           const x=Math.max(0,Math.ceil(r.left*scale)),y=Math.max(0,Math.ceil(r.top*scale)),w=Math.floor(Math.min(c.width,r.right*scale))-x,h=Math.floor(Math.min(c.height,r.bottom*scale))-y;
                           const bytes=c.getContext('2d').getImageData(x,y,w,h).data;for(let i=3;i<bytes.length;i+=4)if(bytes[i])return false;return true;
                         }"""))
                         page.emulate_media(reduced_motion='reduce')
-                        before = page.evaluate('window.noemaMotionTicks')
+                        before = page.evaluate('window.dharaMotionTicks')
                         page.wait_for_timeout(250)
-                        check('Reduced motion stops the actual animation timer', page.evaluate('window.noemaMotionTicks') == before)
+                        check('Reduced motion stops the actual animation timer', page.evaluate('window.dharaMotionTicks') == before)
                         page.emulate_media(reduced_motion='no-preference')
-                        page.wait_for_function('()=>window.noemaMotionTicks>2')
+                        page.wait_for_function('()=>window.dharaMotionTicks>2')
                         page.evaluate("Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'))")
-                        before = page.evaluate('window.noemaMotionTicks')
+                        before = page.evaluate('window.dharaMotionTicks')
                         page.wait_for_timeout(250)
-                        check('Injected hidden-document event stops animation', page.evaluate('window.noemaMotionTicks') == before)
+                        check('Injected hidden-document event stops animation', page.evaluate('window.dharaMotionTicks') == before)
                     if kind == 'attention':
                         check('Completed agent result is still a review task, not completed work',
                               any(r['status'] == 'review' for r in client.get('/api/state').json()['runs']) and

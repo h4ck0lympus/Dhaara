@@ -16,7 +16,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
   it('spawns the exact protocol-2 command in its own session, with a 64-hex lease and a stripped environment', async () => {
     const envfile = path.join(tempDir(), 'env.json');
     const inherited = Object.fromEntries(STRIPPED_ENV.map((key) => [key, 'must-not-reach-python']));
-    const { port, ws, managed } = await fakeService('env-dump', { ...inherited, NOEMA_FAKE_ENVFILE: envfile, NOEMA_KEEP_ME: 'yes' });
+    const { port, ws, managed } = await fakeService('env-dump', { ...inherited, DHARA_FAKE_ENVFILE: envfile, DHARA_KEEP_ME: 'yes' });
     const handle = await managed.start();
     const dump = JSON.parse(fs.readFileSync(envfile, 'utf8')) as { env: string[]; argv: string[]; lease: string; pid: number; pgid: number; sid: number; ppid: number };
     expect(dump.argv).toEqual(['--desktop-managed', '--host', '127.0.0.1', '--port', String(port), '--data-dir', ws, '--owner-pid', String(process.pid)]);
@@ -24,7 +24,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
     expect(dump.lease).toBe(`{"instance":"${handle.instance}"}\n`);
     expect([dump.pgid, dump.sid, dump.ppid]).toEqual([dump.pid, dump.pid, process.pid]);
     for (const key of STRIPPED_ENV) expect(dump.env).not.toContain(key);
-    expect(dump.env).toEqual(expect.arrayContaining(['PATH', 'NOEMA_KEEP_ME', 'NOEMA_FAKE_MODE']));
+    expect(dump.env).toEqual(expect.arrayContaining(['PATH', 'DHARA_KEEP_ME', 'DHARA_FAKE_MODE']));
     expect(handle).toEqual({ pid: dump.pid, instance: handle.instance, origin: `http://127.0.0.1:${port}` });
     expect(managed.state).toBe('running');
   });
@@ -64,7 +64,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
 
   it('turns an exit before the lease into a bounded startup error, never an unhandled EPIPE', async () => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const { managed } = await fakeService('early-exit', { NOEMA_FAKE_PIDFILE: pidfile });
+    const { managed } = await fakeService('early-exit', { DHARA_FAKE_PIDFILE: pidfile });
     const error = await rejection(managed.start());
     // The lease line normally fits in the pipe buffer before Python exits; both wordings are correct guidance.
     expect([['early-exit', MESSAGES.earlyExit], ['startup-exit', MESSAGES.startupExit]]).toContainEqual([error.code, error.message]);
@@ -73,7 +73,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
 
   it('times out without an acknowledgement, then escalates to signals and stops the service', async () => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const { managed } = await fakeService('hang', { NOEMA_FAKE_PIDFILE: pidfile }, 400);
+    const { managed } = await fakeService('hang', { DHARA_FAKE_PIDFILE: pidfile }, 400);
     const started = Date.now();
     const error = await rejection(managed.start());
     expect([error.code, error.message]).toEqual(['timeout', MESSAGES.timeout]);
@@ -83,7 +83,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
 
   it.each(['bad-ack', 'extra-key', 'long-ack', 'bad-http'])('%s fails identity, stops the service and never writes the workspace', async (mode) => {
     const pidfile = path.join(tempDir(), 'pids.json');
-    const { ws, managed } = await fakeService(mode, { NOEMA_FAKE_PIDFILE: pidfile });
+    const { ws, managed } = await fakeService(mode, { DHARA_FAKE_PIDFILE: pidfile });
     const error = await rejection(managed.start());
     expect([error.code, error.message]).toEqual(['identity', MESSAGES.identity]);
     expect(readPids(pidfile).some(live)).toBe(false);

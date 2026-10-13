@@ -42,7 +42,7 @@ SHELL_ASSET='index-AbCd1234.js'
 
 def make_dist(root):
     (root/'assets').mkdir(parents=True)
-    (root/'index.html').write_text('<!doctype html><title>Noema</title><div id="root"></div>')
+    (root/'index.html').write_text('<!doctype html><title>Dhara</title><div id="root"></div>')
     (root/'assets'/SHELL_ASSET).write_text('export {};')
     (root/'sw.js').write_text('const CACHE="dhara-shell-000000000000";const PRECACHE=["/"];\n')
     (root/'manifest.webmanifest').write_text('{"id":"/","start_url":"/","scope":"/"}')
@@ -314,7 +314,7 @@ def test_export_includes_originals_not_tokens(env):
  import zipfile
  c,s,w=env;n=capture(c);r=c.get('/api/export');assert r.status_code==200
  with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-  payload=json.loads(z.read('noema.json'));assert payload['notes'][0]['raw']==n['raw'];assert 'tokens' not in payload;assert ADMIN.encode() not in z.read('noema.json');assert 'notes/'+n['id']+'.md' in z.namelist()
+  payload=json.loads(z.read('dhara.json'));assert payload['notes'][0]['raw']==n['raw'];assert 'tokens' not in payload;assert ADMIN.encode() not in z.read('dhara.json');assert 'notes/'+n['id']+'.md' in z.namelist()
 
 def test_restart_persistence(tmp_path):
  app=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
@@ -335,7 +335,7 @@ def test_old_session_cookie_signs_in_until_login_rewrites_it(env):
  assert c.cookies.get('dhara_session')==ADMIN
  assert c.get('/api/state').status_code==200
  r=c.delete('/api/session');cleared=r.headers.get_list('set-cookie')
- assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','noema_session'))   # rename-shim
+ assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','dhara_session'))   # rename-shim
  assert c.get('/api/state').status_code==401
 
 def test_request_marker_dual_read(env):

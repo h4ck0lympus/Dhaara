@@ -52,12 +52,12 @@ class Worker:
         self.store,self.model,self.ollama_url,self.speech_model = store,model,ollama_url.rstrip('/'),speech_model
         self.stop_event=threading.Event(); self.thread=None
         if model and urlsplit(ollama_url).hostname not in ('localhost','127.0.0.1','::1') and env('ALLOW_REMOTE_MODEL')!='1':
-            raise ValueError('Remote model host requires NOEMA_ALLOW_REMOTE_MODEL=1. Notes would leave this machine.')
+            raise ValueError('Remote model host requires DHARA_ALLOW_REMOTE_MODEL=1. Notes would leave this machine.')
 
     def start(self):
         with self.store.db() as c:
             c.execute("UPDATE jobs SET status='queued' WHERE status='running'")
-        self.thread=threading.Thread(target=self.loop,name='noema-worker',daemon=True)
+        self.thread=threading.Thread(target=self.loop,name='dhara-worker',daemon=True)
         self.thread.start()
 
     def stop(self):
@@ -75,7 +75,7 @@ class Worker:
             self.stop_event.wait(3)
 
     def organize(self,text):
-        if not self.model: raise ValueError('Set NOEMA_MODEL to an installed local Ollama model to enable cleanup.')
+        if not self.model: raise ValueError('Set DHARA_MODEL to an installed local Ollama model to enable cleanup.')
         if len(text)>14000:
             raise ValueError('The original is saved. This CPU profile limits AI cleanup to 14,000 characters; split this note before retrying.')
         with httpx.Client(timeout=httpx.Timeout(180,connect=5),trust_env=False) as client:
@@ -86,7 +86,7 @@ class Worker:
             return validate_organized(json.loads(response.json()['response']))
 
     def transcribe(self,note_id):
-        if not self.speech_model: raise ValueError('Set NOEMA_SPEECH_MODEL to a downloaded faster-whisper model first. Your recording is saved.')
+        if not self.speech_model: raise ValueError('Set DHARA_SPEECH_MODEL to a downloaded faster-whisper model first. Your recording is saved.')
         with self.store.db() as c:
             audio=[dict(r) for r in c.execute("SELECT * FROM attachments WHERE note_id=? AND mime LIKE 'audio/%' ORDER BY rowid",(note_id,))]
         if not audio: raise ValueError('This capture has no audio recording')

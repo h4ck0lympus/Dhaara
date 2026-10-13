@@ -95,7 +95,7 @@ describe('flushOutbox', () => {
   it('stops without marking on 401, 5xx and network failures', async () => {
     await m.db.outboxPut(item(1));
     await m.db.outboxPut(item(2));
-    fetchMock.mockResolvedValueOnce(failed(401, 'Unlock Noema to continue'));
+    fetchMock.mockResolvedValueOnce(failed(401, 'Unlock Dhara to continue'));
     expect(await m.outbox.flushOutbox()).toEqual({ sent: 0, stop: 'unauthorized' });
     fetchMock.mockResolvedValueOnce(failed(503, 'Service restarting'));
     expect(await m.outbox.flushOutbox()).toEqual({ sent: 0, stop: 'server' });

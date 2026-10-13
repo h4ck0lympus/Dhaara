@@ -1,4 +1,4 @@
-# Verification report · Noema 0.1.0 + React/Electron cutover
+# Verification report · Dhara 0.1.0 + React/Electron cutover
 
 The final cutover gate below ran on source revision `cfbfed53d548f039915436975bb2317ae0917d0a` (`git rev-parse HEAD` at the final run; the commit that adds this report comes after it, so it is not that revision). Every other section is an inherited report: the terrain measurements ran on `b13fd4d` and the §21 memory measurement on `54ffe98`, and the sections from "Frictionless task capture" down are earlier milestones' reports, kept unchanged.
 
@@ -8,7 +8,7 @@ Executed on branch `feat/react-electron` before the cutover merge, terrain on so
 
 ### Final gate run
 
-Gate, run from the repository root with Node 22.22.0 (`node --version` = v22.22.0, outside the packages' `engines` range ^22.22.2, so `npm ci` prints `npm warn EBADENGINE`, which is non-fatal; `.nvmrc` says 22.23.3, which the next phase's gate uses) and Python 3.12.3 (`.venv/bin/python --version`): `npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`. Playwright runs with workers=4 and retries=0 (`web/playwright.config.ts`, unchanged). Source revision `cfbfed53d548f039915436975bb2317ae0917d0a` on `feat/react-electron`, 2026-10-12 22:03–23:03 local time. Each segment ran as its own foreground command, and a run counts only when all eight commands pass back to back. Three consecutive clean runs are recorded. Each cell is the tool's own summary line and the command's wall time. The one pytest warning is a third-party `DeprecationWarning` from starlette's test client (`anyio.abc.BlockingPortal` alias), not from Noema code. No log has a skipped, xfailed, xpassed, flaky or todo count, and `tests/test_cutover.py` guards against focused tests.
+Gate, run from the repository root with Node 22.22.0 (`node --version` = v22.22.0, outside the packages' `engines` range ^22.22.2, so `npm ci` prints `npm warn EBADENGINE`, which is non-fatal; `.nvmrc` says 22.23.3, which the next phase's gate uses) and Python 3.12.3 (`.venv/bin/python --version`): `npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`. Playwright runs with workers=4 and retries=0 (`web/playwright.config.ts`, unchanged). Source revision `cfbfed53d548f039915436975bb2317ae0917d0a` on `feat/react-electron`, 2026-10-12 22:03–23:03 local time. Each segment ran as its own foreground command, and a run counts only when all eight commands pass back to back. Three consecutive clean runs are recorded. Each cell is the tool's own summary line and the command's wall time. The one pytest warning is a third-party `DeprecationWarning` from starlette's test client (`anyio.abc.BlockingPortal` alias), not from Dhara code. No log has a skipped, xfailed, xpassed, flaky or todo count, and `tests/test_cutover.py` guards against focused tests.
 
 | Command | Run 1 | Run 2 | Run 3 | Result |
 |---|---|---|---|---|
@@ -63,7 +63,7 @@ Result: PASS
 
 ## Terrain budget · 2026-10-12
 
-Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, noema and run.py clean in the working tree). Spec §7 method: Electron app process tree only (the run.py service is excluded), launched through Playwright with `chromiumSandbox: true` (never `--no-sandbox`), private headless Sway (gles2, Iris Xe), 1440×900 at scale 1, motion on, reduced motion off, 30 s samples, median of 3 runs; PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so memory is cgroup accounting (anon + shmem + kernel) of the Electron scope. Harness: the throwaway bench.py plus terrain.py (decision 13B), not committed.
+Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, dhara and run.py clean in the working tree). Spec §7 method: Electron app process tree only (the run.py service is excluded), launched through Playwright with `chromiumSandbox: true` (never `--no-sandbox`), private headless Sway (gles2, Iris Xe), 1440×900 at scale 1, motion on, reduced motion off, 30 s samples, median of 3 runs; PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so memory is cgroup accounting (anon + shmem + kernel) of the Electron scope. Harness: the throwaway bench.py plus terrain.py (decision 13B), not committed.
 
 | State | CPU % of one core (budget) | iGPU busy % (budget) | Electron non-file MiB (cgroup; PSS unavailable under the setuid sandbox, EACCES on smaps_rollup) | Result |
 |---|---|---|---|---|
@@ -91,7 +91,7 @@ inference provider, permissions or note-to-task conversion. A-FOCUS-01 stays ope
 Before runtime edits `git status --short -- .` was `?? ./`; `git ls-files -- .`
 was empty. All **69 entries** of the previous
 `qa/managed-service/screenshots-2026-10-08/source-after.sha256` verified. Parent
-HEAD is not a Noema revision; no stage/commit/push/nested repository. Current
+HEAD is not a Dhara revision; no stage/commit/push/nested repository. Current
 identity is [qa/task-capture/source-after.sha256](../qa/task-capture/source-after.sha256),
 covering **73 active files**, all verified after the final handoff edits.
 Existing unrelated work and historical/reference evidence are preserved.
@@ -165,7 +165,7 @@ CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/task_capture_check.py -
 .venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/noema-task-capture-complete
 CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python -c 'from pathlib import Path; from qa import now_ui_check as checks; checks.OUTPUT=Path("qa/task-capture/now-regression"); checks.main(capture_screenshots=False)'
 CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py
-NOEMA_QA_OUTPUT=qa/task-capture/capture-recovery CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python -c 'from qa.native_storage_check import run; run(capture_screenshots=False)'
+DHARA_QA_OUTPUT=qa/task-capture/capture-recovery CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python -c 'from qa.native_storage_check import run; run(capture_screenshots=False)'
 cargo test --offline --locked --manifest-path desktop/Cargo.toml --no-default-features --lib
 PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --offline --locked --manifest-path desktop/Cargo.toml --features qa -j 2
 LD_LIBRARY_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu .venv/bin/python qa/webview_check.py --managed --task-capture --skip-build --no-screenshots --output qa/task-capture/webkit --xvfb /tmp/noema-webview-sdk-V3K1nA/root/usr/bin/Xvfb
@@ -174,8 +174,8 @@ LD_LIBRARY_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu .ven
 LD_LIBRARY_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu .venv/bin/python qa/webview_check.py --task-capture --skip-build --no-screenshots --output qa/task-capture/webkit-external-final --xvfb /tmp/noema-webview-sdk-V3K1nA/root/usr/bin/Xvfb
 PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --offline --locked --manifest-path desktop/Cargo.toml -j 2
 node --check public/app.js
-.venv/bin/python -m compileall -q noema qa/task_capture_check.py qa/webview_check.py qa/native_storage_check.py tests/test_task_capture.py
-desktop/target/debug/noema-desktop --qa-stage verify
+.venv/bin/python -m compileall -q dhara qa/task_capture_check.py qa/webview_check.py qa/native_storage_check.py tests/test_task_capture.py
+desktop/target/debug/dhara-desktop --qa-stage verify
 rg --files qa -g '*.png' | wc -l
 sha256sum -c qa/task-capture/source-after.sha256
 ```
@@ -203,8 +203,8 @@ used. No physical session was inferred from that fallback.
 
 ### Files and handoff
 
-Runtime: `public/app.js`, `public/styles.css`, `noema/models.py`, `noema/store.py`,
-`noema/server.py`, new `noema/task_capture.py`. Tests/QA: new
+Runtime: `public/app.js`, `public/styles.css`, `dhara/models.py`, `dhara/store.py`,
+`dhara/server.py`, new `dhara/task_capture.py`. Tests/QA: new
 `tests/test_task_capture.py`, `qa/task_capture_check.py`, existing
 `qa/now_ui_check.py`, `qa/browser_check.py` selectors, `qa/native_storage_check.py`
 optional screenshot suppression, `qa/webview_check.py` and
@@ -229,7 +229,7 @@ managed / 28 external checks below remain the prior implementation results.
 The first user launch used literal placeholder paths and failed to create its
 profile. The corrected `$HOME/.local/share/noema-dev/...` command was aborted
 by the user, not a successful launch result. Exact-executable read-only `/proc`
-inspection found no Noema shell running. Sanitized session inventory still
+inspection found no Dhara shell running. Sanitized session inventory still
 reports live Sway/Wayland; it does not demonstrate input or a native app launch.
 
 On the explicit screenshot request, saved only [two current main-window captures](../qa/managed-service/screenshots-2026-10-08/README.md):
@@ -253,7 +253,7 @@ updated progress/report/status/README inventory. A-FOCUS-01 remains unresolved.
 
 All 68 previous source-manifest entries verified before these changes. The
 current checkpoint is [source-after.sha256](../qa/managed-service/screenshots-2026-10-08/source-after.sha256);
-previous manifests are preserved, not relabeled as current. Noema is still
+previous manifests are preserved, not relabeled as current. Dhara is still
 untracked; parent HEAD is not its revision. No Git stage/commit/push.
 
 Exact newly executed capture/parsing commands:
@@ -311,7 +311,7 @@ the webview. The manual fixture/recorder/sampler are reused, not replaced.
   web checkpoint before shutdown; hide does nothing to service ownership.
   Crash sends existing offline presentation immediately; Retry reconnects without
   navigating/reloading the editor. External mode has no backend shutdown path.
-- `noema/desktop_service.py`, `run.py`, `noema/server.py`: actual Python entry
+- `dhara/desktop_service.py`, `run.py`, `dhara/server.py`: actual Python entry
   consumes inherited listener/workspace lock and private stdin lifetime lease;
   acknowledges only after Uvicorn startup. `/api/desktop-instance` publishes
   protocol/public non-authorizing instance/PID only (external mode 404). Manual
@@ -402,7 +402,7 @@ Companion/observer/microphone/models were not enabled. Short-lived/missed helper
 and CPU after last readable stat can be missed. Physical open/hidden/editing/
 companion workloads remain pending. No battery, accelerated GPU, model latency,
 resource target or native Wayland conclusion follows. Earlier **synthetic sampler
-unit tests are not these Noema workload measurements**. After the sample, all
+unit tests are not these Dhara workload measurements**. After the sample, all
 four recorded PIDs were checked absent; owned timeout/cancel descendants also
 disappeared. No unrelated processes were stopped by lifecycle cleanup.
 
@@ -438,17 +438,17 @@ cargo fmt --manifest-path desktop/Cargo.toml -- --check
 node --check desktop/src/close.js
 node --check desktop/qa/scenario.js
 node --check public/app.js
-.venv/bin/python -m compileall -q noema/desktop_service.py noema/server.py run.py qa/webview_check.py tests/test_managed_service.py
+.venv/bin/python -m compileall -q dhara/desktop_service.py dhara/server.py run.py qa/webview_check.py tests/test_managed_service.py
 # Working directory docs/Noema-Documentation:
 sha256sum -c SHA256SUMS
 # Back at repository root, normal non-QA development handoff build:
 PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --offline --locked --manifest-path desktop/Cargo.toml -j 2
-desktop/target/debug/noema-desktop --help
+desktop/target/debug/dhara-desktop --help
 # Expected exit 2: QA argument is absent in the normal handoff executable.
-desktop/target/debug/noema-desktop --qa-stage verify
+desktop/target/debug/dhara-desktop --qa-stage verify
 rg --files qa -g '*.png' | wc -l
 # Generate source list using this command; saved through apply_patch:
-{ rg --files -0 noema public desktop/src desktop/qa desktop/examples tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
+{ rg --files -0 dhara public desktop/src desktop/qa desktop/examples tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
 sha256sum -c qa/managed-service/source-after.sha256
 sha256sum qa/managed-service/source-after.sha256
 ```
@@ -497,7 +497,7 @@ files were fingerprinted and all verified. The
 [before manifest](../qa/device-acceptance/source-before.sha256) SHA256 is
 `1e1e42bb6ed25d5ab613225b1638ef2832f4c79234e0bff99fdbc93ccb67548c`.
 The [final source manifest](../qa/device-acceptance/source-after.sha256) is the
-reproducible handoff fingerprint. Manifests cover `noema`, `public`, desktop
+reproducible handoff fingerprint. Manifests cover `dhara`, `public`, desktop
 source/QA/Cargo files, `tools`, `tests`, QA Python/C/config and active docs plus
 README/launcher/dependency files; they exclude private data, environments,
 profiles, binaries, generated evidence and the preserved documentation archive.
@@ -509,7 +509,7 @@ Python 3.12.3 and Rust 1.93.1. Hardware reports i7-1270P, 31.06 GiB total usable
 RAM, one DRM card. Active eDP-1 1920×1200 and DP-5 1920×1080 both report scale
 1.0; device types include keyboard/pointer/touchpad. No headless connector name
 is reported. These facts do not prove physical interaction, monitor validation,
-GPU acceleration or a native Noema client launch. The optional session recorder
+GPU acceleration or a native Dhara client launch. The optional session recorder
 can confirm only the fixture PID's `xdg_shell` versus `xwayland` protocol after
 the user launches it; it was not given a shell PID in this pass.
 
@@ -553,7 +553,7 @@ unknown private/PSS values stay null. Short-lived/missed helpers and CPU after
 last readable samples are explicit exclusions; already-reparented helpers need
 explicit attributed `webview-N` roots. No process is started/stopped by sampling.
 Tests use brief synthetic process trees solely to validate accounting and
-privacy. **There are no complete-Noema resource results in this pass**, despite
+privacy. **There are no complete-Dhara resource results in this pass**, despite
 the target CPU being reported. No battery/model performance is inferred.
 The old backend-only sampler was not rerun; its optional `psutil` is absent in
 the current venv. The new sampler needs only Python's standard library.
@@ -577,12 +577,12 @@ git ls-files -- .
 node --test tests/now_state.test.cjs
 cargo test --locked --manifest-path desktop/Cargo.toml --no-default-features --lib
 # Manifest file lists, before and after edits, were generated with:
-{ rg --files -0 noema public desktop/src desktop/qa tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
+{ rg --files -0 dhara public desktop/src desktop/qa tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
 sha256sum qa/device-acceptance/source-before.sha256
 sha256sum -c qa/device-acceptance/source-before.sha256
 .venv/bin/python qa/device_session.py --output qa/device-acceptance/session.json
 .venv/bin/python run.py --help
-desktop/target/debug/noema-desktop --help
+desktop/target/debug/dhara-desktop --help
 /usr/bin/python3 tools/sway_companion.py --help
 .venv/bin/python tools/agent.py --help
 .venv/bin/python qa/process_sample.py --help
@@ -595,7 +595,7 @@ node --test tests/now_state.test.cjs
 .venv/bin/python -m compileall -q qa/device_fixture.py qa/device_session.py qa/process_sample.py tests/test_device_tools.py
 cargo fmt --manifest-path desktop/Cargo.toml -- --check
 node --check public/app.js
-sha256sum desktop/target/debug/noema-desktop public/cat.png public/app.js public/styles.css tools/sway_companion.py
+sha256sum desktop/target/debug/dhara-desktop public/cat.png public/app.js public/styles.css tools/sway_companion.py
 rg --files qa -g '*.png' -g '*.jpg' -g '*.jpeg' -g '*.webp'
 sha256sum -c qa/device-acceptance/source-after.sha256
 # Working directory: docs/Noema-Documentation
@@ -700,7 +700,7 @@ available work or its display scale changes. Appearance/clicks never enable
 observation. Explicit dismissal is tracked separately from GTK's closing
 animation, so a scale/size refresh cannot reopen a dismissed panel.
 
-Changed runtime code: `tools/sway_companion.py`, `noema/server.py` (saved
+Changed runtime code: `tools/sway_companion.py`, `dhara/server.py` (saved
 `next_action` added to the observer-readable summary), `public/app.js` (existing
 task-dialog deep link only). No ranking, priority, focus, SQLite schema, token
 scope middleware or observation permission gate changed. `public/styles.css`

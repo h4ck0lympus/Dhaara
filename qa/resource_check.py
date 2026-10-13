@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 from dhara.env import PREFIXES
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='noema-resource-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='dhara-resource-') as temporary:
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]

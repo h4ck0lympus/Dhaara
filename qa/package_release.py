@@ -20,7 +20,7 @@ def included(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output', default=str(ROOT.parent / 'Noema-v0.1.0.zip'))
+    parser.add_argument('--output', default=str(ROOT.parent / 'Dhara-v0.1.0.zip'))
     args = parser.parse_args()
     paths = sorted(path for path in ROOT.rglob('*') if included(path))
     manifest = ROOT / 'SHA256SUMS'
@@ -32,7 +32,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path in paths + [manifest]:
-            archive.write(path, 'noema/' + path.relative_to(ROOT).as_posix())
+            archive.write(path, 'dhara/' + path.relative_to(ROOT).as_posix())
     with zipfile.ZipFile(output) as archive:
         failed = archive.testzip()
         if failed:

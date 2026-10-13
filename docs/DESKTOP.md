@@ -1,6 +1,6 @@
 # Electron desktop shell
 
-Noema's desktop shell is Electron (`electron/`). It loads the same React bundle
+Dhara's desktop shell is Electron (`electron/`). It loads the same React bundle
 that a browser loads, from the Python service's origin; there is no second UI
 and no second API client. It replaced the Rust Wry/Tao shell (`desktop/`) at the
 React + Electron cutover, chosen from the 2026-10-10 private headless-Sway
@@ -46,9 +46,9 @@ npm --prefix electron start -- --server http://127.0.0.1:8765
 ```
 
 External mode only connects. It never starts or stops the service.
-Noema flags go after the app path (after `--` with npm); Chromium switches go
+Dhara flags go after the app path (after `--` with npm); Chromium switches go
 before it. Relative paths resolve against the launch directory, and the last of a
-repeated flag wins. Any CLI or profile error prints `Noema: <message>` to stderr
+repeated flag wins. Any CLI or profile error prints `Dhara: <message>` to stderr
 and exits 2 without creating a window or directory; `--help` exits 0.
 `npm --prefix electron start` runs from `electron/`, so give absolute paths.
 When you need the shell's own PID (for `qa/device_session.py` or
@@ -58,7 +58,7 @@ When you need the shell's own PID (for `qa/device_session.py` or
 | Flag | Meaning |
 |---|---|
 | `--server URL` | Service origin, default `http://127.0.0.1:8765`. A literal loopback IP over http with no credentials, path, query or fragment (`localhost` and `::ffff:` forms are rejected); anything else exits 2 with "Use a literal loopback HTTP URL, e.g. http://127.0.0.1:8765". |
-| `--profile DIR` | Profile, default `$XDG_DATA_HOME/noema/electron`, else `~/.local/share/noema/electron`; created with mode 0700 (an existing directory keeps its mode). |
+| `--profile DIR` | Profile, default `$XDG_DATA_HOME/dhara/electron`, else `~/.local/share/dhara/electron`; created with mode 0700 (an existing directory keeps its mode). |
 | `--manage-service` | Linux only: start and own the service (below); requires `--data-dir`. |
 | `--data-dir PATH` | Managed-mode workspace; rejected without `--manage-service`. |
 | `--python PATH` | Managed-mode interpreter, default `<repo>/.venv/bin/python`. |
@@ -72,7 +72,7 @@ arguments and exits 0.
 
 ```bash
 npm --prefix electron start -- --manage-service \
-  --data-dir /absolute/path/to/noema-workspace
+  --data-dir /absolute/path/to/dhara-workspace
 ```
 
 Managed mode serves only `http://127.0.0.1:8765`. The origin includes the port,
@@ -88,12 +88,12 @@ Startup, in order:
    directory) and canonicalises it.
 2. It spawns `<python> <entry-point> --desktop-managed --host 127.0.0.1 --port 8765
    --data-dir <canonical> --owner-pid <electron pid>` in the child's own process
-   group, removes `NOEMA_MODEL`, `NOEMA_SPEECH_MODEL`, `NOEMA_TOKEN`,
-   `NOEMA_ACCESS_TOKEN`, `NOEMA_ALLOWED_HOSTS`, `NOEMA_ALLOW_REMOTE_MODEL` and
-   `NOEMA_DATA_DIR` from its environment, and writes `{"instance":"<64 hex>"}`
+   group, removes `DHARA_MODEL`, `DHARA_SPEECH_MODEL`, `DHARA_TOKEN`,
+   `DHARA_ACCESS_TOKEN`, `DHARA_ALLOWED_HOSTS`, `DHARA_ALLOW_REMOTE_MODEL` and
+   `DHARA_DATA_DIR` from its environment, and writes `{"instance":"<64 hex>"}`
    to its stdin. Stdin stays open as the lifetime lease.
 3. Python sets `PR_SET_PDEATHSIG(SIGTERM)`, exits unless its parent is
-   `--owner-pid`, reads the lease, takes the `.noema-service.lock` flock, binds
+   `--owner-pid`, reads the lease, takes the `.dhara-service.lock` flock, binds
    127.0.0.1:8765 with `SO_REUSEADDR`, starts the stdin-EOF watcher and serves.
    Once serving it prints one line with exactly `protocol` (2), `instance`,
    `pid`, `workspace` and `port`.
@@ -117,7 +117,7 @@ credentials were sent." and the origin is never loaded.
 |---|---|---|
 | starting | Local startup page with status, Retry and Cancel. Retry never spawns while a service process is alive. | Cancel stops the service and quits; no page has loaded, so there is no checkpoint. |
 | loaded | The app. | Runs the close checkpoint, then stops the service. |
-| crashed | The page stays loaded and receives `noema:service-down`; a strip along the bottom of the window offers Retry and Quit, so the page stays usable. Nothing restarts without Retry. A successful Retry removes the overlay and dispatches `noema:service-up` without a reload. | Quit runs the checkpoint first. |
+| crashed | The page stays loaded and receives `dhara:service-down`; a strip along the bottom of the window offers Retry and Quit, so the page stays usable. Nothing restarts without Retry. A successful Retry removes the overlay and dispatches `dhara:service-up` without a reload. | Quit runs the checkpoint first. |
 | stopping | — | Close stdin, wait 5 s, SIGTERM the group, wait 1 s, SIGKILL the group, reap. ESRCH counts as success. |
 
 Group cleanup always runs after the child's exit is observed, so grandchildren
@@ -157,7 +157,7 @@ links open in your browser. Downloads are allowed only from the origin and its
 Captures queued in the old Rust/WebKit profile (`~/.local/share/noema/webview`)
 are not readable by Chromium. This is accepted (decision 11C), and that profile
 is left untouched. Browser drafts and queued captures on the same origin keep
-working: the database `noema-local-v1` version 1 and its records are unchanged,
+working: the database `dhara-local-v1` version 1 and its records are unchanged,
 and queued items upload once with their original ids.
 
 ## Tests

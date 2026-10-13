@@ -38,7 +38,7 @@ export async function rejection(promise: Promise<unknown>): Promise<LifecycleErr
 }
 
 export function fakeEnv(mode: string, extra: Record<string, string> = {}): NodeJS.ProcessEnv {
-  return { ...process.env, NOEMA_FAKE_MODE: mode, ...extra };
+  return { ...process.env, DHARA_FAKE_MODE: mode, ...extra };
 }
 
 /** Creates services that are always cancelled (and their groups cleaned) after each test. */

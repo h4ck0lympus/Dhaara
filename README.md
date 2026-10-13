@@ -1,4 +1,4 @@
-# Noema · 0.1.0
+# Dhara · 0.1.0
 
 See [the maintained progress record](docs/PROGRESS.md) for what is built,
 what has been tested, remaining milestones and the next concrete step.
@@ -12,7 +12,7 @@ removed at the cutover; rollback steps are in [PROGRESS.md](docs/PROGRESS.md).
 External service startup remains the default; Linux managed mode
 (`--manage-service`) is opt-in. See [desktop instructions](docs/DESKTOP.md).
 
-Task capture, the capture outbox and the browser database `noema-local-v1`
+Task capture, the capture outbox and the browser database `dhara-local-v1`
 (version 1) keep their behaviour and record shapes, so captures queued by the
 old browser UI upload once after the upgrade. Kitten settings stay in Settings
 for the separate Python Sway helper. Priority shows where it came from:
@@ -31,7 +31,7 @@ Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to bui
 
 ### Linux / macOS
 
-From the extracted `noema` directory:
+From the extracted `dhara` directory:
 
 ```bash
 python3 -m venv .venv
@@ -76,10 +76,10 @@ This distribution contains portable source, not a Windows installer, macOS appli
 The default data directory is `.data` beside `run.py`. To keep data independent of code upgrades:
 
 ```bash
-python run.py --data-dir "$HOME/.local/share/noema" --open
+python run.py --data-dir "$HOME/.local/share/dhara" --open
 ```
 
-Use the same path on subsequent starts. Files include `noema.sqlite3`, an `attachments/` directory, and `admin.token`. Keep the directory private. An OS account with access to these files can read the data; this build does not encrypt it at rest.
+Use the same path on subsequent starts. Files include `dhara.sqlite3`, an `attachments/` directory, and `admin.token`. Keep the directory private. An OS account with access to these files can read the data; this build does not encrypt it at rest.
 
 ## First five minutes
 
@@ -118,15 +118,15 @@ Install/start Ollama separately using its official instructions. Choose a model 
 
 ```bash
 ollama pull qwen2.5:3b
-export NOEMA_MODEL='qwen2.5:3b'
+export DHARA_MODEL='qwen2.5:3b'
 python run.py --open
 ```
 
-`ollama pull` explicitly downloads model files. It is not part of ordinary Noema startup. On PowerShell, set `$env:NOEMA_MODEL = 'qwen2.5:3b'` instead of `export`.
+`ollama pull` explicitly downloads model files. It is not part of ordinary Dhara startup. On PowerShell, set `$env:DHARA_MODEL = 'qwen2.5:3b'` instead of `export`.
 
 The worker uses one job at a time, four inference threads, a bounded context, a 14,000-character input limit, and `keep_alive: 0` to request model unloading after a job. Longer captures remain safely saved and receive an explanatory processing error; automatic chunking is not implemented yet.
 
-Ollama defaults to `http://127.0.0.1:11434`. Change `NOEMA_OLLAMA_URL` only when necessary. A non-loopback model host also requires `NOEMA_ALLOW_REMOTE_MODEL=1`, because note content would leave the machine. Remote authentication/TLS for model services is not managed here.
+Ollama defaults to `http://127.0.0.1:11434`. Change `DHARA_OLLAMA_URL` only when necessary. A non-loopback model host also requires `DHARA_ALLOW_REMOTE_MODEL=1`, because note content would leave the machine. Remote authentication/TLS for model services is not managed here.
 
 Cleanup output is validated for shape, not factual accuracy. It can still be wrong. The original and all revisions remain accessible. If you edit while a model is working, its late result becomes a separate suggestion instead of overwriting your changes. The first version uses a small fixed folder taxonomy; arbitrary project-folder learning and robust mixed-topic splitting remain future work.
 
@@ -141,11 +141,11 @@ Within the same Python environment:
 ```bash
 python -m pip install -e '.[speech]'
 python tools/download_speech_model.py small
-export NOEMA_SPEECH_MODEL="$PWD/.data/models/whisper-small"
+export DHARA_SPEECH_MODEL="$PWD/.data/models/whisper-small"
 python run.py --open
 ```
 
-The helper downloads a model only when you explicitly run it. You may choose `tiny`, `base`, `small`, `medium`, or `large-v3`; smaller is not automatically good enough for technical speech. Model downloads can be substantial. On PowerShell, set `$env:NOEMA_SPEECH_MODEL` to the full model-directory path.
+The helper downloads a model only when you explicitly run it. You may choose `tiny`, `base`, `small`, `medium`, or `large-v3`; smaller is not automatically good enough for technical speech. Model downloads can be substantial. On PowerShell, set `$env:DHARA_SPEECH_MODEL` to the full model-directory path.
 
 Transcription runs in a separate CPU process using INT8 and four threads, with local model files only. The process exits when done. Audio and original typed content survive a transcription failure. You can retry through the note's **Transcribe recording** button.
 
@@ -162,7 +162,7 @@ This does not inspect arbitrary existing conversations. You deliberately wrap a 
 In **Settings → Agent & observer tokens**, create an **Agent** token and select the allowed task(s). Copy the token when shown. In a task's detail view, expand **Connect an agent** to copy its ID.
 
 ```bash
-export NOEMA_TOKEN='paste-the-task-scoped-token-here'
+export DHARA_TOKEN='paste-the-task-scoped-token-here'
 python tools/agent.py --task TASK_ID --name 'Coding agent' -- your-command argument1
 ```
 
@@ -172,7 +172,7 @@ For a harmless first check:
 python tools/agent.py --task TASK_ID --name 'Test command' -- python -c "print('Ready for review')"
 ```
 
-The wrapper leaves output in the terminal, creates a run, reports liveness every 30 seconds, and reports the exit status. It removes `NOEMA_TOKEN` and `NOEMA_ACCESS_TOKEN` from the child environment. A zero exit code means ready for human review, not verified success. Terminal output/prompt text is not automatically copied into notes.
+The wrapper leaves output in the terminal, creates a run, reports liveness every 30 seconds, and reports the exit status. It removes `DHARA_TOKEN` and `DHARA_ACCESS_TOKEN` from the child environment. A zero exit code means ready for human review, not verified success. Terminal output/prompt text is not automatically copied into notes.
 
 Events are written to an SQLite outbox before delivery. If the server goes away, they can be replayed after reconnect:
 
@@ -194,7 +194,7 @@ The initial run registration requires a reachable server. For interactive agents
 The in-app browser kitten preview was removed at the React + Electron cutover. The native Linux helper is separate:
 
 ```bash
-export NOEMA_TOKEN='paste-an-observer-token-created-in-settings'
+export DHARA_TOKEN='paste-an-observer-token-created-in-settings'
 /usr/bin/python3 tools/sway_companion.py
 ```
 
@@ -218,7 +218,7 @@ To enable window metadata, both the helper flag and the server permission must b
 /usr/bin/python3 tools/sway_companion.py --observe-window-context
 ```
 
-Then enable **Window context** in Noema Settings and add application/title-to-task rules. Alternatively, run only the observer without the native cat:
+Then enable **Window context** in Dhara Settings and add application/title-to-task rules. Alternatively, run only the observer without the native cat:
 
 ```bash
 python tools/sway_context.py --observe-window-context
@@ -306,11 +306,11 @@ git history); only their recorded results under `qa/` stay.
 
 ```text
 run.py                   Local launcher
-noema/server.py          HTTP API, local safeguards, serves web/dist, export
-noema/store.py           SQLite records, priority/availability policy, state transitions
-noema/models.py          Bounded API input validation
-noema/worker.py          Single optional AI/transcription worker
-noema/desktop_service.py Linux managed-mode lease (protocol 2)
+dhara/server.py          HTTP API, local safeguards, serves web/dist, export
+dhara/store.py           SQLite records, priority/availability policy, state transitions
+dhara/models.py          Bounded API input validation
+dhara/worker.py          Single optional AI/transcription worker
+dhara/desktop_service.py Linux managed-mode lease (protocol 2)
 web/                     React + TypeScript interface (npm --prefix web run build)
 electron/                Electron desktop shell and managed lifecycle
 tools/agent.py           Command tracking + durable event outbox

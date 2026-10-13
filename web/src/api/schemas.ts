@@ -1,4 +1,4 @@
-// Response schemas (contract §3.3). z.object strips unknown keys; nothing is coerced. Shapes: noema/store.py, noema/server.py.
+// Response schemas (contract §3.3). z.object strips unknown keys; nothing is coerced. Shapes: dhara/store.py, dhara/server.py.
 import { z } from '../zod';
 import type { TASK_EDIT_FIELDS } from '../domain/tasks';
 

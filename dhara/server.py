@@ -75,7 +75,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             admin=secrets.token_urlsafe(32)
             fd=os.open(token_file,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
             with os.fdopen(fd,'w') as f: f.write(admin)
-    if len(admin)<24: raise ValueError('NOEMA_ACCESS_TOKEN must be at least 24 characters')
+    if len(admin)<24: raise ValueError('DHARA_ACCESS_TOKEN must be at least 24 characters')
     worker=Worker(store,env('MODEL',''),env('OLLAMA_URL','http://127.0.0.1:11434'),env('SPEECH_MODEL',''))
     allowed_hosts={'localhost','127.0.0.1','::1','testserver'}|{x.strip() for x in env('ALLOWED_HOSTS','').split(',') if x.strip()}
 
@@ -85,7 +85,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         yield
         if start_worker: worker.stop()
 
-    app=FastAPI(title='Noema',version=__version__,lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
+    app=FastAPI(title='Dhara',version=__version__,lifespan=lifespan,docs_url=None,redoc_url=None,openapi_url=None)
     app.state.store,app.state.worker=store,worker
     app.add_middleware(BodyLimit)
 
@@ -113,7 +113,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         request.state.identity=identity
         path=request.url.path
         if path.startswith('/api/') and path not in ('/api/health','/api/session','/api/desktop-instance'):
-            if not identity: return JSONResponse({'detail':'Unlock Noema to continue'},status_code=401)
+            if not identity: return JSONResponse({'detail':'Unlock Dhara to continue'},status_code=401)
             if not authorization and request.method not in ('GET','HEAD') and not has_request_marker(request):
                 return JSONResponse({'detail':'Missing same-origin request marker'},status_code=403)
             if identity['scope']!='admin':
@@ -258,12 +258,12 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/notes/{note_id}/organize')
     def organize(note_id):
-        if not worker.model: raise Problem(409,'AI cleanup is off. Set NOEMA_MODEL to a downloaded local model and restart; originals remain usable without it.')
+        if not worker.model: raise Problem(409,'AI cleanup is off. Set DHARA_MODEL to a downloaded local model and restart; originals remain usable without it.')
         return store.enqueue(note_id,'organize')
 
     @app.post('/api/notes/{note_id}/transcribe')
     def transcribe(note_id):
-        if not worker.speech_model: raise Problem(409,'Transcription is off. Install the speech extra, download a model, and set NOEMA_SPEECH_MODEL. Your recording is saved.')
+        if not worker.speech_model: raise Problem(409,'Transcription is off. Install the speech extra, download a model, and set DHARA_SPEECH_MODEL. Your recording is saved.')
         return store.enqueue(note_id,'transcribe')
 
     @app.get('/api/attachments/{file_id}')
@@ -342,7 +342,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         # SQLite backup is separate from portable export. Never include credentials.
         payload=store.export_data(); stream=io.BytesIO()
         with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED) as archive:
-            archive.writestr('noema.json',json.dumps(payload,ensure_ascii=False,indent=2))
+            archive.writestr('dhara.json',json.dumps(payload,ensure_ascii=False,indent=2))
             for note in payload['notes']:
                 archive.writestr(f"notes/{note['id']}.md",f"# {note['title']}\n\nFolder: {note['folder']}\n\n{note['body']}\n")
             with store.db() as c:
@@ -350,7 +350,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             for f in blobs:
                 path=store.blobs/f['path']
                 if path.exists(): archive.write(path,'attachments/'+f['id'])
-        return Response(stream.getvalue(),media_type='application/zip',headers={'Content-Disposition':'attachment; filename="noema-export.zip"'})
+        return Response(stream.getvalue(),media_type='application/zip',headers={'Content-Disposition':'attachment; filename="dhara-export.zip"'})
 
     @app.get('/api/openapi')
     def schema(): return app.openapi()

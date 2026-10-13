@@ -40,15 +40,15 @@ describe('boot', () => {
   });
 
   it('tries loopback auto-login only after a 401, then fetches the state again', async () => {
-    respond([401, '{"detail":"Unlock Noema to continue"}'], [200, '{"ok":true}'], [200, SNAPSHOT]);
+    respond([401, '{"detail":"Unlock Dhara to continue"}'], [200, '{"ok":true}'], [200, SNAPSHOT]);
     expect((await boot()).kind).toBe('ready');
     expect(requests()).toEqual(['GET /api/state', 'POST /api/session {"token":""}', 'GET /api/state']);
   });
 
   it('is locked only after a second 401', async () => {
-    respond([401, '{"detail":"Unlock Noema to continue"}'], [401, '{"detail":"Invalid access token"}']);
+    respond([401, '{"detail":"Unlock Dhara to continue"}'], [401, '{"detail":"Invalid access token"}']);
     expect(await boot()).toEqual({ kind: 'locked' });
-    respond([401, '{"detail":"Unlock Noema to continue"}'], [200, '{"ok":true}'], [401, '{"detail":"Unlock Noema to continue"}']);
+    respond([401, '{"detail":"Unlock Dhara to continue"}'], [200, '{"ok":true}'], [401, '{"detail":"Unlock Dhara to continue"}']);
     expect(await boot()).toEqual({ kind: 'locked' });
   });
 

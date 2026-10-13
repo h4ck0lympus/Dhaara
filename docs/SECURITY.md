@@ -14,7 +14,7 @@ This is a personal local development app, not a production security audit or mul
 External mode is still the default and never stops the user's backend. Explicit
 `--manage-service --data-dir PATH` owns only the child it spawns, in that
 child's own process group. Electron creates the workspace with mode 0700 and
-canonicalises it. Python takes the `.noema-service.lock` flock, binds
+canonicalises it. Python takes the `.dhara-service.lock` flock, binds
 127.0.0.1:8765 itself (`SO_REUSEADDR`, never `SO_REUSEPORT`) and, once serving,
 prints one acknowledgement line with exactly `protocol` (2), `instance`, `pid`,
 `workspace` and `port`. Electron accepts it only with exactly those keys and
@@ -29,9 +29,9 @@ ASGI embeddings are not claimed to participate in launcher exclusion.
 `GET /api/desktop-instance` exposes only protocol, the public non-authorizing
 instance id and PID in managed mode (404 in external mode); never the workspace
 path or a token. Host/Origin checks and no-store apply. The child environment is
-stripped of `NOEMA_MODEL`, `NOEMA_SPEECH_MODEL`, `NOEMA_TOKEN`,
-`NOEMA_ACCESS_TOKEN`, `NOEMA_ALLOWED_HOSTS`, `NOEMA_ALLOW_REMOTE_MODEL` and
-`NOEMA_DATA_DIR`; child stderr is discarded and user messages are fixed text.
+stripped of `DHARA_MODEL`, `DHARA_SPEECH_MODEL`, `DHARA_TOKEN`,
+`DHARA_ACCESS_TOKEN`, `DHARA_ALLOWED_HOSTS`, `DHARA_ALLOW_REMOTE_MODEL` and
+`DHARA_DATA_DIR`; child stderr is discarded and user messages are fixed text.
 
 Python sets `PR_SET_PDEATHSIG(SIGTERM)` and exits if its parent is not
 `--owner-pid` before it reads the lease, so it cannot outlive an owner that died
@@ -85,7 +85,7 @@ exact origin, and URL parse errors deny. New windows are always denied; http(s)
 links with a host and no credentials open in the user's browser. `<webview>` is
 denied. Downloads are allowed only from the origin and its `blob:` URLs. The page
 preload exposes one call, `window.ipc.postMessage`, and main accepts only
-`noema:close-approved` from the main frame at the origin. No command, filesystem
+`dhara:close-approved` from the main frame at the origin. No command, filesystem
 or token bridge exists; the page uses the same loopback session bootstrap as a
 browser.
 
@@ -94,7 +94,7 @@ the origin show a native prompt; video, display capture, geolocation and
 everything else are denied. Decisions are remembered for the app session
 only and cleared on restart, by design.
 
-The profile (`$XDG_DATA_HOME/noema/electron` or `~/.local/share/noema/electron`,
+The profile (`$XDG_DATA_HOME/dhara/electron` or `~/.local/share/dhara/electron`,
 mode 0700) holds the session cookie, IndexedDB drafts and outbox, and cache; it is
 treated as credential storage and is not encrypted. Chromium's single-instance
 lock guards it; a second launch focuses the first window and exits. Old

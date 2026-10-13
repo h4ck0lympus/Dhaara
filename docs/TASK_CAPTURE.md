@@ -91,7 +91,7 @@ Sway acceptance and A-FOCUS-01 remain pending independently.
 
 ## Try it
 
-Restart the existing service (or close/reopen opt-in managed Noema) to load the
+Restart the existing service (or close/reopen opt-in managed Dhara) to load the
 new API, and reload the client. Keep the same data directory, profile and origin;
 do not switch to a test notebook. Click Add task, type a sentence and press
 Ctrl/Command + Enter. To check recovery safely, use the existing disposable

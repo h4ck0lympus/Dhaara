@@ -16,58 +16,58 @@ const notice = (page: Page) => page.locator('.saved-notice');
 const draftRaw = async (page: Page) => ((await readLocalDb(page)).draft as { raw: string }).raw;
 
 test.describe('Capture', () => {
-  test('Unsaved draft never ingested into server notebook', async ({ page, noema }) => {   // native_storage_check.py:166; handbook-trace R3
-    await gotoApp(page, noema, '#/capture');
+  test('Unsaved draft never ingested into server notebook', async ({ page, dhara }) => {   // native_storage_check.py:166; handbook-trace R3
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill(RAW);
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
     expect(await draftRaw(page)).toBe(RAW);
-    expect((await serverState(noema)).notes).toEqual([]);
+    expect((await serverState(dhara)).notes).toEqual([]);
   });
 
-  test('Capture creates a learning note, never an automatic task', async ({ page, noema }) => {   // now_ui_check.py:163; handbook-trace R1
-    await gotoApp(page, noema, '#/capture');
+  test('Capture creates a learning note, never an automatic task', async ({ page, dhara }) => {   // now_ui_check.py:163; handbook-trace R1
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Learning note: I am unsure about ownership. Not a commitment.');
     await saveButton(page).click();
     await expect(editor(page)).toHaveValue('');
-    await expect.poll(async () => (await serverState(noema)).notes.length).toBe(1);
-    expect((await serverState(noema)).tasks).toEqual([]);
+    await expect.poll(async () => (await serverState(dhara)).notes.length).toBe(1);
+    expect((await serverState(dhara)).tasks).toEqual([]);
   });
 
-  test('Ordinary learning-note capture creates no task', async ({ page, noema }) => {   // task_capture_check.py:250
-    await noema.api('POST', '/api/tasks', { title: 'Existing commitment' });
-    await gotoApp(page, noema, '#/capture');
+  test('Ordinary learning-note capture creates no task', async ({ page, dhara }) => {   // task_capture_check.py:250
+    await dhara.api('POST', '/api/tasks', { title: 'Existing commitment' });
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Learning note: review tomorrow is an example, not a task commitment.');
     await saveButton(page).click();
-    await expect.poll(async () => (await serverState(noema)).notes.length).toBe(1);
-    expect((await serverState(noema)).tasks.map(task => task.title)).toEqual(['Existing commitment']);
+    await expect.poll(async () => (await serverState(dhara)).notes.length).toBe(1);
+    expect((await serverState(dhara)).tasks.map(task => task.title)).toEqual(['Existing commitment']);
   });
 
-  test('Text and uploaded image commit together', async ({ page, noema }) => {   // browser_check.py:118-127
-    await gotoApp(page, noema, '#/capture');
+  test('Text and uploaded image commit together', async ({ page, dhara }) => {   // browser_check.py:118-127
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('LeetCode trick: sorted input. two pointers, move left if the sum is small. not sure about duplicates yet.');
     await page.locator('input[type=file]').setInputFiles({ name: 'example.png', mimeType: 'image/png', buffer: PNG });
     await expect(page.getByRole('img', { name: 'example.png' })).toBeVisible();
     await saveButton(page).click();
     await expect(notice(page)).toHaveAttribute('data-storage', 'server');
-    const [note] = (await serverState(noema)).notes;
-    const full = await noema.api<{ attachments: unknown[]; raw: string }>('GET', `/api/notes/${note.id}`);
+    const [note] = (await serverState(dhara)).notes;
+    const full = await dhara.api<{ attachments: unknown[]; raw: string }>('GET', `/api/notes/${note.id}`);
     expect(full.attachments).toHaveLength(1);
     expect(full.raw).toContain('not sure');
   });
 
-  test('After server acknowledgement Capture shows the title and folder with Open note and Change folder', async ({ page, noema }) => {   // handbook-trace U16
-    await gotoApp(page, noema, '#/capture');
+  test('After server acknowledgement Capture shows the title and folder with Open note and Change folder', async ({ page, dhara }) => {   // handbook-trace U16
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('heap... maybe wrong\nfree_slot(0x1234);');
     await saveButton(page).click();
     await expect(notice(page)).toContainText('Saved on your server');
-    const [note] = (await serverState(noema)).notes;
+    const [note] = (await serverState(dhara)).notes;
     await expect(notice(page)).toContainText(note.title);
     await expect(notice(page)).toContainText(note.folder);
     await notice(page).getByRole('button', { name: 'Change folder' }).click();
     await notice(page).getByLabel('Folder').fill('Security / Heap');
     await notice(page).getByRole('button', { name: 'Move' }).click();
     await expect(notice(page)).toContainText('Security / Heap');
-    const full = await noema.api<{ version: number; raw: string; folder: string }>('GET', `/api/notes/${note.id}`);
+    const full = await dhara.api<{ version: number; raw: string; folder: string }>('GET', `/api/notes/${note.id}`);
     expect(full.folder).toBe('Security / Heap');
     expect(full.version).toBe(2);
     expect(full.raw).toBe('heap... maybe wrong\nfree_slot(0x1234);');
@@ -75,8 +75,8 @@ test.describe('Capture', () => {
     await expect(page).toHaveURL(new RegExp(`#/note/${note.id}$`));
   });
 
-  test('While queued, Capture says the capture is on this device', async ({ page, noema, context }) => {   // handbook-trace U16; browser_check.py:136-141
-    await gotoApp(page, noema, '#/capture');
+  test('While queued, Capture says the capture is on this device', async ({ page, dhara, context }) => {   // handbook-trace U16; browser_check.py:136-141
+    await gotoApp(page, dhara, '#/capture');
     await goOffline(page, context);
     await editor(page).fill('Offline learning note. Keep my original.');
     await saveButton(page).click();
@@ -91,8 +91,8 @@ test.describe('Capture', () => {
     expect((await readLocalDb(page)).outbox).toEqual([]);
   });
 
-  test('Draft, queued and saved-on-server labels are distinct', async ({ page, noema, context }) => {   // handbook-trace U17
-    await gotoApp(page, noema, '#/capture');
+  test('Draft, queued and saved-on-server labels are distinct', async ({ page, dhara, context }) => {   // handbook-trace U17
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('label check');
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
     const device = await draftStatus(page).textContent();
@@ -109,8 +109,8 @@ test.describe('Capture', () => {
     expect(server).toBe('Saved on your server');
   });
 
-  test('Capture text never moves under the cursor', async ({ page, noema }) => {   // handbook-trace U15; spec §8 Refetch
-    await gotoApp(page, noema, '#/capture');
+  test('Capture text never moves under the cursor', async ({ page, dhara }) => {   // handbook-trace U15; spec §8 Refetch
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('alpha beta gamma');
     await editor(page).evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(6, 6));
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
@@ -127,8 +127,8 @@ test.describe('Capture', () => {
     })).toBe(false);
   });
 
-  test('Ctrl+Enter saves; plain Enter inserts a newline', async ({ page, noema }) => {   // spec §4.5 Keyboard
-    await gotoApp(page, noema, '#/capture');
+  test('Ctrl+Enter saves; plain Enter inserts a newline', async ({ page, dhara }) => {   // spec §4.5 Keyboard
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).click();
     await page.keyboard.type('line one');
     await page.keyboard.press('Enter');
@@ -136,11 +136,11 @@ test.describe('Capture', () => {
     await expect(editor(page)).toHaveValue('line one\nline two');
     await page.keyboard.press('Control+Enter');
     await expect(editor(page)).toHaveValue('');
-    await expect.poll(async () => (await serverState(noema)).notes.length).toBe(1);
+    await expect.poll(async () => (await serverState(dhara)).notes.length).toBe(1);
   });
 
-  test('Ctrl+Enter during IME composition does not save', async ({ page, noema }) => {   // spec §4.5 "IME composition is respected"
-    await gotoApp(page, noema, '#/capture');
+  test('Ctrl+Enter during IME composition does not save', async ({ page, dhara }) => {   // spec §4.5 "IME composition is respected"
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('かな');
     await editor(page).evaluate(element => {
       element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, isComposing: true, bubbles: true, cancelable: true }));
@@ -152,17 +152,17 @@ test.describe('Capture', () => {
     expect((await readLocalDb(page)).outbox).toEqual([]);
   });
 
-  test('An empty Save is refused with the existing message and queues nothing', async ({ page, noema }) => {   // app.js:402
-    await gotoApp(page, noema, '#/capture');
+  test('An empty Save is refused with the existing message and queues nothing', async ({ page, dhara }) => {   // app.js:402
+    await gotoApp(page, dhara, '#/capture');
     await expect(saveButton(page)).toBeEnabled();
     await saveButton(page).click();
     await expect(page.getByRole('alert').filter({ hasText: S.writeSomething })).toBeVisible();
     expect((await readLocalDb(page)).outbox).toEqual([]);
   });
 
-  test('A save in flight blocks navigation', async ({ page, noema }) => {   // spec §8 Navigation guards
+  test('A save in flight blocks navigation', async ({ page, dhara }) => {   // spec §8 Navigation guards
     await delayIdbTransactions(page, 1500);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Saving slowly.');
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
     await saveButton(page).click();
@@ -174,16 +174,16 @@ test.describe('Capture', () => {
     await expect(page).toHaveURL(/#\/notes$/);
   });
 
-  test('Phone capture has no horizontal overflow', async ({ page, noema }) => {   // browser_check.py:149-150
+  test('Phone capture has no horizontal overflow', async ({ page, dhara }) => {   // browser_check.py:149-150
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('A quick thought from my phone with a_very_long_identifier_that_must_wrap_instead_of_overflowing_0x41414141');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
-  test('Phone width uses bottom navigation and full-screen Capture', async ({ page, noema }) => {   // handbook-trace U10
+  test('Phone width uses bottom navigation and full-screen Capture', async ({ page, dhara }) => {   // handbook-trace U10
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!;
     expect(nav.y + nav.height).toBeGreaterThan(844 - 100);
     expect(nav.width).toBeGreaterThan(300);
@@ -193,7 +193,7 @@ test.describe('Capture', () => {
 });
 
 test.describe('Capture attachments and task link', () => {
-  test('Rejects files that would fail on the server, each with its own message', async ({ page, noema }) => {   // spec §4.4 validation
+  test('Rejects files that would fail on the server, each with its own message', async ({ page, dhara }) => {   // spec §4.4 validation
     const big = test.info().outputPath('big.png');
     const a = test.info().outputPath('a.png');
     const b = test.info().outputPath('b.png');
@@ -201,7 +201,7 @@ test.describe('Capture attachments and task link', () => {
     writeFileSync(big, Buffer.alloc(32 * MB + 1));
     writeFileSync(a, padded);
     writeFileSync(b, padded);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     const picker = page.locator('input[type=file]');
     await expect(picker).toHaveAttribute('accept', 'image/png,image/jpeg,image/webp,audio/wav,audio/ogg,audio/webm,audio/mp4,audio/mpeg');
     await picker.setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
@@ -218,8 +218,8 @@ test.describe('Capture attachments and task link', () => {
     expect((await readLocalDb(page)).outbox).toEqual([]);
   });
 
-  test('Paste and drop add images to the tray, and Remove takes one out', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/capture');
+  test('Paste and drop add images to the tray, and Remove takes one out', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/capture');
     const bytes = [...PNG];
     await editor(page).evaluate((element, data) => {
       const transfer = new DataTransfer();
@@ -238,27 +238,27 @@ test.describe('Capture attachments and task link', () => {
     await expect(page.getByRole('img', { name: 'dropped.png' })).toBeVisible();
   });
 
-  test('A capture can link to an open task as a small optional link', async ({ page, noema }) => {   // handbook-trace U19 (related task)
-    const task = await noema.api<{ id: string }>('POST', '/api/tasks', { title: 'Two Sum' });
-    await gotoApp(page, noema, '#/capture');
+  test('A capture can link to an open task as a small optional link', async ({ page, dhara }) => {   // handbook-trace U19 (related task)
+    const task = await dhara.api<{ id: string }>('POST', '/api/tasks', { title: 'Two Sum' });
+    await gotoApp(page, dhara, '#/capture');
     await page.getByLabel('Link to a task').selectOption({ label: 'Two Sum' });
     await editor(page).fill('two pointers after sorting');
     await saveButton(page).click();
     await expect(notice(page)).toContainText('Saved on your server');
-    const state = await serverState(noema);
+    const state = await serverState(dhara);
     expect(state.notes[0].task_id).toBe(task.id);
     expect(state.tasks).toHaveLength(1);
   });
 });
 
 test.describe('Capture on native browser storage', () => {
-  test('Draft text and exact Blob bytes survive browser process restart', async ({ playwright, noema }) => {   // native_storage_check.py:175
+  test('Draft text and exact Blob bytes survive browser process restart', async ({ playwright, dhara }) => {   // native_storage_check.py:175
     const errors: string[] = [];
     const profile = test.info().outputPath('profile');
     let context = await persistentBrowser(playwright.chromium, profile, errors);
     try {
       let page = await context.newPage();
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await editor(page).fill(RAW);
       await page.locator('input[type=file]').setInputFiles({ name: 'heap.png', mimeType: 'image/png', buffer: PNG });
       await expect(page.getByRole('img', { name: 'heap.png' })).toBeVisible();
@@ -267,11 +267,11 @@ test.describe('Capture on native browser storage', () => {
 
       context = await persistentBrowser(playwright.chromium, profile, errors);
       page = await context.newPage();
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await expect(editor(page)).toHaveValue(RAW);
       await expect(page.getByRole('img', { name: 'heap.png' })).toBeVisible();
       expect((await readDraftFileBytes(page)).equals(PNG)).toBe(true);
-      expect((await serverState(noema)).notes).toEqual([]);
+      expect((await serverState(dhara)).notes).toEqual([]);
     } finally {
       await context.close();
     }
@@ -280,10 +280,10 @@ test.describe('Capture on native browser storage', () => {
 
   const SEEDED = { id: 'abort-draft-0001', raw: 'A draft that must survive an aborted Save.', task_id: '', files: [] };
 
-  test('Aborted atomic Save keeps persisted draft and rolls back queue insertion', async ({ page, noema }) => {   // native_storage_check.py:215
-    await seedLocalDb(page, noema.origin, { draft: SEEDED });
+  test('Aborted atomic Save keeps persisted draft and rolls back queue insertion', async ({ page, dhara }) => {   // native_storage_check.py:215
+    await seedLocalDb(page, dhara.origin, { draft: SEEDED });
     await failIdbWrite(page, { store: 'outbox', key: SEEDED.id, error: 'AbortError' });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await expect(editor(page)).toHaveValue(SEEDED.raw);
     await saveButton(page).click();
     await expect(localError(page)).toBeVisible();
@@ -292,13 +292,13 @@ test.describe('Capture on native browser storage', () => {
     const local = await readLocalDb(page);
     expect(local.outbox).toEqual([]);
     expect((local.draft as { id: string; raw: string })).toMatchObject({ id: SEEDED.id, raw: SEEDED.raw });
-    expect((await serverState(noema)).notes).toEqual([]);
+    expect((await serverState(dhara)).notes).toEqual([]);
   });
 
-  test('Reload recovers original draft after transaction abort', async ({ page, noema }) => {   // native_storage_check.py:218
-    await seedLocalDb(page, noema.origin, { draft: SEEDED });
+  test('Reload recovers original draft after transaction abort', async ({ page, dhara }) => {   // native_storage_check.py:218
+    await seedLocalDb(page, dhara.origin, { draft: SEEDED });
     await failIdbWrite(page, { store: 'outbox', key: SEEDED.id, error: 'AbortError' });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await saveButton(page).click();
     await expect(localError(page)).toBeVisible();
     await page.reload();
@@ -306,10 +306,10 @@ test.describe('Capture on native browser storage', () => {
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
   });
 
-  test('Injected quota failure has persistent truthful UI and retains editor text', async ({ page, noema }) => {   // native_storage_check.py:230
+  test('Injected quota failure has persistent truthful UI and retains editor text', async ({ page, dhara }) => {   // native_storage_check.py:230
     await failIdbWrite(page, { store: 'kv', key: 'draft', error: 'QuotaExceededError' });
     await page.clock.install();
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Exact unsaved edit after simulated quota failure.');
     await expect(localError(page)).toBeVisible();
     await expect(localError(page)).toContainText(S.localSaveErrorNotice);
@@ -320,19 +320,19 @@ test.describe('Capture on native browser storage', () => {
     await expect(editor(page)).toHaveValue('Exact unsaved edit after simulated quota failure.');
   });
 
-  test('Recovery control fits phone viewport', async ({ page, noema }) => {   // native_storage_check.py:233
+  test('Recovery control fits phone viewport', async ({ page, dhara }) => {   // native_storage_check.py:233
     await page.setViewportSize({ width: 390, height: 844 });
     await failIdbWrite(page, { store: 'kv', key: 'draft', error: 'QuotaExceededError' });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Phone quota failure.');
     await expect(localError(page)).toBeVisible();
     await expect(page.getByRole('button', { name: S.retryLocalSave })).toBeInViewport();
     await expectPhoneFriendly(page, '#local-save-error');
   });
 
-  test('Retry commits recovered edit through native IndexedDB', async ({ page, noema }) => {   // native_storage_check.py:238
+  test('Retry commits recovered edit through native IndexedDB', async ({ page, dhara }) => {   // native_storage_check.py:238
     await failIdbWrite(page, { store: 'kv', key: 'draft', error: 'QuotaExceededError' });
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Exact unsaved edit after simulated quota failure.');
     await expect(localError(page)).toBeVisible();
     await page.getByRole('button', { name: S.retryLocalSave }).click();
@@ -341,46 +341,46 @@ test.describe('Capture on native browser storage', () => {
     expect(await draftRaw(page)).toBe('Exact unsaved edit after simulated quota failure.');
   });
 
-  test('Immediate Save cancels draft debounce without resurrecting a saved draft', async ({ page, noema }) => {   // native_storage_check.py:274
+  test('Immediate Save cancels draft debounce without resurrecting a saved draft', async ({ page, dhara }) => {   // native_storage_check.py:274
     await page.clock.install();
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Immediate Save before debounce: maybe not cleared, 0x4141.');
     await saveButton(page).click();
     await expect(editor(page)).toHaveValue('');
-    await expect.poll(async () => (await serverState(noema)).notes.length).toBe(1);
+    await expect.poll(async () => (await serverState(dhara)).notes.length).toBe(1);
     await page.clock.runFor(500);   // fires a still-armed 350 ms debounce, if Save failed to cancel it
     await page.reload();
     await expect(editor(page)).toHaveValue('');
     expect(await draftRaw(page)).toBe('');
   });
 
-  test('Unavailable storage at boot leaves editable UI and failed Save retains text', async ({ page, noema }) => {   // native_storage_check.py:287
+  test('Unavailable storage at boot leaves editable UI and failed Save retains text', async ({ page, dhara }) => {   // native_storage_check.py:287
     await blockIdbOpen(page);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await expect(localError(page)).toBeVisible();
     await editor(page).fill('Still editable with storage unavailable.');
     await saveButton(page).click();
     await expect(page.getByRole('alert').filter({ hasText: 'Could not save the capture: ' })).toBeVisible();
     await expect(editor(page)).toHaveValue('Still editable with storage unavailable.');
-    expect((await serverState(noema)).notes).toEqual([]);
+    expect((await serverState(dhara)).notes).toEqual([]);
   });
 });
 
 test.describe('Offline Capture', () => {
-  test('Offline capture remains queued in storage adapter', async ({ page, noema, context }) => {   // browser_check.py:136-139
-    await gotoApp(page, noema, '#/capture');
+  test('Offline capture remains queued in storage adapter', async ({ page, dhara, context }) => {   // browser_check.py:136-139
+    await gotoApp(page, dhara, '#/capture');
     await goOffline(page, context);
     await editor(page).fill('Offline learning note. Keep my original.');
     await saveButton(page).click();
     await expect(page.getByRole('status').filter({ hasText: S.captureSavedOffline })).toBeVisible();
     const { outbox } = await readLocalDb(page);
     expect(outbox.map(item => item.raw)).toEqual(['Offline learning note. Keep my original.']);
-    expect((await serverState(noema)).notes).toEqual([]);
+    expect((await serverState(dhara)).notes).toEqual([]);
   });
 
-  test('Service worker opens actual capture UI offline with last snapshot', async ({ page, noema, context }) => {   // native_storage_check.py:179
-    await noema.api('POST', '/api/tasks', { title: 'Offline task from the last snapshot' });
-    await gotoApp(page, noema, '#/capture');
+  test('Service worker opens actual capture UI offline with last snapshot', async ({ page, dhara, context }) => {   // native_storage_check.py:179
+    await dhara.api('POST', '/api/tasks', { title: 'Offline task from the last snapshot' });
+    await gotoApp(page, dhara, '#/capture');
     await waitForServiceWorker(page);
     await context.setOffline(true);
     await page.reload();
@@ -389,8 +389,8 @@ test.describe('Offline Capture', () => {
     await expect(page.getByLabel('Link to a task').locator('option', { hasText: 'Offline task from the last snapshot' })).toHaveCount(1);
   });
 
-  test('Explicit offline Save atomically queues original and resets stored draft', async ({ page, noema, context }) => {   // native_storage_check.py:184
-    await gotoApp(page, noema, '#/capture');
+  test('Explicit offline Save atomically queues original and resets stored draft', async ({ page, dhara, context }) => {   // native_storage_check.py:184
+    await gotoApp(page, dhara, '#/capture');
     await goOffline(page, context);
     await editor(page).fill('free_slot(0x1234) may leave a pointer.');
     await expect(page.locator('#draft-status')).toHaveText(S.draftSaved);
@@ -402,13 +402,13 @@ test.describe('Offline Capture', () => {
     expect((local.draft as { id: string }).id).not.toBe(local.outbox[0].id);
   });
 
-  test('Queued attachment capture survives offline browser restart', async ({ playwright, noema }) => {   // native_storage_check.py:193
+  test('Queued attachment capture survives offline browser restart', async ({ playwright, dhara }) => {   // native_storage_check.py:193
     const errors: string[] = [];
     const profile = test.info().outputPath('profile');
     let context = await persistentBrowser(playwright.chromium, profile, errors);
     try {
       let page = await context.newPage();
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await waitForServiceWorker(page);
       await goOffline(page, context);
       await editor(page).fill('Offline heap sketch');
@@ -423,11 +423,11 @@ test.describe('Offline Capture', () => {
       context = await persistentBrowser(playwright.chromium, profile, errors);
       await context.setOffline(true);
       page = await context.newPage();
-      await page.goto(`${noema.origin}/#/capture`);
+      await page.goto(`${dhara.origin}/#/capture`);
       await expect(editor(page)).toBeVisible();
       const { outbox } = await readLocalDb(page);
       expect(outbox.map(item => [item.id, item.raw, item.fileCount])).toEqual([[queued.id, 'Offline heap sketch', 1]]);
-      expect((await serverState(noema)).notes).toEqual([]);
+      expect((await serverState(dhara)).notes).toEqual([]);
     } finally {
       await context.close();
     }
@@ -436,8 +436,8 @@ test.describe('Offline Capture', () => {
 });
 
 test.describe('Sketch', () => {
-  test('Sketch offers pen, eraser, undo and a text tool', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/capture');
+  test('Sketch offers pen, eraser, undo and a text tool', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/capture');
     await page.getByRole('button', { name: 'Sketch' }).click();
     const dialog = page.getByRole('dialog', { name: 'A quick sketch' });
     await expect(dialog.getByText('Draw while you talk. Your recording continues.')).toBeVisible();
@@ -488,8 +488,8 @@ test.describe('Sketch', () => {
 });
 
 test.describe('Capture recording', () => {
-  test('Capture has one writing surface, a mic/image/sketch toolbar and one Save note action', async ({ page, noema }) => {   // handbook-trace U13
-    await gotoApp(page, noema, '#/capture');
+  test('Capture has one writing surface, a mic/image/sketch toolbar and one Save note action', async ({ page, dhara }) => {   // handbook-trace U13
+    await gotoApp(page, dhara, '#/capture');
     const screen = page.locator('.capture-screen');
     await expect(screen.getByRole('heading', { level: 1 })).toHaveText('Capture a thought.');
     await expect(screen.getByText('A quiet place for the rough edges.')).toBeVisible();
@@ -502,7 +502,7 @@ test.describe('Capture recording', () => {
     await expect(draftStatus(page)).toHaveText(S.draftMemory);
   });
 
-  test('No microphone permission is requested before Record', async ({ playwright, noema }) => {   // handbook-trace R9
+  test('No microphone permission is requested before Record', async ({ playwright, dhara }) => {   // handbook-trace R9
     const errors: string[] = [];
     const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
     try {
@@ -515,7 +515,7 @@ test.describe('Capture recording', () => {
           return original(constraints);
         };
       });
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await expect(page.getByText('Audio stays local until you save.')).toBeVisible();
       await editor(page).fill('typing never opens the microphone');
       expect(await page.evaluate('window.micRequests')).toBe(0);
@@ -529,12 +529,12 @@ test.describe('Capture recording', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Recording shows elapsed time, Pause/Resume and Stop; paused is labelled distinctly', async ({ playwright, noema }) => {   // handbook-trace U14
+  test('Recording shows elapsed time, Pause/Resume and Stop; paused is labelled distinctly', async ({ playwright, dhara }) => {   // handbook-trace U14
     const errors: string[] = [];
     const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
     try {
       await page.clock.install();
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await page.getByRole('button', { name: 'Record' }).click();
       const controls = page.getByRole('group', { name: 'Recording', exact: true });
       await expect(controls).toHaveAttribute('data-phase', 'recording');
@@ -559,8 +559,8 @@ test.describe('Capture recording', () => {
       await expect(page.locator('.attachment-name')).toHaveText(/^voice-.*\.webm$/);
       await saveButton(page).click();
       await expect(notice(page)).toContainText('Saved on your server');
-      const [note] = (await serverState(noema)).notes;
-      const full = await noema.api<{ attachments: { mime: string }[] }>('GET', `/api/notes/${note.id}`);
+      const [note] = (await serverState(dhara)).notes;
+      const full = await dhara.api<{ attachments: { mime: string }[] }>('GET', `/api/notes/${note.id}`);
       expect(full.attachments.map(attachment => attachment.mime)).toEqual(['audio/webm']);
     } finally {
       await close();
@@ -568,11 +568,11 @@ test.describe('Capture recording', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Visual tray stays usable while recording', async ({ playwright, noema }) => {   // handbook-trace U14
+  test('Visual tray stays usable while recording', async ({ playwright, dhara }) => {   // handbook-trace U14
     const errors: string[] = [];
     const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
     try {
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       await page.getByRole('button', { name: 'Record' }).click();
       const controls = page.getByRole('group', { name: 'Recording', exact: true });
       await expect(controls).toBeVisible();
@@ -591,11 +591,11 @@ test.describe('Capture recording', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Save, navigation and unload are refused while recording', async ({ playwright, noema }) => {   // spec §4.5 guards
+  test('Save, navigation and unload are refused while recording', async ({ playwright, dhara }) => {   // spec §4.5 guards
     const errors: string[] = [];
     const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
     try {
-      await gotoApp(page, noema, '#/capture');
+      await gotoApp(page, dhara, '#/capture');
       expect(await beforeUnloadArmed(page)).toBe(false);
       await editor(page).fill('thinking aloud');
       await page.getByRole('button', { name: 'Record' }).click();

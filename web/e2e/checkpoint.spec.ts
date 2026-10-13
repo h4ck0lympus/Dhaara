@@ -15,9 +15,9 @@ async function startSlowSave(page: Page): Promise<void> {
 }
 
 test.describe('Close checkpoint', () => {
-  test('The checkpoint saves a draft typed just before closing', async ({ page, noema }) => {
+  test('The checkpoint saves a draft typed just before closing', async ({ page, dhara }) => {
     await stubIpc(page);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     expect(await page.evaluate(() => window.__dharaCheckpointCloseReady)).toBe(true);
     await editor(page).fill('typed right before closing');
     await requestClose(page);
@@ -25,29 +25,29 @@ test.describe('Close checkpoint', () => {
     expect(((await readLocalDb(page)).draft as { raw: string }).raw).toBe('typed right before closing');
   });
 
-  test('A save in flight keeps the window open', async ({ page, noema }) => {
+  test('A save in flight keeps the window open', async ({ page, dhara }) => {
     await delayIdbTransactions(page, 1500);
     await stubIpc(page);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await startSlowSave(page);
     await requestClose(page);
     await expect(page.getByRole('status').filter({ hasText: S.closeSaveInFlight })).toBeVisible();
     expect(await ipcMessages(page)).toEqual([]);
   });
 
-  test('A save in flight blocks navigation', async ({ page, noema }) => {
+  test('A save in flight blocks navigation', async ({ page, dhara }) => {
     await delayIdbTransactions(page, 1500);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await startSlowSave(page);
     await navLink(page, 'Notes').click();
     await expect(page.getByRole('status').filter({ hasText: S.finishingLocalSave })).toBeVisible();
     expect(new URL(page.url()).hash).toBe('#/capture');
   });
 
-  test('A draft-write failure asks for confirmation', async ({ page, noema }) => {
+  test('A draft-write failure asks for confirmation', async ({ page, dhara }) => {
     await failIdbWrite(page, { store: 'kv', key: 'draft', times: 10, error: 'QuotaExceededError' });
     await stubIpc(page);
-    await gotoApp(page, noema, '#/capture');
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('cannot be stored');
     await expect(page.locator('#draft-status')).toHaveText(S.draftError);
     const declined = page.waitForEvent('dialog').then(async prompt => { expect(prompt.message()).toBe(S.closeDraftFailed); await prompt.dismiss(); });
@@ -62,10 +62,10 @@ test.describe('Close checkpoint', () => {
     await expect.poll(() => ipcMessages(page)).toEqual(['dhara:close-approved']);
   });
 
-  test('An unsaved note edit asks before closing; declining keeps the edit', async ({ page, noema }) => {
-    const note = await createNote(noema, 'note under edit');
+  test('An unsaved note edit asks before closing; declining keeps the edit', async ({ page, dhara }) => {
+    const note = await createNote(dhara, 'note under edit');
     await stubIpc(page);
-    await gotoApp(page, noema, `#/note/${note.id}`);
+    await gotoApp(page, dhara, `#/note/${note.id}`);
     await page.getByRole('button', { name: 'Edit' }).click();
     await page.getByLabel('Note', { exact: true }).fill('half-finished edit');
     const declined = page.waitForEvent('dialog').then(async prompt => { expect(prompt.message()).toBe(S.closeConfirm); await prompt.dismiss(); });
@@ -76,13 +76,13 @@ test.describe('Close checkpoint', () => {
     await expect(page.getByLabel('Note', { exact: true })).toHaveValue('half-finished edit');
   });
 
-  test('An ordinary browser never marks itself ready for the desktop close', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/capture');
+  test('An ordinary browser never marks itself ready for the desktop close', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/capture');
     expect(await page.evaluate(() => window.__dharaCheckpointCloseReady)).toBeUndefined();
   });
 
-  test('A failed chunk load after an update saves the draft, then offers Reload', async ({ page, noema }) => {
-    await gotoApp(page, noema, '#/capture');
+  test('A failed chunk load after an update saves the draft, then offers Reload', async ({ page, dhara }) => {
+    await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('kept across the update');
     await page.evaluate(() => { window.dispatchEvent(new Event('vite:preloadError', { cancelable: true })); });
     const offer = page.getByRole('status').filter({ hasText: S.updateReady });

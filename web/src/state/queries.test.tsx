@@ -72,7 +72,7 @@ describe('useSnapshot', () => {
   it('reports disconnected on a failed state fetch and keeps the last snapshot', async () => {
     const { result } = renderHook(() => useSnapshot(), { wrapper });
     await vi.waitFor(() => expect(result.current.data).toEqual(makeSnapshot()));
-    fetchMock.mockImplementation(async () => json({ detail: 'Unlock Noema to continue' }, 401));
+    fetchMock.mockImplementation(async () => json({ detail: 'Unlock Dhara to continue' }, 401));
     await act(() => vi.advanceTimersByTimeAsync(15_000));
     await vi.waitFor(() => expect(connection.get()).toBe(false));
     expect(result.current.data).toEqual(makeSnapshot());
@@ -97,7 +97,7 @@ describe('useSnapshot', () => {
     await vi.waitFor(() => expect(calls('GET', '/state')).toBe(2));
   });
 
-  it('refetches on noema:service-up', async () => {
+  it('refetches on dhara:service-up', async () => {
     const { result } = renderHook(() => useSnapshot(), { wrapper });
     await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
     const uninstall = installRefetchTriggers(qc);

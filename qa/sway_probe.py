@@ -24,16 +24,16 @@ def widgets(widget):
 
 
 def main():
-    runtime = Path(os.environ['NOEMA_QA_PRIVATE_RUNTIME']).resolve()
+    runtime = Path(os.environ['DHARA_QA_PRIVATE_RUNTIME']).resolve()
     socket_path = Path(os.environ['SWAYSOCK']).resolve()
-    compositor_pid = os.environ['NOEMA_QA_COMPOSITOR_PID']
-    if (not runtime.parent.name.startswith('noema-sway-qa-') or socket_path.parent != runtime
+    compositor_pid = os.environ['DHARA_QA_COMPOSITOR_PID']
+    if (not runtime.parent.name.startswith('dhara-sway-qa-') or socket_path.parent != runtime
             or not socket_path.name.endswith('.' + compositor_pid + '.sock')
             or Path(os.environ['XDG_RUNTIME_DIR']).resolve() != runtime):
         raise SystemExit('Refusing to probe or screenshot a non-fixture compositor')
-    output = Path(os.environ['NOEMA_QA_OUTPUT'])
-    phase = os.environ['NOEMA_QA_PHASE']
-    source = Path(os.environ.get('NOEMA_QA_SOURCE', ROOT / 'tools/sway_companion.py'))
+    output = Path(os.environ['DHARA_QA_OUTPUT'])
+    phase = os.environ['DHARA_QA_PHASE']
+    source = Path(os.environ.get('DHARA_QA_SOURCE', ROOT / 'tools/sway_companion.py'))
     spec = importlib.util.spec_from_file_location('companion_under_test', source)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -70,7 +70,7 @@ def main():
     def inspect():
         try:
             window = next((w for w in Gtk.Window.list_toplevels()
-                           if w.get_title() == 'Noema companion'), None)
+                           if w.get_title() == 'Dhara companion'), None)
             if window is None or not window.get_visible() or time.monotonic() - started < 2:
                 return True
             button = window.get_child()
@@ -126,7 +126,7 @@ def main():
         return False
     def click(label):
         app.show_popover()
-        if label not in ('Companion menu', 'Open task in Noema', 'Close'):
+        if label not in ('Companion menu', 'Open task in Dhara', 'Close'):
             app.show_menu()
         button = next(w for w in widgets(app.popover)
                       if isinstance(w, Gtk.Button) and w.get_label() == label)
@@ -238,12 +238,12 @@ def main():
         app.window.destroy()
     GLib.timeout_add(100, inspect)
     GLib.timeout_add_seconds(40, lambda: (Gtk.main_quit(), False)[1])
-    sys.argv = [str(source), '--url', os.environ['NOEMA_QA_URL']]
+    sys.argv = [str(source), '--url', os.environ['DHARA_QA_URL']]
     if phase == 'before':
         module.main()
     else:
         from client import Client
-        app = module.Companion(Client(os.environ['NOEMA_QA_URL']), observe_window_context=True)
+        app = module.Companion(Client(os.environ['DHARA_QA_URL']), observe_window_context=True)
         # Execute a real HTTP/observer poll, then drive GTK explicitly. A timer
         # thread must not overwrite the deliberately injected placement/outage
         # fixtures midway through their assertions. No fake API/GTK widgets.

@@ -40,7 +40,7 @@ describe('notifyDueReminders', () => {
     notifyDueReminders(snapshot(reminder('r1', 'due')));
     notifyDueReminders(snapshot(reminder('r1', 'due')));
     expect(shown).toHaveLength(1);
-    expect(shown[0].title).toBe('Noema reminder');
+    expect(shown[0].title).toBe('Dhara reminder');
     expect(shown[0].options.tag).toBe('r1');
     expect(shown[0].options.body).toBe('Review the cleanup');
     expect(typeof shown[0].options.icon).toBe('string');

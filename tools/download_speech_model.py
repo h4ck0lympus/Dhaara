@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit model download, separate from starting Noema."""
+"""Explicit model download, separate from starting Dhara."""
 import argparse
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
@@ -11,4 +11,4 @@ except ImportError:raise SystemExit('Install the optional speech dependencies fi
 destination=Path(a.output or f'.data/models/whisper-{a.size}').resolve()
 print(f'Downloading {a.size} into {destination}. This may use substantial disk space.')
 download_model(a.size,output_dir=str(destination))
-print(f'\nSet NOEMA_SPEECH_MODEL to: {destination}')
+print(f'\nSet DHARA_SPEECH_MODEL to: {destination}')

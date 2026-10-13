@@ -38,16 +38,16 @@ class Companion:
         self.status_label = self.helper_label = None
         self.controls_open = False
         self.popup_open = False
-        self.window = Gtk.Window(title='Noema companion')
+        self.window = Gtk.Window(title='Dhara companion')
         self.window.set_decorated(False)
         self.window.set_resizable(False)
         self.window.set_app_paintable(True)
-        self.window.get_style_context().add_class('noema-companion')
+        self.window.get_style_context().add_class('dhara-companion')
         visual = self.window.get_screen().get_rgba_visual()
         if visual:
             self.window.set_visual(visual)
         GtkLayerShell.init_for_window(self.window)
-        GtkLayerShell.set_namespace(self.window, 'noema-companion')
+        GtkLayerShell.set_namespace(self.window, 'dhara-companion')
         GtkLayerShell.set_layer(self.window, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_keyboard_mode(self.window, GtkLayerShell.KeyboardMode.NONE)
         for edge in (GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.RIGHT):
@@ -56,7 +56,7 @@ class Companion:
         GtkLayerShell.set_exclusive_zone(self.window, 0)
         css = Gtk.CssProvider()
         css.load_from_data(b'''
-            window.noema-companion {background:transparent;}
+            window.dhara-companion {background:transparent;}
             .kitten-bubble {background:#eef0df; border:1px solid #657058;
                 border-radius:15px; box-shadow:0 2px 3px rgba(0,0,0,0.24);
                 padding:0; min-width:0; min-height:0;}
@@ -78,7 +78,7 @@ class Companion:
         for edge in ('top', 'bottom', 'start', 'end'):
             getattr(self.button, 'set_margin_' + edge)(4)  # Space for the shadow, not an input overlay.
         self.button.set_can_focus(False)
-        self.button.get_accessible().set_name('Noema companion controls')
+        self.button.get_accessible().set_name('Dhara companion controls')
         self.window.add(self.button)
         self.button.connect('clicked', self.toggle_popover)
         self.window.connect('notify::scale-factor', self.scale_changed)
@@ -119,7 +119,7 @@ class Companion:
     def show_menu(self, *_):
         self.show_popover(controls=True)
 
-    def open_noema(self, suffix):
+    def open_dhara(self, suffix):
         self.close_popover()
         webbrowser.open(self.client.url + suffix)
 
@@ -168,10 +168,10 @@ class Companion:
                 text('Next available')
                 text(item['title'])
                 text(item.get('next_action') or 'No next action saved. Open the task to choose one.')
-                action('Open task in Noema', lambda *_: self.open_noema('/#task/' + item['id']))
+                action('Open task in Dhara', lambda *_: self.open_dhara('/#task/' + item['id']))
             elif self.connected:
                 text('No other available task in the current summary.')
-                action('Open Plan', lambda *_: self.open_noema('/#plan'))
+                action('Open Plan', lambda *_: self.open_dhara('/#plan'))
             self.status_label = text(observation_status(self.summary, self.connected))
             self.helper_label = text(self.helper_status() + ' · no screenshots')
             action('Companion menu', self.show_menu)
@@ -209,8 +209,8 @@ class Companion:
         if self.observe_window_context:
             label = 'Resume this observer' if self.observation_paused.is_set() else 'Pause this observer'
             action(label, self.toggle_observation)
-        for label, suffix in (('Observation settings', '/#settings'), ('Open Noema', '/')):
-            action(label, lambda _, path=suffix: self.open_noema(path))
+        for label, suffix in (('Observation settings', '/#settings'), ('Open Dhara', '/')):
+            action(label, lambda _, path=suffix: self.open_dhara(path))
         action('Quit companion', lambda *_: self.window.destroy())
 
     def set_mode(self, mode):
@@ -324,7 +324,7 @@ class Companion:
             self.Gtk.main_quit()
 
     def run(self):
-        threading.Thread(target=self.poll, name='noema-companion-poll', daemon=True).start()
+        threading.Thread(target=self.poll, name='dhara-companion-poll', daemon=True).start()
         self.Gtk.main()
 
 

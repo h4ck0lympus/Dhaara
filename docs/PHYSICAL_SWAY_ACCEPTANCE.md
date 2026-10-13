@@ -15,7 +15,7 @@ eDP-1 is 1920×1200 and DP-5 is 1920×1080, both scale 1.0. Keyboard, pointer an
 touchpad devices are reported; no headless output name is reported. These are
 read-only inventory facts, not proof of physical interaction or GPU use.
 
-Noema is untracked in `/home/p4nic/code`; the parent's HEAD is not its revision.
+Dhara is untracked in `/home/p4nic/code`; the parent's HEAD is not its revision.
 [Before-source manifest](../qa/device-acceptance/source-before.sha256) covers
 59 active source/configuration/test/documentation files. SHA256:
 `1e1e42bb6ed25d5ab613225b1638ef2832f4c79234e0bff99fdbc93ccb67548c`.
@@ -48,14 +48,14 @@ executed physical workflow**.
 Terminal 1 — create fresh private files; launch the existing service explicitly:
 
 ```bash
-NOEMA_FIXTURE="$(.venv/bin/python qa/device_fixture.py)"
-if [[ -f "$NOEMA_FIXTURE/fixture-port.txt" ]]; then
-  printf 'Fixture path: %s\n' "$NOEMA_FIXTURE"
-  env -u NOEMA_MODEL -u NOEMA_SPEECH_MODEL -u NOEMA_ALLOW_REMOTE_MODEL \
-    -u NOEMA_ACCESS_TOKEN -u NOEMA_TOKEN -u NOEMA_DATA_DIR -u NOEMA_ALLOWED_HOSTS \
-    .venv/bin/python run.py --host 127.0.0.1 --port 18765 --data-dir "$NOEMA_FIXTURE/data" &
-  NOEMA_SERVICE_PID=$!
-  printf 'Service PID: %s\n' "$NOEMA_SERVICE_PID"
+DHARA_FIXTURE="$(.venv/bin/python qa/device_fixture.py)"
+if [[ -f "$DHARA_FIXTURE/fixture-port.txt" ]]; then
+  printf 'Fixture path: %s\n' "$DHARA_FIXTURE"
+  env -u DHARA_MODEL -u DHARA_SPEECH_MODEL -u DHARA_ALLOW_REMOTE_MODEL \
+    -u DHARA_ACCESS_TOKEN -u DHARA_TOKEN -u DHARA_DATA_DIR -u DHARA_ALLOWED_HOSTS \
+    .venv/bin/python run.py --host 127.0.0.1 --port 18765 --data-dir "$DHARA_FIXTURE/data" &
+  DHARA_SERVICE_PID=$!
+  printf 'Service PID: %s\n' "$DHARA_SERVICE_PID"
   fg
 fi
 ```
@@ -71,24 +71,24 @@ Terminal 2 — paste the generated path when prompted. On a Sway session Electro
 runs as a native Wayland client; the session recorder below confirms it:
 
 ```bash
-read -r -p 'Fixture path from terminal 1: ' NOEMA_FIXTURE
-if [[ -f "$NOEMA_FIXTURE/fixture-port.txt" ]]; then
+read -r -p 'Fixture path from terminal 1: ' DHARA_FIXTURE
+if [[ -f "$DHARA_FIXTURE/fixture-port.txt" ]]; then
   electron/node_modules/electron/dist/electron electron/ \
-    --server http://127.0.0.1:18765 --profile "$NOEMA_FIXTURE/profile" &
-  NOEMA_SHELL_PID=$!
-  printf 'Shell PID: %s\n' "$NOEMA_SHELL_PID"
+    --server http://127.0.0.1:18765 --profile "$DHARA_FIXTURE/profile" &
+  DHARA_SHELL_PID=$!
+  printf 'Shell PID: %s\n' "$DHARA_SHELL_PID"
   fg
 fi
 ```
 
-In a third terminal, set `NOEMA_FIXTURE` to that same path, and record the actual
+In a third terminal, set `DHARA_FIXTURE` to that same path, and record the actual
 shell PID shown above:
 
 ```bash
-read -r -p 'Fixture path: ' NOEMA_FIXTURE
-read -r -p 'Fixture shell PID: ' NOEMA_SHELL_PID
-.venv/bin/python qa/device_session.py --shell-pid "$NOEMA_SHELL_PID" \
-  --output "$NOEMA_FIXTURE/reports/session.json"
+read -r -p 'Fixture path: ' DHARA_FIXTURE
+read -r -p 'Fixture shell PID: ' DHARA_SHELL_PID
+.venv/bin/python qa/device_session.py --shell-pid "$DHARA_SHELL_PID" \
+  --output "$DHARA_FIXTURE/reports/session.json"
 ```
 
 Require `fixture_shell_protocols` to contain `xdg_shell`, not `xwayland`. This
@@ -119,12 +119,12 @@ port. If your own service holds 8765, preparation refuses; stop your own service
 deliberately first. Never stop an occupant you have not identified.
 
 ```bash
-NOEMA_MANAGED_FIXTURE="$(.venv/bin/python qa/device_fixture.py --port 8765)"
-printf 'Keep this fixture path for relaunch: %s\n' "$NOEMA_MANAGED_FIXTURE"
+DHARA_MANAGED_FIXTURE="$(.venv/bin/python qa/device_fixture.py --port 8765)"
+printf 'Keep this fixture path for relaunch: %s\n' "$DHARA_MANAGED_FIXTURE"
 electron/node_modules/electron/dist/electron electron/ --manage-service \
-  --data-dir "$NOEMA_MANAGED_FIXTURE/data" \
+  --data-dir "$DHARA_MANAGED_FIXTURE/data" \
   --python /home/p4nic/code/noema/.venv/bin/python \
-  --profile "$NOEMA_MANAGED_FIXTURE/profile"
+  --profile "$DHARA_MANAGED_FIXTURE/profile"
 ```
 
 1. **Launch:** wait for verified startup and the existing UI. Using the actual
@@ -200,26 +200,26 @@ Task wrapper, in another fixture terminal (tokens entered silently, never in
 arguments or reports):
 
 ```bash
-read -r -p 'Fixture task ID from task details: ' NOEMA_TASK_ID
-read -rs -p 'Task-scoped Agent token from fixture Settings: ' NOEMA_TOKEN
-export NOEMA_TOKEN
-.venv/bin/python tools/agent.py --url http://127.0.0.1:18765 --task "$NOEMA_TASK_ID" \
-  --outbox "$NOEMA_FIXTURE/agent-events.sqlite3" --name 'Synthetic review command' \
+read -r -p 'Fixture task ID from task details: ' DHARA_TASK_ID
+read -rs -p 'Task-scoped Agent token from fixture Settings: ' DHARA_TOKEN
+export DHARA_TOKEN
+.venv/bin/python tools/agent.py --url http://127.0.0.1:18765 --task "$DHARA_TASK_ID" \
+  --outbox "$DHARA_FIXTURE/agent-events.sqlite3" --name 'Synthetic review command' \
   -- .venv/bin/python -c "print('Synthetic result; human review required')"
-unset NOEMA_TOKEN
+unset DHARA_TOKEN
 ```
 
 Companion, only when the user is ready to test its desktop interaction:
 
 ```bash
-read -rs -p 'Observer token from fixture Settings: ' NOEMA_TOKEN
-export NOEMA_TOKEN
+read -rs -p 'Observer token from fixture Settings: ' DHARA_TOKEN
+export DHARA_TOKEN
 GI_TYPELIB_PATH=/tmp/noema-sway-sdk-dEQTbK/root/usr/lib/x86_64-linux-gnu/girepository-1.0 \
   GDK_BACKEND=wayland /usr/bin/python3 tools/sway_companion.py \
   --url http://127.0.0.1:18765 --observe-window-context &
-NOEMA_COMPANION_PID=$!
-unset NOEMA_TOKEN
-printf 'Companion PID: %s\n' "$NOEMA_COMPANION_PID"
+DHARA_COMPANION_PID=$!
+unset DHARA_TOKEN
+printf 'Companion PID: %s\n' "$DHARA_COMPANION_PID"
 fg
 ```
 
@@ -243,11 +243,11 @@ the helper is running, and `--root observer=PID` only for a separately launched
 observer (the companion's observer thread is already included).
 
 ```bash
-read -r -p 'Current fixture service PID: ' NOEMA_SERVICE_PID
-read -r -p 'Current fixture shell PID: ' NOEMA_SHELL_PID
-.venv/bin/python qa/process_sample.py --root "service=$NOEMA_SERVICE_PID" \
-  --root "shell=$NOEMA_SHELL_PID" --phase open-idle --warmup 20 --duration 60 \
-  --interval 1 --output "$NOEMA_FIXTURE/reports/open-idle.json"
+read -r -p 'Current fixture service PID: ' DHARA_SERVICE_PID
+read -r -p 'Current fixture shell PID: ' DHARA_SHELL_PID
+.venv/bin/python qa/process_sample.py --root "service=$DHARA_SERVICE_PID" \
+  --root "shell=$DHARA_SHELL_PID" --phase open-idle --warmup 20 --duration 60 \
+  --interval 1 --output "$DHARA_FIXTURE/reports/open-idle.json"
 ```
 
 The sampler follows descendants and retains known children after reparenting,

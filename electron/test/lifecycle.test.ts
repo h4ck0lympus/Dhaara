@@ -6,7 +6,7 @@ import {
   DEFAULT_MANAGED_PORT, LifecycleError, MESSAGES, ackMatches, exitCodeError, identityMatches, managedPort, prepareWorkspace,
 } from '../src/lifecycle.js';
 
-const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'noema-workspace-'));
+const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'dhara-workspace-'));
 const INSTANCE = 'a'.repeat(64);
 const EXPECTED = { instance: INSTANCE, pid: 4242, workspace: '/data/ws', port: 8765 };
 const ack = (changes: Record<string, unknown> = {}) => JSON.stringify({ protocol: 2, ...EXPECTED, ...changes });
@@ -24,18 +24,18 @@ function thrown(run: () => unknown): LifecycleError {
 describe('managedPort', () => {
   it('is 8765 unless the explicit test flag is set', () => {
     expect(managedPort({})).toBe(DEFAULT_MANAGED_PORT);
-    expect(managedPort({ NOEMA_ELECTRON_TEST_PORT: '9100' })).toBe(8765);
-    expect(managedPort({ NOEMA_ELECTRON_TEST: 'yes', NOEMA_ELECTRON_TEST_PORT: '9100' })).toBe(8765);
-    expect(managedPort({ NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: '9100' })).toBe(9100);
+    expect(managedPort({ DHARA_ELECTRON_TEST_PORT: '9100' })).toBe(8765);
+    expect(managedPort({ DHARA_ELECTRON_TEST: 'yes', DHARA_ELECTRON_TEST_PORT: '9100' })).toBe(8765);
+    expect(managedPort({ DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: '9100' })).toBe(9100);
   });
 
   it('accepts the bounds 1024 and 65535', () => {
-    expect(managedPort({ NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: '1024' })).toBe(1024);
-    expect(managedPort({ NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: '65535' })).toBe(65535);
+    expect(managedPort({ DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: '1024' })).toBe(1024);
+    expect(managedPort({ DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: '65535' })).toBe(65535);
   });
 
   it.each(['', '80', '1023', '65536', '9100x', ' 9100', '9.5', '-9100'])('ignores the invalid test port %j', (value) => {
-    expect(managedPort({ NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: value })).toBe(8765);
+    expect(managedPort({ DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: value })).toBe(8765);
   });
 });
 

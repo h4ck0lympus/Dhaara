@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
-export function tempDir(prefix = 'noema-lifecycle-'): string {
+export function tempDir(prefix = 'dhara-lifecycle-'): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
@@ -33,7 +33,7 @@ export async function until(predicate: () => boolean | Promise<boolean>, ms = 15
   throw new Error('Condition did not become true');
 }
 
-/** The managed service strips NOEMA_ACCESS_TOKEN, so the admin token is the workspace's admin.token (test_managed_service.py:99-101). */
+/** The managed service strips DHARA_ACCESS_TOKEN, so the admin token is the workspace's admin.token (test_managed_service.py:99-101). */
 export async function admin<T = any>(workspaceDir: string, port: number, apiPath: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const token = fs.readFileSync(path.join(workspaceDir, 'admin.token'), 'utf8').trim();
   const response = await fetch(`http://127.0.0.1:${port}/api${apiPath}`, {

@@ -1,14 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startNoema, type NoemaServer } from '../../web/e2e/server.js';
-import { killAll, launchNoema, messageBoxes, stubMessageBox, waitConnected } from './fixtures.js';
+import { startDhara, type DharaServer } from '../../web/e2e/server.js';
+import { killAll, launchDhara, messageBoxes, stubMessageBox, waitConnected } from './fixtures.js';
 
 // Verbatim PERMISSION_PROMPTS (src/permissions.ts; main.rs:263-276).
-const MICROPHONE = 'Allow Noema to use your microphone for a recording?';
-const NOTIFICATIONS = 'Allow Noema to show notifications?';
+const MICROPHONE = 'Allow Dhara to use your microphone for a recording?';
+const NOTIFICATIONS = 'Allow Dhara to show notifications?';
 
-let noema: NoemaServer;
-test.beforeEach(async () => { noema = await startNoema(); });
-test.afterEach(async () => { await killAll(); await noema.stop(); });
+let dhara: DharaServer;
+test.beforeEach(async () => { dhara = await startDhara(); });
+test.afterEach(async () => { await killAll(); await dhara.stop(); });
 
 const getUserMedia = (page: Page, constraints: MediaStreamConstraints) => page.evaluate(async (wanted) => {
   try {
@@ -21,7 +21,7 @@ const getUserMedia = (page: Page, constraints: MediaStreamConstraints) => page.e
 }, constraints);
 
 test('audio-only media is prompted once per app session; video is always denied', async () => {
-  const first = await launchNoema(['--server', noema.origin]);
+  const first = await launchDhara(['--server', dhara.origin]);
   await waitConnected(first.window);
   await stubMessageBox(first.app, [0]);
   expect(await getUserMedia(first.window, { audio: true })).toBe('granted');
@@ -31,7 +31,7 @@ test('audio-only media is prompted once per app session; video is always denied'
   expect(await messageBoxes(first.app)).toEqual([MICROPHONE]);
   await first.app.close();
   // Decisions are not persisted: a restart prompts again.
-  const second = await launchNoema(['--server', noema.origin], { profile: first.profile });
+  const second = await launchDhara(['--server', dhara.origin], { profile: first.profile });
   await waitConnected(second.window);
   await stubMessageBox(second.app, [1]);
   expect(await getUserMedia(second.window, { audio: true })).toBe('NotAllowedError');
@@ -39,7 +39,7 @@ test('audio-only media is prompted once per app session; video is always denied'
 });
 
 test('Notification.permission is correct before and after a decision', async () => {
-  const { app, window } = await launchNoema(['--server', noema.origin]);
+  const { app, window } = await launchDhara(['--server', dhara.origin]);
   await waitConnected(window);
   expect(await window.evaluate(() => Notification.permission)).not.toBe('granted');
   await stubMessageBox(app, [0]);

@@ -1,4 +1,4 @@
-"""Managed-service double for electron/test (protocol 2). NOEMA_FAKE_MODE selects the behaviour."""
+"""Managed-service double for electron/test (protocol 2). DHARA_FAKE_MODE selects the behaviour."""
 import http.server
 import json
 import os
@@ -10,13 +10,13 @@ import time
 
 MODES = {'ok', 'locked', 'port', 'lease', 'hang', 'early-exit', 'bad-ack', 'extra-key', 'long-ack',
          'bad-http', 'grandchild', 'env-dump', 'pdeathsig', 'die-after-ack'}
-mode = os.environ.get('NOEMA_FAKE_MODE', '')
+mode = os.environ.get('DHARA_FAKE_MODE', '')
 if mode not in MODES:
     sys.exit(99)
 args = sys.argv[1:]
 port = int(args[args.index('--port') + 1])
 workspace = args[args.index('--data-dir') + 1]
-pidfile = os.environ.get('NOEMA_FAKE_PIDFILE')
+pidfile = os.environ.get('DHARA_FAKE_PIDFILE')
 
 
 def write_pids(*pids):
@@ -52,11 +52,11 @@ threading.Thread(target=watch_lease, daemon=True).start()
 if mode == 'grandchild':
     child = subprocess.Popen(['/bin/sleep', '60'])
     write_pids(os.getpid(), child.pid)
-    if os.environ.get('NOEMA_FAKE_ACK') != '1':
+    if os.environ.get('DHARA_FAKE_ACK') != '1':
         time.sleep(60)
         sys.exit(0)
 if mode == 'env-dump':
-    Path(os.environ['NOEMA_FAKE_ENVFILE']).write_text(json.dumps({
+    Path(os.environ['DHARA_FAKE_ENVFILE']).write_text(json.dumps({
         'env': sorted(os.environ), 'argv': args, 'lease': line.decode(), 'pid': os.getpid(),
         'pgid': os.getpgrp(), 'sid': os.getsid(0), 'ppid': os.getppid()}))
 identity = {'protocol': 2, 'instance': instance, 'pid': os.getpid()}

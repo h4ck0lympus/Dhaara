@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tools/ scripts run from anywhere; dhara/ is beside them
 from dhara.env import env
-print('Noema diagnostics')
+print('Dhara diagnostics')
 print('Python:',sys.version.split()[0], '| OS:',platform.system(),platform.release())
 for name in ('fastapi','uvicorn','httpx','multipart','faster_whisper','gi'):
     print(f'{name}:', 'installed' if importlib.util.find_spec(name) else 'not installed')

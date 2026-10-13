@@ -9,7 +9,7 @@ Router with hash history, zod-validated API responses). FastAPI serves
 503 that names the build command and the API keeps working. Node 22 is needed to
 build, never to run the service.
 
-Local persistence keeps IndexedDB `noema-local-v1` version 1 with the same `kv`
+Local persistence keeps IndexedDB `dhara-local-v1` version 1 with the same `kv`
 (`draft`, `task-draft`, `snapshot`) and `outbox` record shapes as the old UI, so
 captures queued before the cutover upload once with their original ids. The UI
 never retries a mutation automatically; only the capture outbox and "Retry add
@@ -37,7 +37,7 @@ SQLite and the service are unchanged.
 ## Frictionless explicit task capture · 2026-10-09
 
 The existing service/UI now offer one-input Add task with collapsed Details.
-`noema/task_capture.py` applies only disclosed first-line/explicit-label/planned-
+`dhara/task_capture.py` applies only disclosed first-line/explicit-label/planned-
 day rules, without model calls, window association or task jobs. Unknown workflow
 stays Unassigned; priority and availability algorithms are unchanged. The new
 `task_captures` table stores immutable original/fingerprint/initial interpretation
@@ -130,7 +130,7 @@ its existing refresh/animation behavior. See [DESKTOP.md](DESKTOP.md).
 Linux opt-in `--manage-service` adds `desktop/src/service.rs`, a background Rust
 owner with explicit retry, no restart loop and bounded readiness/shutdown. The
 existing `run.py` delegates its private managed descriptor/lease protocol to
-`noema/desktop_service.py`; manual startup remains available/default. The owner
+`dhara/desktop_service.py`; manual startup remains available/default. The owner
 prebinds the stable loopback listener and holds a canonical-workspace OS lock
 also used by manual `run.py` launches. Private startup acknowledgement verifies
 workspace/PID/instance, then `/api/desktop-instance` verifies the same identity
@@ -213,7 +213,7 @@ The user's selected/pinned focus wins over context rules. Matching requires expl
 
 Events are scoped to a run/task. Each event has a stable ID, increasing sequence, kind and bounded message. Duplicates are idempotent, mismatched reused IDs conflict, older sequences are ignored, terminal runs cannot reopen through a delayed heartbeat. Lack of a heartbeat is displayed as unknown after the stale threshold, not automatic success/failure.
 
-The wrapper queues events before delivery, gives the child no Noema integration/admin token, inherits terminal output, and never runs a shell string on behalf of remote requests. The server does not execute commands supplied through the event API.
+The wrapper queues events before delivery, gives the child no Dhara integration/admin token, inherits terminal output, and never runs a shell string on behalf of remote requests. The server does not execute commands supplied through the event API.
 
 Due reminder records survive restarts. Desktop notifications are merely optional browser delivery. The reminder clock still depends on the machine's clock; notifications are not guaranteed when the host/browser is stopped.
 

@@ -1,4 +1,4 @@
-# Noema progress
+# Dhara progress
 
 Last updated: 2026-10-12. Current source: **0.1.0 plus the React + Electron cutover**, written on revision `c1bf6fa2281e0d27e08e1c30b2a1655bd1c435a2`.
 
@@ -9,7 +9,7 @@ results stay there rather than being presented as new tests.
 
 ## Current direction
 
-Noema is a local-first learning notebook and task/agent workspace. The working
+Dhara is a local-first learning notebook and task/agent workspace. The working
 stack is Python/FastAPI + SQLite, a typed **React** interface (`web/`, built with
 Node 22 and served by the service) and an **Electron** desktop shell
 (`electron/`) that loads the same origin. The browser version remains usable.
@@ -42,7 +42,7 @@ Clarified 2026-10-08. After the user's cleanup, earlier browser/Now screenshots
 are no longer retained. This visibility milestone adds the explicitly requested
 [same-fixture before/after set](../qa/kitten-visibility/README.md) and refreshes
 the four current native views in [`qa/sway/after/`](../qa/sway/after/). The attached
-[desktop concept](<../images/Noema Productivity Dashboard with Cat Companion.png>),
+[desktop concept](<../images/Dhara Productivity Dashboard with Cat Companion.png>),
 [small kitten](../images/cat-companion.png),
 [mobile concept](../images/reference-mobile-app-ui-design.png) and
 [tablet concept](../images/reference-tablet-app-ui-design.png) communicate
@@ -81,7 +81,7 @@ unchanged. Physical Sway acceptance is still a separate validation gate.
   `web/src/domain/nowState.test.ts`). Untracked leftovers, including both Rust
   `target/` trees, were moved to `/home/p4nic/code/noema-cutover-backup/`. The
   kitten sprite moved to `tools/assets/cat.png`.
-- IndexedDB `noema-local-v1` version 1 is unchanged; captures queued by the old
+- IndexedDB `dhara-local-v1` version 1 is unchanged; captures queued by the old
   UI upload once.
 - Headings, subtitles and the tagline are kept in `web/src/copy.ts` (owner
   decision 18B); the greeting uses `display_name`.
@@ -120,9 +120,9 @@ migration does not satisfy it; follow [the device checklist](PHYSICAL_SWAY_ACCEP
    cp -a -n /home/p4nic/code/noema-cutover-backup/desktop/. desktop/
    cp -a -n /home/p4nic/code/noema-cutover-backup/tests/now_state.test.cjs tests/
    ```
-3. Browsers: old and new UIs share `noema-local-v1` version 1, so the old UI in a
+3. Browsers: old and new UIs share `dhara-local-v1` version 1, so the old UI in a
    browser keeps its queued captures. The reinstalled v1 service worker deletes
-   nothing of v1's; the v2 `noema-shell-<hash>` caches are only stale storage.
+   nothing of v1's; the v2 `dhara-shell-<hash>` caches are only stale storage.
 
 ## Previous continuation: frictionless task capture (historical)
 
@@ -157,7 +157,7 @@ claims. Before/after desktop and phone-width images of this interaction only are
 in [qa/task-capture](../qa/task-capture/README.md), visually inspected. Current QA
 inventory: **39 PNGs**, the previous 35 preserved plus these four. Current source
 identity: `qa/task-capture/source-after.sha256`; earlier manifests stay historical.
-Noema is still untracked, no parent commit claimed as its revision.
+Dhara is still untracked, no parent commit claimed as its revision.
 
 **Physical A remains BLOCKED/PENDING; managed lifecycle remains opt-in; external
 default unchanged.** No new complete-process measurements or device acceptance.
@@ -171,7 +171,7 @@ recovery remains a later functional priority, not started in this pass.
 The user-reported launch with literal `/absolute/...` placeholders failed with
 “Cannot create webview profile”; a corrected writable-path command was provided.
 The subsequent user command was aborted, so it is not a demonstrated launch.
-A read-only exact-executable check found no running Noema shell at capture time.
+A read-only exact-executable check found no running Dhara shell at capture time.
 
 Saved [empty and populated Now screenshots](../qa/managed-service/screenshots-2026-10-08/README.md)
 from the normal managed development binary in one disposable synthetic workspace,
@@ -271,7 +271,7 @@ validation. Tests do not make every feature production-ready.
 requirement; exact boundaries and evidence are in the previous continuation above.
 
 Numbered entries below were recorded on 2026-10-08; order matters more than the shared
-date. Noema is currently untracked in the parent repository, so its parent HEAD
+date. Dhara is currently untracked in the parent repository, so its parent HEAD
 is not an application revision identifier. No release/version bump is claimed.
 
 1. **Recovered and inspected the actual 0.1.0 baseline.** Read the build/continue
@@ -307,7 +307,7 @@ is not an application revision identifier. No release/version bump is claimed.
    request, moved the other 19 Now/browser storage images to system Trash. Only
    four current images in `qa/sway/after/` remain. Historical logs/results,
    references, source/test code and user data are unchanged; stale links removed.
-10. **Made the native kitten clearly visible without redesigning Noema.** Kept
+10. **Made the native kitten clearly visible without redesigning Dhara.** Kept
     the approved bitmap and main UI/CSS/framework; added a small pale-sage
     rounded container, border/shadow and scale-aware rendering. Click opens one
     available task's saved action and its implemented details link; a menu

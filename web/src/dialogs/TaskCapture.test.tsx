@@ -109,11 +109,11 @@ describe('TaskCaptureDialog', () => {
   });
 
   it('a 401 or other 4xx unfreezes the input', async () => {
-    h.store.submit.mockResolvedValue({ ok: false, frozen: false, message: S.notConfirmed + 'Unlock Noema to continue' });
+    h.store.submit.mockResolvedValue({ ok: false, frozen: false, message: S.notConfirmed + 'Unlock Dhara to continue' });
     const { input } = renderDialog();
     typeRaw(input, 'Review the cleanup path');
     fireEvent.click(screen.getByRole('button', { name: S.addTask }));
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(S.notConfirmed + 'Unlock Noema to continue'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(S.notConfirmed + 'Unlock Dhara to continue'));
     expect(input.disabled).toBe(false);
     expect(screen.getByRole('button', { name: S.addTask })).toBeTruthy();
   });

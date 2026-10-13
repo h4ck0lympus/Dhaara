@@ -34,12 +34,12 @@ function profileBusy(profile: string): boolean {
 }
 
 /** Always a throwaway --profile unless one is passed back in to test a restart; a reused profile waits for its previous instance to be fully gone. */
-export async function launchNoema(args: string[], options: { env?: Record<string, string>; profile?: string } = {}): Promise<{ app: ElectronApplication; window: Page; profile: string }> {
+export async function launchDhara(args: string[], options: { env?: Record<string, string>; profile?: string } = {}): Promise<{ app: ElectronApplication; window: Page; profile: string }> {
   if (!fs.existsSync(MAIN)) throw new Error('Run npm --prefix electron run build first');
-  const profile = options.profile ?? tempDir('noema-electron-profile-');
+  const profile = options.profile ?? tempDir('dhara-electron-profile-');
   if (options.profile) await until(() => !profileBusy(profile), 30_000);
   const env = Object.fromEntries(Object.entries({ ...process.env, ...options.env }).filter((entry): entry is [string, string] => entry[1] !== undefined));
-  // Chromium switches go before the app path; Noema's own arguments follow it (cli.ts userArgv).
+  // Chromium switches go before the app path; Dhara's own arguments follow it (cli.ts userArgv).
   // chromiumSandbox: Playwright otherwise adds --no-sandbox (spec §6.3: never); needs scripts/link-sandbox.mjs.
   const app = await _electron.launch({
     executablePath: ELECTRON_BIN,

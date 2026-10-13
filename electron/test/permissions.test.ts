@@ -99,8 +99,8 @@ describe('installPermissions', () => {
 
   it('uses the main.rs prompt wording', () => {
     expect(PERMISSION_PROMPTS).toEqual({
-      'media-audio': 'Allow Noema to use your microphone for a recording?',
-      notifications: 'Allow Noema to show notifications?',
+      'media-audio': 'Allow Dhara to use your microphone for a recording?',
+      notifications: 'Allow Dhara to show notifications?',
     });
   });
 });

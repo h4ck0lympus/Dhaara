@@ -10,17 +10,17 @@ export const FAKE = path.join(REPO_ROOT, 'electron/test/fixtures/fake_service.py
 
 export type Managed = { dataDir: string; port: number; origin: string; args: string[]; env: Record<string, string> };
 
-/** Managed mode on a free port. The override needs NOEMA_ELECTRON_TEST=1 and is unreachable from the CLI (spec §6.4.2). */
+/** Managed mode on a free port. The override needs DHARA_ELECTRON_TEST=1 and is unreachable from the CLI (spec §6.4.2). */
 export async function managedSetup(): Promise<Managed> {
   const port = await getFreePort();
-  const dataDir = path.join(tempDir('noema-managed-'), 'data');
+  const dataDir = path.join(tempDir('dhara-managed-'), 'data');
   const origin = `http://127.0.0.1:${port}`;
   return {
     dataDir,
     port,
     origin,
     args: ['--manage-service', '--data-dir', dataDir, '--server', origin],
-    env: { NOEMA_ELECTRON_TEST: '1', NOEMA_ELECTRON_TEST_PORT: String(port) },
+    env: { DHARA_ELECTRON_TEST: '1', DHARA_ELECTRON_TEST_PORT: String(port) },
   };
 }
 

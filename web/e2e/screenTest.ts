@@ -2,7 +2,7 @@ import type { BrowserContext, BrowserType, Locator, Page } from '@playwright/tes
 import { expect, PNG_1PX } from './fixtures';
 import { runSql } from './db';
 import { note } from './nowSeed';
-import type { NoemaServer } from './server';
+import type { DharaServer } from './server';
 
 export const MB = 1024 * 1024;
 export const PNG = Buffer.from(PNG_1PX, 'base64');   // native_storage_check.py:24
@@ -81,12 +81,12 @@ export function beforeUnloadArmed(page: Page): Promise<boolean> {
 
 export type CreatedNote = { id: string; title: string; folder: string; body: string; raw: string; version: number; task_id: string | null };
 
-export const createNote = (noema: NoemaServer, raw: string, files: { name: string; type: string; bytes: Buffer }[] = []) => note(noema, raw, files) as Promise<CreatedNote>;
+export const createNote = (dhara: DharaServer, raw: string, files: { name: string; type: string; bytes: Buffer }[] = []) => note(dhara, raw, files) as Promise<CreatedNote>;
 
 // Test-only: inserts a worker-style AI suggestion straight into the disposable database.
-export function seedSuggestion(noema: NoemaServer, noteId: string, s: { id: string; title: string; body: string; folder: string }): void {
-  runSql(noema.dataDir, 'INSERT INTO suggestions VALUES(?,?,?,?,?,?)', [s.id, noteId, s.title, s.body, s.folder, new Date().toISOString()]);
+export function seedSuggestion(dhara: DharaServer, noteId: string, s: { id: string; title: string; body: string; folder: string }): void {
+  runSql(dhara.dataDir, 'INSERT INTO suggestions VALUES(?,?,?,?,?,?)', [s.id, noteId, s.title, s.body, s.folder, new Date().toISOString()]);
 }
 
-export const editNote = (noema: NoemaServer, from: CreatedNote, changes: Partial<Pick<CreatedNote, 'title' | 'folder' | 'body'>>) =>
-  noema.api<CreatedNote>('PUT', `/api/notes/${from.id}`, { title: from.title, folder: from.folder, body: from.body, ...changes, expected_version: from.version });
+export const editNote = (dhara: DharaServer, from: CreatedNote, changes: Partial<Pick<CreatedNote, 'title' | 'folder' | 'body'>>) =>
+  dhara.api<CreatedNote>('PUT', `/api/notes/${from.id}`, { title: from.title, folder: from.folder, body: from.body, ...changes, expected_version: from.version });

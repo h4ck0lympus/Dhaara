@@ -7,7 +7,7 @@ const CONFIG = 'xwayland disable\noutput * bg #101110 solid_color\noutput HEADLE
 
 /** Mirrors qa/sway_check.py: own XDG_RUNTIME_DIR, headless wlroots, no Xwayland. Workers inherit the env set here. */
 export default async function startPrivateSway(): Promise<() => Promise<void>> {
-  const dir = tempDir('noema-e2e-sway-');
+  const dir = tempDir('dhara-e2e-sway-');
   const runtime = path.join(dir, 'runtime');
   fs.mkdirSync(runtime, { mode: 0o700 });
   fs.writeFileSync(path.join(dir, 'sway.config'), CONFIG);
