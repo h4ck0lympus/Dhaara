@@ -65,7 +65,10 @@ export function validateServer(value: string): string {
   return url.origin;
 }
 
-export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string, env: NodeJS.ProcessEnv): CliOptions | 'help' {
+/** What an AppImage knows (packaging spec §4): where the bundled service lives and where the default workspace goes. */
+export type PackagedFacts = { resourcesPath: string; dataHome: string };
+
+export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string, env: NodeJS.ProcessEnv, packaged: PackagedFacts | null = null): CliOptions | 'help' {
   const values = new Map<string, string>();
   let manageService = false;
   for (let index = 0; index < argv.length; index += 1) {
@@ -85,7 +88,10 @@ export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string
   const server = validateServer(values.get('--server') ?? DEFAULT_SERVER);
   const seconds = Number(values.get('--startup-timeout') ?? '15');
   if (!Number.isFinite(seconds) || seconds < 0.1 || seconds > 60) throw new CliError('Use a startup timeout from 0.1 to 60 seconds');
-  const dataDir = values.get('--data-dir');
+  // Packaged build (packaging spec §4): managed mode on a private workspace unless --server or --manage-service was given.
+  const packagedDefaults = packaged !== null && !values.has('--server') && !manageService ? packaged : null;
+  if (packagedDefaults !== null) manageService = true;
+  const dataDir = values.get('--data-dir') ?? (packagedDefaults === null ? undefined : path.join(packagedDefaults.dataHome, 'dhara', 'workspace'));
   if (!manageService && dataDir !== undefined) {
     throw new CliError('--data-dir requires explicit --manage-service; external mode never owns a service');
   }
@@ -99,8 +105,9 @@ export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string
     profile: values.get('--profile') ?? null,
     manageService,
     dataDir: dataDir === undefined ? null : absolutePath(dataDir, cwd),
-    python: absolutePath(values.get('--python') ?? path.join(repoRoot, '.venv/bin/python'), cwd),
-    entryPoint: absolutePath(values.get('--entry-point') ?? path.join(repoRoot, 'run.py'), cwd),
+    // An AppImage has no venv: the bundled service is its own entry point whenever the shell is packaged.
+    python: absolutePath(values.get('--python') ?? (packaged === null ? path.join(repoRoot, '.venv/bin/python') : path.join(packaged.resourcesPath, 'service/dhara-service/dhara-service')), cwd),
+    entryPoint: absolutePath(values.get('--entry-point') ?? (packaged === null ? path.join(repoRoot, 'run.py') : ''), cwd),
     startupTimeoutMs: Math.round(seconds * 1000),
   };
 }

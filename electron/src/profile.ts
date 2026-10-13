@@ -10,7 +10,8 @@ export const PROFILE_MESSAGES = {
   protect: 'Cannot protect profile',
 } as const;
 
-function dataHome(env: NodeJS.ProcessEnv): string {
+/** $XDG_DATA_HOME when absolute, else ~/.local/share; the profile and the packaged default workspace both live under it. */
+export function dataHome(env: NodeJS.ProcessEnv): string {
   const xdg = env.XDG_DATA_HOME;
   const base = xdg && path.isAbsolute(xdg) ? xdg : env.HOME ? path.join(env.HOME, '.local/share') : null;
   if (base === null) throw new Error(PROFILE_MESSAGES.noHome);
