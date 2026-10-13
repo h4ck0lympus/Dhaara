@@ -61,6 +61,15 @@ REQUIRED = {
     'docs/CONTINUATION.md': [
         '`web/src/local/drafts.ts`',
     ],
+    'docs/PROGRESS.md': [
+        'Next validation gate: physical Sway acceptance (handbook §24 Stage A)',
+        '"Current static UI + SQLite" decision (handbook §27) is superseded',
+        '`web/src/copy.ts`',
+        'AI-assigned automatic priority (spec §11.1)',
+        'Daily motivating slogan (spec §11.2)',
+        'git revert -m 1 --no-edit react-electron-cutover',
+        'git checkout cutover-docs-baseline --',
+    ],
 }
 
 # Current-instruction documents must not tell anyone to run the deleted shell or UI.
@@ -82,3 +91,7 @@ def test_document_states_current_fact(name, snippet):
 def test_document_has_no_stale_instruction(name):
     content = text(name)
     assert [stale for stale in STALE_INSTRUCTIONS if stale in content] == []
+
+
+def test_progress_has_dated_cutover_milestone():
+    assert re.search(r'^\d{4}-\d{2}-\d{2}: React \+ Electron cutover', text('docs/PROGRESS.md'), re.M)

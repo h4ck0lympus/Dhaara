@@ -1,6 +1,6 @@
 # Noema progress
 
-Last updated: 2026-10-09. Current source: **0.1.0 plus unreleased continuations**.
+Last updated: 2026-10-12. Current source: **0.1.0 plus the React + Electron cutover**, written on revision `c1bf6fa2281e0d27e08e1c30b2a1655bd1c435a2`.
 
 This is the maintained handoff: what exists, what has been checked, what remains,
 and what to do next. Update it after each completed milestone. Detailed commands
@@ -10,13 +10,17 @@ results stay there rather than being presented as new tests.
 ## Current direction
 
 Noema is a local-first learning notebook and task/agent workspace. The working
-stack is Python/FastAPI + SQLite, the existing HTML/CSS/JavaScript interface, and
-a **Rust Wry/Tao desktop webview shell**. The browser version remains usable.
-External service startup remains the default. Linux now has an explicit opt-in
-managed-service development mode; it is not device-accepted or a shipped installer.
+stack is Python/FastAPI + SQLite, a typed **React** interface (`web/`, built with
+Node 22 and served by the service) and an **Electron** desktop shell
+(`electron/`) that loads the same origin. The browser version remains usable.
+External service startup remains the default; Linux `--manage-service`
+(lifecycle protocol 2) is opt-in and not device-accepted. The handbook's
+"Current static UI + SQLite" decision (handbook §27) is superseded for the UI
+only; SQLite stays.
 
-Keep the compact Now / Capture / Notes / Plan navigation, charcoal palette,
-restrained accent, original approved assets and small kitten. No oversized cards
+Keep the compact Overview / Capture / Notes / Tasks navigation (route ids
+`overview`/`capture`/`notes`/`plan`), graphite palette, restrained accent,
+original approved assets and small kitten. No oversized cards
 or permanent overlay panels. Learning notes are not automatically tasks.
 Original captures, revisions, manual priorities and pinned focus must survive
 future work; pinned focus wins over automatic inference.
@@ -44,13 +48,15 @@ the four current native views in [`qa/sway/after/`](../qa/sway/after/). The atta
 [tablet concept](../images/reference-tablet-app-ui-design.png) communicate
 direction, not implemented functionality or layouts to reproduce wholesale.
 
-- Preserve the existing compact Now / Capture / Notes / Plan interface and
-  framework. Change layout only for a demonstrated usability, accessibility,
-  scaling or platform-integration problem.
+- Preserve the compact Overview / Capture / Notes / Tasks interface delivered by
+  the React + Electron cutover. Change layout only for a demonstrated usability,
+  accessibility, scaling or platform-integration problem.
 - Keep abstract graphics subtle, inside the app and outside reading/editing
   surfaces. Keep the kitten tiny, with dot/hidden modes and on-demand controls.
-- Do not reintroduce large dashboard cards, permanent overlays, slogans,
-  decorative headers or photorealistic cats from older concepts.
+- Do not reintroduce large dashboard cards, permanent overlays, decorative
+  headers or photorealistic cats from older concepts. Owner decision 18B keeps
+  the variant B headings, subtitles and tagline in `web/src/copy.ts`; a daily
+  motivating slogan is a later milestone that only swaps that module's source.
 - Mobile/tablet references do not request device implementation or establish
   device support during this Sway milestone.
 - Determine functionality from this record and actual source, never an image.
@@ -61,7 +67,61 @@ The reference review itself changed documentation only. The later native-helper
 fixes below address controls and status reporting; the main UI/framework remain
 unchanged. Physical Sway acceptance is still a separate validation gate.
 
-## Latest continuation
+## Latest continuation: React + Electron cutover
+
+2026-10-12: React + Electron cutover.
+
+- The production UI is the React bundle in `web/` (variant B look), served by
+  FastAPI from `web/dist`, which is not committed:
+  `npm --prefix web ci && npm --prefix web run build`.
+- The desktop shell is Electron (`electron/`): external mode by default, Linux
+  managed mode through lifecycle protocol 2.
+- Deleted: `public/`, `desktop/`, `experiments/ui-ab/hosts/wry`,
+  `experiments/ui-ab/hosts/companion` and `tests/now_state.test.cjs` (ported to
+  `web/src/domain/nowState.test.ts`). Untracked leftovers, including both Rust
+  `target/` trees, were moved to `/home/p4nic/code/noema-cutover-backup/`. The
+  kitten sprite moved to `tools/assets/cat.png`.
+- IndexedDB `noema-local-v1` version 1 is unchanged; captures queued by the old
+  UI upload once.
+- Headings, subtitles and the tagline are kept in `web/src/copy.ts` (owner
+  decision 18B); the greeting uses `display_name`.
+- Every parity-map row is green or an approved drop, and every handbook-trace
+  row is green. Gate results, the terrain budget and the main-app memory check
+  (handbook §21, < 400 MB excluding AI) are in [TEST_REPORT.md](TEST_REPORT.md).
+- Not built: AI-assigned priority, daily slogans, audio checkpoint recovery.
+- One cutover merge of `feat/react-electron` into `master`, after owner
+  approval, tagged `react-electron-cutover`. The approved Phase 6 rename to
+  Dhara runs before that merge.
+
+Next validation gate: physical Sway acceptance (handbook §24 Stage A). This
+migration does not satisfy it; follow [the device checklist](PHYSICAL_SWAY_ACCEPTANCE.md).
+
+### Rollback to the pre-migration UI
+
+1. Flush first. In the Electron app, wait until the status line no longer shows
+   "N capture(s) on this device" (open it and Retry if needed), then quit. Captures
+   still queued in the Electron profile are not readable by the restored
+   Rust/WebKit shell; this is accepted.
+2. `docs/superpowers` (spec, plans) is untracked by owner decision, so no git
+   command restores it: keep a copy outside the worktree before a rollback.
+   Revert the merge, then restore the docs and untracked files that the revert
+   cannot bring back:
+   ```bash
+   git switch master
+   git revert -m 1 --no-edit react-electron-cutover
+   git checkout cutover-docs-baseline -- README.md SHA256SUMS docs/API.md docs/ARCHITECTURE.md \
+     docs/ASSETS.md docs/BUILD_STATUS.md docs/CONTINUATION.md docs/DESKTOP.md \
+     docs/PHYSICAL_SWAY_ACCEPTANCE.md docs/PROGRESS.md docs/SECURITY.md docs/TEST_REPORT.md \
+     docs/TASK_CAPTURE.md docs/Noema-Handbook.md
+   git commit -m "docs: restore pre-migration docs after rollback"
+   cp -a -n /home/p4nic/code/noema-cutover-backup/desktop/. desktop/
+   cp -a -n /home/p4nic/code/noema-cutover-backup/tests/now_state.test.cjs tests/
+   ```
+3. Browsers: old and new UIs share `noema-local-v1` version 1, so the old UI in a
+   browser keeps its queued captures. The reinstalled v1 service worker deletes
+   nothing of v1's; the v2 `noema-shell-<hash>` caches are only stale storage.
+
+## Previous continuation: frictionless task capture (historical)
 
 **Frictionless task capture implemented, independently of pending Sway acceptance.**
 Replaced only the task-creation interaction with multiline input, Add task and
@@ -195,15 +255,17 @@ validation. Tests do not make every feature production-ready.
 | Tasks and focus | Dependencies, start/due dates, optional estimates, explainable priorities, durable manual overrides, selected/inferred/pinned focus. | Existing service rules preserved; UI labels provenance and confirms explicit pin replacement. |
 | Agents | Task-scoped tokens, ordered/deduplicated events, subprocess wrapper with durable retry, review/questions/failure/stale states. | Tracks deliberately wrapped commands, not arbitrary running agents. Agent exit does not complete the task. |
 | Now interface | Distinct empty/notes-only, available, waiting, attention, complete, unknown and disconnected states; one grounded action, disclosed alternatives, useful real setup flow. | 22 current pure state tests; 58 historical browser checks. A-FOCUS-01 records the pin/recommendation explanation gap. Integration connection health has no dedicated API; no runs means unknown, not disconnected. |
-| Kitten and motion | Small browser preview and separate GTK/Sway popup; unchanged illustrated asset inside pale-sage bordered/shadowed container, one actual next action on click, secondary menu, dot/hidden and local pause. | Default 40 px sprite / 56 px container; 32 / 48 option. Non-modal, no keyboard focus request. 31 native regression + 41 visibility checks at 1/1.5/2 headless scales. Physical-device behavior remains unvalidated. No reliable presence detection or automatic preview suppression. |
-| Rust desktop | Existing web interface, locked persistent profile, restricted navigation, draft checkpoint; opt-in Linux service ownership, readiness, explicit retry and bounded cleanup. | Real process and virtual WebKit checks; default remains external. Physical acceptance, installer and Windows/macOS build remain unproven. [Desktop guide](DESKTOP.md). |
+| Kitten and motion | Separate GTK/Sway popup (unchanged; sprite `tools/assets/cat.png`) and an optional in-app WebGL2 terrain: motion off by default, static without WebGL2, paused when hidden, blurred or idle. | Browser kitten preview removed at the cutover. Terrain budget measured once in TEST_REPORT. Physical-device behavior remains unvalidated; no reliable presence detection. |
+| Desktop shell | Electron shell loading the service origin: sandboxed renderer, same-origin navigation, session-only permissions, draft close checkpoint; opt-in Linux managed lifecycle (protocol 2). | Real-process lifecycle and `_electron` checks; default remains external. Physical acceptance, installer and Windows/macOS remain unproven. [Desktop guide](DESKTOP.md). |
 | Reminders and export | In-app due queue, snooze/dismiss and restart handling; Markdown/JSON/attachment export. | No guaranteed closed-app/powered-off notifications; complete import/restore is not implemented. |
 | Optional processing | Ollama cleanup adapter and faster-whisper CPU subprocess adapter. | Model tests use doubles. Actual technical-speech accuracy, model quality and hardware latency are unvalidated. |
 
 ## Completed milestones
 
+2026-10-12: React + Electron cutover; see the latest continuation above.
+
 2026-10-09: frictionless task capture delivered and made a permanent product
-requirement; exact boundaries and evidence are in the latest continuation above.
+requirement; exact boundaries and evidence are in the previous continuation above.
 
 Numbered entries below were recorded on 2026-10-08; order matters more than the shared
 date. Noema is currently untracked in the parent repository, so its parent HEAD
@@ -338,8 +400,7 @@ Phone-width Chrome does not demonstrate Android, and virtual X11 does not
 demonstrate physical Sway. Nor does the new headless Sway suite establish
 physical input, microphone, real monitor scaling or GPU behavior. Reliable
 native-companion presence detection and event-triggered attention messages
-are still unimplemented; the browser preview remains explicit, not hidden by
-guessing whether a helper is present.
+are still unimplemented; the browser kitten preview was removed at the React + Electron cutover.
 Installation, cloud synchronization, model accuracy,
 native overlay placement and full-process RAM/CPU/battery targets are unproven.
 
@@ -350,21 +411,23 @@ frameworks. Keep the current working app throughout.
 
 | Order | Work | Completion gate |
 |---|---|---|
-| Next · BLOCKED ON DEVICE | Physical Sway acceptance using the single disposable fixture: editor keyboard/clipboard, Now/pinned focus, minimize/restore, file picker, microphone, agent review and kitten/routing. | Every required checklist row has actual device evidence and failures resolved; complete attributable-process workload measurements. |
-| 2 · IMPLEMENTED / DEVICE PENDING | Explicit opt-in Linux Rust-owned lifecycle; external production default unchanged. Packaging/platforms/companion orchestration remain separate. | Real process/WebKit regressions recorded; physical Linux launch/quit/relaunch and complete device workloads pending before promotion. |
+| Next validation gate · PENDING | Physical Sway acceptance (handbook §24 Stage A) with the single disposable fixture, now on the Electron shell: editor keyboard/clipboard, Overview/pinned focus, minimize/restore, file picker, microphone, agent review, kitten/routing and the opt-in managed launch/quit/relaunch. | Every required checklist row has actual device evidence and failures resolved; complete attributable-process workload measurements. |
+| Next build milestone | AI-assigned automatic priority (spec §11.1): the optional local model sets the automatic priority with `priority_source = 'ai'` and a one-line reason; the deterministic rules stay the fallback (`'rules'`). Manual overrides, pins, focus, deadlines and status are never touched. | Schema-validated model output, fallback without a model, override and pin preservation tests. The UI already shows "Auto · AI". |
+| Before the merge | Phase 6 rename to Dhara (approved; see `docs/superpowers/specs/2026-10-12-rename-dhara-design.md`), then the owner-approved cutover merge. | Rename lands on `feat/react-electron` before the `react-electron-cutover` merge. |
 | 3 | Recoverable unfinished audio checkpoints and long-capture processing. | Interrupted recording/storage-failure tests, explicit Save preserved, original bytes retained. Benchmark optional models on actual technical recordings before choosing defaults. |
 | 4 | Tested import/restore, backup workflow and deletion/retention controls. | Round-trip notes/attachments/revisions; failed-restore recovery without overwriting the user's workspace. |
 | 5 | Integration health reporting and permission-scoped OS observation/companion improvements. | Connection health distinct from run counts; explicit observer enablement and exclusions; pin protection; real compositor tests. Screenshot/vision inference is not present now. |
 | 6 | Authenticated device pairing, HTTPS synchronization and conflict-safe outboxes; Android capture client. | Offline/retry/conflict/security tests and actual devices. Kotlin/Compose is a proposed Android direction, not an existing client. No cloud sync exists today. |
+| Later | Daily motivating slogan (spec §11.2): the Overview slogan changes each day by swapping `web/src/copy.ts`'s source to a list picked by date; an optional AI-generated variant uses the same local model. | No network service; stable within a day; the base app still needs no model. |
+| Backlog candidates | Phone shortcut capture, nightly export snapshot, Markdown mirror, opt-in daily prompts. Candidates only; unscheduled and not designed. | Each needs its own spec and tests before work starts. |
 
-After lifecycle acceptance, unfinished voice capture and long recordings are
-the next functional priority. Whistle is only a candidate for a separate
-comparative transcription evaluation; nothing was started or downloaded here.
+After Stage A, AI-assigned priority is the next build milestone; unfinished
+voice capture and long recordings follow. Whistle is only a candidate for a
+separate comparative transcription evaluation; nothing was started or
+downloaded here.
 
-Any future Slint versus Rust + Qt/QML comparison must use the actual editor
-(code, image paste, undo, keyboard/IME/accessibility and cat/dot interaction).
-No Slint prototype or comparative benchmark exists. This is an optional future
-evaluation, not a decision to replace the current webview.
+The Slint versus Rust + Qt/QML comparison is closed: the shell was chosen by
+measurement and is Electron (migration spec decision 1A).
 
 ## How to keep this record current
 
