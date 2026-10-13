@@ -47,6 +47,8 @@ Two attempts were discarded and do not count as runs; neither was a test fault. 
 
   These match the aborted-request pattern above. None of these tests failed in the three runs or in 40 repeated isolated runs.
 
+Phase 6 (the Dhara rename): the same six commands ran three consecutive times clean on `da9c9cc`, where `cutover-gate` now points. Environment: Node v22.23.3, Python 3.12.3. Flake instances: none from the code; in run 2 one web e2e attempt failed two tests (checkpoint.spec.ts:28, terrain.spec.ts:148) with `net::ERR_NETWORK_CHANGED` (wifi address churn, infrastructure), and the segment was rerun clean without counting that attempt.
+
 ### Handbook §21 main-app memory · measured 2026-10-12
 
 Source revision `54ffe98218e87873ebffe69252b4fdc55f08811b`. Private headless Sway (`WLR_RENDERER=gles2`, 1440×900 at scale 1). Idle app: the built web shell in Electron (`chromiumSandbox: true`, throwaway profile), motion off, observation off, no model configured, so AI is excluded; 20 s warm-up then 60 × 1 s samples. Each tree ran in its own `systemd-run --user --scope -p MemoryAccounting=yes` scope; memory is cgroup accounting (`memory.current`, and non-file = anon + shmem + kernel from `memory.stat`). PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so it was not used. Aspiration: < 400 MB, read as 400,000,000 bytes (381.5 MiB). Persisted run: `qa/bench/out-mem/results.json` (summary plus the 60 raw rows; untracked). Harness: throwaway bench.py plus mem.py, not committed (decision 13B).
