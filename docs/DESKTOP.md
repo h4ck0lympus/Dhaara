@@ -45,6 +45,12 @@ Start the service you chose, then the shell:
 npm --prefix electron start -- --server http://127.0.0.1:8765
 ```
 
+One command does both in external mode: `.venv/bin/python run.py --desktop` starts the
+service, waits until it listens, then opens the built shell against it
+(`electron/node_modules/electron/dist/electron electron/ --server …`, so npm need not be on
+`PATH`); closing the window or Ctrl+C stops both. It refuses to start when the shell is not
+built.
+
 External mode only connects. It never starts or stops the service.
 Dhara flags go after the app path (after `--` with npm); Chromium switches go
 before it. Relative paths resolve against the launch directory, and the last of a
