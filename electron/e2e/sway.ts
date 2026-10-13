@@ -22,6 +22,7 @@ export default async function startPrivateSway(): Promise<() => Promise<void>> {
   }, 20_000);
   Object.assign(process.env, { XDG_RUNTIME_DIR: runtime, WAYLAND_DISPLAY: sockets()[0], SWAYSOCK: path.join(runtime, fs.readdirSync(runtime).find((name) => name.startsWith('sway-ipc.'))!) });
   delete process.env.DISPLAY;
+  delete process.env.DBUS_SESSION_BUS_ADDRESS;   // a future real Notification must not reach the owner's desktop
   return async () => {
     sway.kill('SIGTERM');
     fs.rmSync(dir, { recursive: true, force: true });

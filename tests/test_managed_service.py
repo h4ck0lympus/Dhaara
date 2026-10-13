@@ -7,6 +7,7 @@ production port is used.
 import io
 import json
 import os
+import re
 from pathlib import Path
 import select
 import signal
@@ -26,6 +27,13 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = 'a' * 64
 LEASE = json.dumps({'instance': INSTANCE}).encode() + b'\n'
 linux = pytest.mark.skipif(sys.platform != 'linux', reason='Managed mode is Linux-only')
+
+
+def test_stripped_env_matches_the_electron_owner_list():
+    # electron/src/lifecycle.ts strips the same variables before spawning (spec §6.4.2); no other cross-check exists.
+    ts = (ROOT / 'electron/src/lifecycle.ts').read_text()
+    block = re.search(r'export const STRIPPED_ENV = \[(.*?)\] as const', ts, re.S).group(1)
+    assert set(re.findall(r"'(NOEMA_\w+)'", block)) == set(STRIPPED_ENV)
 
 
 def free_port():
