@@ -13,7 +13,7 @@ STALE = re.compile(r"""['"](?:\.{1,2}/)*(?:public/|public['"]|desktop/)"""
                    r"""|['"][^'"\n]*(?:hosts/wry|hosts/companion|now_state\.test\.cjs)""")
 
 SCANNED = ['run.py', 'noema', 'tools', 'tests', 'electron/src', 'electron/test', 'electron/e2e',
-           'web/src', 'web/e2e', 'web/scripts']
+           'web/src', 'web/e2e', 'web/scripts', 'qa']
 TEXT_SUFFIXES = {'.py', '.ts', '.tsx', '.mts', '.cts', '.mjs', '.js', '.json'}
 # These two files name the deleted paths on purpose, as the things they forbid.
 SELF_CHECKS = {'tests/test_cutover.py', 'tests/test_cutover_docs.py'}
@@ -26,7 +26,9 @@ def scanned_files():
         for file in candidates:
             if (file.is_file() and file.suffix in TEXT_SUFFIXES
                     and '__pycache__' not in file.parts and 'node_modules' not in file.parts
-                    and file.relative_to(ROOT).as_posix() not in SELF_CHECKS):
+                    and file.relative_to(ROOT).as_posix() not in SELF_CHECKS
+                    # qa/ also holds recorded run evidence (results.json); only its scripts can point at a path
+                    and (name != 'qa' or (file.suffix == '.py' and file.parent == path))):
                 yield file
 
 

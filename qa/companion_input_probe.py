@@ -66,7 +66,6 @@ def main():
     def screenshot(name):
         subprocess.run(['grim', '-o', 'HEADLESS-1', str(output / (name + '.png'))], check=True, timeout=5)
     pump(2)
-    command('[pid=' + os.environ['NOEMA_QA_DESKTOP_PID'] + '] move scratchpad')
     command('workspace 1; move workspace to output HEADLESS-1')
     work = Gtk.Window(title='Synthetic input sentinel')
     work_button = Gtk.Button(label='Synthetic work area · clicks must remain available')

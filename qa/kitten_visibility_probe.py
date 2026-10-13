@@ -75,9 +75,7 @@ def main():
             yield from nodes(child)
     def focused():
         return next((n.get('id') for n in nodes(sway_json('get_tree')) if n.get('focused')), None)
-    # Hide only the fixture webview to examine actual desktop backgrounds.
     pump(2)
-    command('[pid=' + os.environ['NOEMA_QA_DESKTOP_PID'] + '] move scratchpad')
     summary = app.client.request('/companion')
     target = next(w for w in sway_json('get_workspaces') if w['output'] == 'HEADLESS-1')
     app.apply(summary, {'visible': True, 'rect': target['rect']})

@@ -202,34 +202,8 @@ def main():
             screenshot('disconnected')
             app.close_popover()
             app.apply(app.client.request('/companion'), None)
-            later(check_desktop)
+            later(check_metadata)
         later(capture_disconnected, 400)
-    def check_desktop():
-        from sway_context import sway_json
-        def nodes(tree):
-            yield tree
-            for child in tree.get('nodes', []) + tree.get('floating_nodes', []):
-                yield from nodes(child)
-        pid = int(os.environ['NOEMA_QA_DESKTOP_PID'])
-        desktop = next(node for node in nodes(sway_json('get_tree')) if node.get('pid') == pid)
-        check(desktop.get('app_id') is not None, 'Rust webview maps as a real native Wayland window')
-        selector = '[con_id=' + str(desktop['id']) + ']'
-        subprocess.run(['swaymsg', '-r', selector + ' move scratchpad'], check=True, capture_output=True)
-        def hidden_desktop():
-            tree = sway_json('get_tree')
-            scratch = next(node for node in nodes(tree) if node.get('name') == '__i3_scratch')
-            check(any(node.get('pid') == pid for node in nodes(scratch)),
-                  'Sway scratchpad hide contains only the fixture desktop')
-            subprocess.run(['swaymsg', '-r', selector + ' scratchpad show'], check=True, capture_output=True)
-            later(restored_desktop)
-        def restored_desktop():
-            tree = sway_json('get_tree')
-            scratch = next(node for node in nodes(tree) if node.get('name') == '__i3_scratch')
-            check(not any(node.get('pid') == pid for node in nodes(scratch)),
-                  'Rust webview restores from compositor hide without relaunch')
-            screenshot('restored-desktop')
-            check_metadata()
-        later(hidden_desktop)
     def check_metadata():
         work = Gtk.Window(title='Synthetic parser window')
         work.set_default_size(500, 300)

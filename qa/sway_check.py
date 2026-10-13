@@ -102,14 +102,8 @@ def main():
             else:
                 raise AssertionError('Private compositor sockets did not appear')
             env.update(SWAYSOCK=str(sockets[0]), WAYLAND_DISPLAY=wayland[0].name)
-            with (output / 'desktop.txt').open('w') as log:
-                desktop = subprocess.Popen([str(ROOT / 'desktop/target/debug/noema-desktop'),
-                                           '--server', origin, '--profile', str(directory / 'profile')],
-                                          env=env, stdout=log, stderr=subprocess.STDOUT)
-            processes.append(desktop)
             env.update(NOEMA_TOKEN=observer_token, NOEMA_QA_URL=origin,
                        NOEMA_QA_OUTPUT=str(output), NOEMA_QA_PHASE=phase,
-                       NOEMA_QA_DESKTOP_PID=str(desktop.pid),
                        NOEMA_QA_PRIVATE_RUNTIME=str(runtime),
                        NOEMA_QA_COMPOSITOR_PID=str(compositor.pid))
             if args.pointer:
@@ -159,10 +153,8 @@ def main():
             report['passed'] = len(report['checks'])
             source = args.before_source or ROOT / 'tools/sway_companion.py'
             report['source_sha256'] = hashlib.sha256(source.read_bytes()).hexdigest()
-            report['frontend_sha256'] = {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-                                         for name in ('public/app.js', 'public/styles.css')}
             report['boundary'] = ('Real private headless Sway 1.9, two synthetic outputs, GTK3/layer-shell '
-                'and Rust/Wry/WebKit, real HTTP and SQLite. Programmatic GTK/compositor input; '
+                'companion, real HTTP and SQLite. Programmatic GTK/compositor input; '
                 'not physical keyboard/clipboard/microphone, target GPU, device performance or installation.')
             if args.pointer:
                 report['boundary'] += ' Pointer presses travel through private Sway IPC/Wayland, not GTK clicked signals.'
