@@ -8,12 +8,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 # Paths that keep the old name: archives and evidence, this migration's specs and plans, the shims and the migration code
-# with their tests, the historical v1 service-worker fixture, and the regenerated manifest (it lists the shim package).
+# with their tests and the historical v1 service-worker fixture.
 ALLOWED_PATHS = (
     'docs/Noema-Documentation/', 'docs/Noema-Handbook.md', 'docs/superpowers/', 'experiments/',
     'noema/', 'dhara/env.py', 'electron/src/env.ts', 'electron/test/env.test.ts',
     'web/src/local/migrate.ts', 'web/src/local/migrate.test.ts', 'web/e2e/v1/sw.js',
-    'tests/test_shims.py', 'tests/test_rename_gate.py', 'SHA256SUMS',
+    'tests/test_shims.py', 'tests/test_rename_gate.py',
 )
 # Substrings that are right as they are: archive paths, the README's history line,
 # and the repository directory plus the cutover backup beside it: paths on the owner's disk, out of scope (spec §1).

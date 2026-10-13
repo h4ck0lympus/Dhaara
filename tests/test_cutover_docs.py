@@ -28,7 +28,7 @@ REQUIRED = {
         '**Stage A (handbook §24): PENDING',
         'electron/node_modules/electron/dist/electron electron/',
         'qa/device_fixture.py --port 8765',
-        'sha256sum -c --quiet SHA256SUMS',
+        'git rev-parse HEAD',
     ],
     'docs/SECURITY.md': [
         '## Opt-in Linux managed service boundary (protocol 2)',
@@ -74,7 +74,7 @@ REQUIRED = {
 
 # Current-instruction documents must not tell anyone to run the deleted shell or UI.
 STALE_INSTRUCTIONS = ['cargo run', 'cargo build', 'desktop/target', 'public/app.js', 'companion.html',
-                      'protocol: 1', 'zero or more `files`']
+                      'protocol: 1', 'zero or more `files`', 'SHA256SUMS']
 CURRENT_INSTRUCTION_DOCS = ['README.md', 'docs/DESKTOP.md', 'docs/PHYSICAL_SWAY_ACCEPTANCE.md', 'docs/API.md']
 
 

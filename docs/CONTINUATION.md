@@ -24,8 +24,10 @@ is `2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`; that is not a Dhara source revisi
 Before editing, `sha256sum -c SHA256SUMS` verified all 47 files of the original
 manifest (starting SHA256
 `062799a885090fdce1c6b1b4685331e3368e345a7342e1c36947a74465e60bbe`). That
-manifest was historical; `SHA256SUMS` was regenerated at the React + Electron
-cutover as the tracked-file manifest.
+manifest was historical; the tracked-file manifest regenerated at the React +
+Electron cutover was removed on 2026-10-13 and files are no longer hashed. The
+current source identity is `git rev-parse HEAD` in this repository (with
+`git status --short` for local changes).
 
 Read the actual prompts/handbook under `docs/Noema-Documentation/`, current
 README/architecture/security/status/reports, tests and relevant source. The
@@ -75,8 +77,6 @@ installed development/QA packages in that venv, not on the target laptop:
 .venv/bin/pip list
 .venv/bin/pip install -e '.[test]'
 .venv/bin/pip install playwright
-sha256sum -c SHA256SUMS
-sha256sum SHA256SUMS
 mktemp -d /tmp/noema-baseline-XXXXXX
 ```
 
@@ -109,10 +109,7 @@ For repeatable base-app startup, use an explicitly chosen data directory:
 
 That is a handoff command, not a claim it was run against the user's data.
 No migration is needed. Back up the complete data directory with the server
-stopped before upgrading. Keep tokens/backups private. The top-level
-`SHA256SUMS` is the regenerated tracked-file manifest (see
-[PHYSICAL_SWAY_ACCEPTANCE.md](PHYSICAL_SWAY_ACCEPTANCE.md)); the 47-file original
-is historical.
+stopped before upgrading. Keep tokens/backups private.
 
 ## Evidence and limits
 

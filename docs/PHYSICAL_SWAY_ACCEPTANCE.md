@@ -23,11 +23,9 @@ Dhara is untracked in `/home/p4nic/code`; the parent's HEAD is not its revision.
 identifies the historical preparation handoff (64 files), verified unchanged
 before lifecycle edits. The [managed-mode implementation manifest](../qa/managed-service/source-after.sha256)
 is also preserved, along with the later screenshot and task-capture handoffs.
-The **current** source identity is the repository's `SHA256SUMS`, regenerated at
-the React + Electron cutover. Run `sha256sum -c --quiet SHA256SUMS` from the
-repository root before recording device results. Earlier manifests are history.
-It covers tracked files only (tracked binaries included); data, credentials,
-profiles and untracked generated evidence are excluded.
+Record `git rev-parse HEAD` and `git status --short` with device results to
+identify the revision and any local changes. Source checksum manifests are no
+longer generated or verified; earlier manifests are historical evidence only.
 
 ## Isolated manual launch
 
