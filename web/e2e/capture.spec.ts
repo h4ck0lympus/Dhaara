@@ -145,7 +145,9 @@ test.describe('Capture', () => {
     await editor(page).evaluate(element => {
       element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, isComposing: true, bubbles: true, cancelable: true }));
     });
-    await page.waitForTimeout(300);
+    // A save would cancel the draft debounce and clear the draft; the debounced draft landing proves none started.
+    await expect(draftStatus(page)).toHaveText(S.draftSaved);
+    expect(await draftRaw(page)).toBe('かな');
     await expect(editor(page)).toHaveValue('かな');
     expect((await readLocalDb(page)).outbox).toEqual([]);
   });
@@ -306,12 +308,13 @@ test.describe('Capture on native browser storage', () => {
 
   test('Injected quota failure has persistent truthful UI and retains editor text', async ({ page, noema }) => {   // native_storage_check.py:230
     await failIdbWrite(page, { store: 'kv', key: 'draft', error: 'QuotaExceededError' });
+    await page.clock.install();
     await gotoApp(page, noema, '#/capture');
     await editor(page).fill('Exact unsaved edit after simulated quota failure.');
     await expect(localError(page)).toBeVisible();
     await expect(localError(page)).toContainText(S.localSaveErrorNotice);
     await expect(draftStatus(page)).toHaveText(S.draftError);
-    await page.waitForTimeout(1000);
+    await page.clock.runFor(1000);   // fires every timer due in the next second (debounce, retries) before re-checking
     await expect(localError(page)).toBeVisible();
     await expect(draftStatus(page)).toHaveText(S.draftError);
     await expect(editor(page)).toHaveValue('Exact unsaved edit after simulated quota failure.');
@@ -339,12 +342,13 @@ test.describe('Capture on native browser storage', () => {
   });
 
   test('Immediate Save cancels draft debounce without resurrecting a saved draft', async ({ page, noema }) => {   // native_storage_check.py:274
+    await page.clock.install();
     await gotoApp(page, noema, '#/capture');
     await editor(page).fill('Immediate Save before debounce: maybe not cleared, 0x4141.');
     await saveButton(page).click();
     await expect(editor(page)).toHaveValue('');
     await expect.poll(async () => (await serverState(noema)).notes.length).toBe(1);
-    await page.waitForTimeout(500);   // longer than the 350 ms debounce
+    await page.clock.runFor(500);   // fires a still-armed 350 ms debounce, if Save failed to cancel it
     await page.reload();
     await expect(editor(page)).toHaveValue('');
     expect(await draftRaw(page)).toBe('');
@@ -529,6 +533,7 @@ test.describe('Capture recording', () => {
     const errors: string[] = [];
     const { page, close } = await fakeMicrophonePage(playwright.chromium, errors);
     try {
+      await page.clock.install();
       await gotoApp(page, noema, '#/capture');
       await page.getByRole('button', { name: 'Record' }).click();
       const controls = page.getByRole('group', { name: 'Recording', exact: true });
@@ -540,7 +545,7 @@ test.describe('Capture recording', () => {
       await expect(controls.locator('.recording-phase')).toHaveText('Paused');
       await expect(controls.getByRole('button', { name: 'Resume' })).toBeVisible();
       const frozen = await controls.locator('.recording-elapsed').textContent();
-      await page.waitForTimeout(1500);
+      await page.clock.runFor(1500);   // fires the elapsed-time ticks of 1.5 s; a paused recording must not count them
       await expect(controls.locator('.recording-elapsed')).toHaveText(frozen!);
       expect(await controls.evaluate(element => getComputedStyle(element).borderTopStyle)).toBe('dashed');
       await controls.getByRole('button', { name: 'Resume' }).click();

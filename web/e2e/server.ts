@@ -52,9 +52,10 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
   if (!existsSync(join(options.distDir ?? WEB_DIST, 'index.html'))) throw new Error('Run npm --prefix web run build first');
   const ownsDataDir = options.dataDir === undefined;
   const dataDir = options.dataDir ?? mkdtempSync(join(tmpdir(), 'noema-e2e-'));
-  const port = options.port ?? (await getFreePort());
-  const origin = `http://127.0.0.1:${port}`;
-  const args =
+  // Port 0 lets the service bind a free port itself and report it: a port probed here and bound later could be
+  // taken by a sibling worker's service meanwhile, and /api/health would then answer from that sibling.
+  let port = options.port ?? 0;
+  const args = () =>
     options.distDir === undefined
       ? [join(REPO, 'run.py'), '--host', '127.0.0.1', '--port', String(port), '--data-dir', dataDir]
       : ['-c', SERVE_DIST, String(port), dataDir, options.distDir];
@@ -62,18 +63,23 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
 
   async function launch(): Promise<void> {
     let stderr = '';
-    const proc = spawn(PYTHON, args, { cwd: REPO, env: childEnv(options.env ?? {}), stdio: ['ignore', 'ignore', 'pipe'] });
+    let bound = 0;   // the port this process reports it is listening on; health is trusted only after that
+    const proc = spawn(PYTHON, args(), { cwd: REPO, env: childEnv(options.env ?? {}), stdio: ['ignore', 'ignore', 'pipe'] });
     child = proc;
     proc.stderr?.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-4000);
+      bound ||= Number(/Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/.exec(stderr)?.[1] ?? 0);
     });
     const deadline = Date.now() + STARTUP_MS;
     while (Date.now() < deadline) {
       if (proc.exitCode !== null || proc.signalCode !== null) throw new Error(`Noema exited during startup (${proc.exitCode ?? proc.signalCode}):\n${stderr}`);
-      try {
-        if ((await fetch(origin + '/api/health')).ok) return;
-      } catch {
-        // not listening yet
+      if (bound) {
+        port = bound;   // a restart binds the same port, so the page origin and its browser storage stay the same
+        try {
+          if ((await fetch(`http://127.0.0.1:${port}/api/health`)).ok) return;
+        } catch {
+          // not answering yet
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -92,6 +98,7 @@ export async function startNoema(options: StartOptions = {}): Promise<NoemaServe
   }
 
   await launch();
+  const origin = `http://127.0.0.1:${port}`;
   return {
     origin,
     port,
