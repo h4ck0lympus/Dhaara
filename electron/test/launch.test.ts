@@ -33,6 +33,13 @@ describe('release/launch.cjs decide (packaging spec §5)', () => {
     expect(launch.EXIT_REFUSED).toBe(3);
   });
 
+  it('refuses every Chromium spelling of --no-sandbox', () => {
+    for (const flag of ['-no-sandbox', '--no-sandbox=1', '-no-sandbox=']) {
+      expect(decide({ argv: [flag], facts: facts(OWN_EXE, true) })).toEqual({ message: launch.NO_SANDBOX });
+    }
+    expect(decide({ argv: ['--no-sandboxes', '--data-dir=--no-sandbox'], facts: facts(OWN_EXE, true) })).toEqual({ env: { HOME: '/h', PATH: '/bin' } });
+  });
+
   it('rule 1: keeps an explicit CHROME_DEVEL_SANDBOX and drops ELECTRON_RUN_AS_NODE', () => {
     expect(decide({ env: { ...BASE, CHROME_DEVEL_SANDBOX: '/x' } })).toEqual({ env: { HOME: '/h', PATH: '/bin', CHROME_DEVEL_SANDBOX: '/x' } });
   });
@@ -78,6 +85,15 @@ describe('release/launch.cjs decide (packaging spec §5)', () => {
     expect(launch.ownerMessage(0, 1000)).toBe(message);
     expect(decide({ facts: facts(foreign) })).toEqual({ message });
     expect(decide({ env: { ...BASE, CHROME_DEVEL_SANDBOX: '/x' }, facts: facts(foreign) })).toEqual({ message });
+  });
+
+  it('rule 0 comes before the helper search: a foreign uid with no helper gets the owner line and nothing is copied', () => {
+    const root = tempDir('dhara-launch-');
+    const bundled = path.join(root, 'chrome-sandbox');
+    fs.writeFileSync(bundled, 'helper bytes');
+    const home = path.join(root, 'share');
+    expect(decide({ dataHome: home, bundledHelper: bundled, facts: facts({ [EXE]: { uid: 0, mode: 0o100755 } }) })).toEqual({ message: launch.ownerMessage(0, 1000) });
+    expect(fs.existsSync(path.join(home, 'dhara'))).toBe(false);
   });
 
   it('dataHome mirrors profile.ts without throwing', () => {

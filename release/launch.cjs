@@ -38,17 +38,18 @@ function ownerMessage(builtFor, uid) {
  * running user (sandbox/linux/suid/client/setuid_sandbox_host.cc), so a helper is usable only for the uid the image was built for.
  */
 function decide({ env, argv, exe, dataHome: home, bundledHelper, facts }) {
-  if (argv.includes('--no-sandbox')) return { message: NO_SANDBOX };
+  if (argv.some((a) => /^--?no-sandbox(=|$)/.test(a))) return { message: NO_SANDBOX };  // Chromium accepts -flag and --flag=value
   const next = { ...env };
   delete next.ELECTRON_RUN_AS_NODE;                                     // otherwise the child would also run as Node
   const builtFor = facts.stat(exe)?.uid;
-  const usable = (helperEnv) => (builtFor === facts.uid ? { env: helperEnv } : { message: ownerMessage(builtFor, facts.uid) });
-  if (next.CHROME_DEVEL_SANDBOX) return usable(next);                   // 1: an explicit helper is used as is
+  const foreign = builtFor === facts.uid ? null : { message: ownerMessage(builtFor, facts.uid) };
+  if (next.CHROME_DEVEL_SANDBOX) return foreign ?? { env: next };       // 1: an explicit helper is used as is
   if (facts.userns()) return { env: next };                             // 2: the namespace sandbox needs no helper
+  if (foreign) return foreign;                                          // 0: no helper works for this uid, so search and copy nothing
   const user = path.join(home, 'dhara', 'chrome-sandbox');
   for (const file of [user, SYSTEM_HELPER]) {                           // 3: the first root-owned setuid file wins
     const info = facts.stat(file);
-    if (info !== null && info.uid === 0 && (info.mode & 0o4000) !== 0) return usable({ ...next, CHROME_DEVEL_SANDBOX: file });
+    if (info !== null && info.uid === 0 && (info.mode & 0o4000) !== 0) return { env: { ...next, CHROME_DEVEL_SANDBOX: file } };
   }
   try {
     fs.mkdirSync(path.dirname(user), { recursive: true, mode: 0o700 }); // 4: a user-owned copy for the one-time line
@@ -69,8 +70,8 @@ const facts = {
       return null;
     }
   },
-  // A missing unshare gives status null, which counts as "no namespaces" and falls through to the helper search (spec §10).
-  userns: () => spawnSync('unshare', ['-Ur', 'true'], { stdio: 'ignore' }).status === 0,
+  // The user, pid and net namespaces Chromium's namespace sandbox creates. A missing unshare gives status null, which counts as "no namespaces" and falls through to the helper search (spec §10).
+  userns: () => spawnSync('unshare', ['-Urpn', 'true'], { stdio: 'ignore' }).status === 0,
   uid: process.getuid(),
 };
 
