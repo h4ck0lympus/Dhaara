@@ -95,3 +95,19 @@ def test_document_has_no_stale_instruction(name):
 
 def test_progress_has_dated_cutover_milestone():
     assert re.search(r'^\d{4}-\d{2}-\d{2}: React \+ Electron cutover', text('docs/PROGRESS.md'), re.M)
+
+
+def test_test_report_records_terrain_budget():
+    """Spec §7: measured once by the terrain phase (04-terrain.md Task 9); never re-measured here."""
+    content = text('docs/TEST_REPORT.md')
+    assert re.search(r'^## Terrain budget · \d{4}-\d{2}-\d{2}$', content, re.M)
+    for state in ('Animated', 'Paused', 'Hidden'):
+        assert re.search(rf'^\| {state}: [^|]+ \| [0-9.]+ \(< [0-9.]+\) \| [0-9.]+ \(< [0-9.]+\) \| [0-9.]+ \| '
+                         r'(?:PASS|FAIL) \|$', content, re.M), state
+    assert re.search(r'^\*\*Overall: (?:PASS|FAIL)\*\*$', content, re.M)
+
+
+def test_test_report_records_main_app_memory():
+    content = text('docs/TEST_REPORT.md')
+    assert re.search(r'^### Handbook §21 main-app memory · measured .+\n[\s\S]*?^Result: (?:PASS|FAIL)$',
+                     content, re.M)

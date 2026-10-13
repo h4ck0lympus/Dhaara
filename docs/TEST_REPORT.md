@@ -1,4 +1,39 @@
-# Verification report · Noema 0.1.0 + capture recovery / Rust webview
+# Verification report · Noema 0.1.0 + React/Electron cutover
+
+## React + Electron cutover · 2026-10-12
+
+Executed on branch `feat/react-electron` before the cutover merge, source revision `b13fd4d97b2274011708f159936ebc0a72bea484`. The terrain budget (spec §7) and the handbook §21 memory check were measured with throwaway harnesses (decision 13B, not committed) under a private headless Sway; see the subsection below and the "Terrain budget" section. Per-process PSS could not be read under the setuid Chromium sandbox, so both use cgroup accounting.
+
+### Handbook §21 main-app memory · measured 2026-10-12
+
+Source revision `b13fd4d97b2274011708f159936ebc0a72bea484`. Private headless Sway (`WLR_RENDERER=gles2`, 1440×900 at scale 1). Idle app: the built web shell in Electron (`chromiumSandbox: true`, throwaway profile), motion off, observation off, no model configured, so AI is excluded; 20 s warm-up then 60 × 1 s samples. Each tree ran in its own `systemd-run --user --scope -p MemoryAccounting=yes` scope; memory is cgroup accounting (`memory.current`, and non-file = anon + shmem + kernel from `memory.stat`). PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so it was not used. Aspiration: < 400 MB, read as 400,000,000 bytes (381.5 MiB). Harness: throwaway bench.py plus mem.py, not committed (decision 13B).
+
+| Tree | non-file MiB (median / max) | memory.current MiB (median / max) |
+|---|---|---|
+| Electron shell | 228.5 / 232.2 | 232.2 / 235.9 |
+| Companion Python service (run.py) | 36.4 / 36.4 | 36.5 / 36.6 |
+| Electron + service | 264.9 / 268.5 | 268.7 / 272.4 |
+
+Worst case (max memory.current of both trees, 272.4 MiB = 285.6 MB) is under 400,000,000 bytes.
+
+Result: PASS
+
+## Terrain budget · 2026-10-12
+
+Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, noema and run.py clean in the working tree). Spec §7 method: Electron app process tree only (the run.py service is excluded), launched through Playwright with `chromiumSandbox: true` (never `--no-sandbox`), private headless Sway (gles2, Iris Xe), 1440×900 at scale 1, motion on, reduced motion off, 30 s samples, median of 3 runs; PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so memory is cgroup accounting (anon + shmem + kernel) of the Electron scope. Harness: the throwaway bench.py plus terrain.py (decision 13B), not committed.
+
+| State | CPU % of one core (budget) | iGPU busy % (budget) | Electron non-file MiB (cgroup; PSS unavailable under the setuid sandbox, EACCES on smaps_rollup) | Result |
+|---|---|---|---|---|
+| Animated: focused, Escape key every 5 s | 4.33 (< 3.0) | 1.27 (< 6.0) | 212.3 | FAIL |
+| Paused: 65 s without input (idle timeout) | 0.17 (< 1.0) | 0.0 (< 0.5) | 206.7 | PASS |
+| Hidden: blurred in the Sway scratchpad (document.hidden stays false on Wayland) | 0.1 (< 1.0) | 0.0 (< 0.05) | 222.7 | PASS |
+
+Screen check: animated frames changed in 3/3 runs (gating: proves motion was really on); paused frames were identical in 3/3 runs (informational: any CSS animation in the app also changes the screen, and a terrain that kept drawing would already fail the Paused CPU row).
+Hidden-view visibility flags: [[False], [False], [False]]. Failed or incomplete runs discarded: 0.
+iGPU budgets: paused "~0%" is read as < 0.5%, hidden "0%" as < 0.05% (sampling rounding). The handbook §21 memory figure (Electron plus service) is measured separately by the cutover phase.
+Animated misses its CPU budget (4.33% vs < 3%); iGPU is within budget. Motion is opt-in (default off), so the default states are Paused and Hidden, which pass. Thresholds, code and terrain were not changed; raised for the owner (spec §1 success criterion).
+**Overall: FAIL**
+
 
 ## Frictionless task capture · 2026-10-09
 
