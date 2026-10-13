@@ -129,6 +129,19 @@ test.describe('Note view', () => {
     expect(full.body).toBe('My edited note. Still unsure about duplicates.');
   });
 
+  test('Ctrl+Z in the note editor undoes typing', async ({ page, noema }) => {   // desktop scenario.js:130 (parity row 29)
+    const note = await createNote(noema, 'undo me');
+    await gotoApp(page, noema, `#/note/${note.id}`);
+    await page.getByRole('button', { name: 'Edit' }).click();
+    await noteField(page).click();
+    await page.keyboard.press('End');
+    await page.keyboard.type(' and more words');
+    await expect(noteField(page)).toHaveValue('undo me and more words');
+    // Chromium undoes synthetic key presses in small steps, so press until the typed text is gone.
+    for (let step = 0; step < 15; step += 1) await page.keyboard.press('Control+z');
+    await expect(noteField(page)).toHaveValue('undo me');
+  });
+
   test('Original tab shows untouched capture', async ({ page, noema }) => {   // browser_check.py:133; handbook-trace R4
     const note = await createNote(noema, 'LeetCode trick: two pointers. not sure about duplicates yet.');
     await gotoApp(page, noema, `#/note/${note.id}`);
