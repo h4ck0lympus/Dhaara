@@ -3,63 +3,31 @@
 See [the maintained progress record](docs/PROGRESS.md) for what is built,
 what has been tested, remaining milestones and the next concrete step.
 
-Current status: **physical Sway acceptance BLOCKED ON DEVICE; Rust-owned service
-lifecycle implemented as Linux development opt-in, not device-accepted**. Live Sway inventory is available, not physical-input
-evidence. Use the [single isolated device checklist and resource sampler](docs/PHYSICAL_SWAY_ACCEPTANCE.md).
-The externally started Python service remains the default. To opt in, use
-`desktop/target/debug/noema-desktop --manage-service --data-dir /absolute/workspace`
-with the same stable `--server` and persistent `--profile` on every launch.
-See [ownership, launch, quit and retry instructions](docs/DESKTOP.md).
-No framework or companion redesign is part of this pass.
+Current status: **React + Electron cutover; physical Sway acceptance (handbook §24 Stage A) is still pending**
+and is the next validation gate. The interface is a typed React bundle (`web/`)
+served by the Python service. The desktop shell is Electron (`electron/`), which
+loads that same bundle from the service origin. The previous `public/` interface,
+the Rust Wry/Tao shell (`desktop/`) and the in-app browser kitten preview were
+removed at the cutover; rollback steps are in [PROGRESS.md](docs/PROGRESS.md).
+External service startup remains the default; Linux managed mode
+(`--manage-service`) is opt-in. See [desktop instructions](docs/DESKTOP.md).
 
-Frictionless task capture (2026-10-09, unreleased): **Add task** now opens one
-focused multiline input and collapsed Details. A sentence is enough;
-Ctrl/Command + Enter adds, ordinary Enter inserts a newline. Original wording is retained,
-limited rules distinguish a planned day from deadlines/reminders, and retries
-cannot duplicate a capture. Task drafts recover separately from learning notes;
-they are not an offline task queue. See [the permanent requirement and limits](docs/TASK_CAPTURE.md),
-[before/after images](qa/task-capture/README.md), and [newly executed tests](docs/TEST_REPORT.md).
-Restart the service/managed app and reload the client to use the new API; retain
-the same workspace/profile/origin. No task voice or richer AI path is claimed.
-
-Workspace continuation (unreleased): capture Save now commits the browser queue
-and draft reset atomically. Local-save failures remain visible and can be retried
-without losing editor text. Native headless-Chrome persistence checks are in
-`qa/native_storage_check.py`; see [the continuation note](docs/CONTINUATION.md).
-The actual application is still based on v0.1.0. The documentation bundle's
-v0.2.0 reports describe an archived release, not screen-awareness code in this workspace.
-
-The **Rust webview desktop shell** in `desktop/` now loads the original web
-interface, replacing the rejected Qt/QML prototype. The Python service and
-existing notebook data are unchanged. The shell uses Wry/Tao, not a new UI;
-its private persistent browser profile reuses the existing draft/outbox logic.
-See [desktop launch instructions and validation boundaries](docs/DESKTOP.md).
-Existing Chrome/browser drafts are not automatically moved into that profile.
-
-Now-screen refinement (unreleased): stronger secondary-text contrast, tighter
-spacing, one grounded next action with disclosed alternatives, distinct empty /
-waiting / human-attention / complete / unknown states, and correctly labeled
-selected/inferred/pinned focus. Click the small kitten for mode, size and window-
-metadata permission controls. Permission is not proof of an active observer.
-The backend and webview framework are unchanged. Now-state results remain in
-`qa/now-ui/`; earlier screenshots were removed at your request. Current native
-views are in `qa/sway/after/`, with the newly requested kitten visibility
-before/after set in `qa/kitten-visibility/`, plus three pointer-pass views in
-`qa/companion-input/after/`; see [verification](docs/TEST_REPORT.md). There are
-39 current QA PNGs: those preserved 33 plus [two current managed-desktop Now captures](qa/managed-service/screenshots-2026-10-08/README.md)
-and [four task-capture before/after views](qa/task-capture/README.md).
-These new captures use a synthetic private-X11 fixture, not physical Sway
-acceptance; earlier screenshot inventories below are historical.
+Task capture, the capture outbox and the browser database `noema-local-v1`
+(version 1) keep their behaviour and record shapes, so captures queued by the
+old browser UI upload once after the upgrade. Kitten settings stay in Settings
+for the separate Python Sway helper. Priority shows where it came from:
+"Auto · rules" or "Set by you". AI-assigned automatic priority ("Auto · AI") is
+the next milestone and is not built yet; a daily motivating slogan comes later.
 
 A quiet place for what you are learning, what your agents are doing, and what you can do next.
 
 This is a **runnable local development release**, not just a UI mockup. The server persists notes, attachments, tasks, reminders, agent events, and revisions. The interface uses those real APIs. It starts empty; the example content in the screenshots belongs to disposable tests, not your workspace.
 
-**No GPU, Node build, paid API key, account, or AI model is required for the base app.** Optional local models provide transcription and note rewriting. The default app does not record your microphone, capture your screen, download models, or contact an AI service.
+**No GPU, paid API key, account, or AI model is required for the base app.** Node 22 is needed once to build the interface, not to run it. Optional local models provide transcription and note rewriting. The default app does not record your microphone, capture your screen, download models, or contact an AI service.
 
 ## Start here
 
-Requirements: Python 3.11 or newer, a current browser, and internet access to install the Python dependencies once. Python 3.13.5 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
+Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. Python 3.13.5 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
 
 ### Linux / macOS
 
@@ -69,10 +37,25 @@ From the extracted `noema` directory:
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+npm --prefix web ci && npm --prefix web run build
 python run.py --open
 ```
 
 The interface is at `http://127.0.0.1:8765`. Stop the server with Ctrl-C. Starting it again opens the same saved workspace.
+
+`web/dist` is not committed. If you skip the build, the API still works and the page at `/` says "Frontend not built: run `npm --prefix web run build`". To use the desktop shell instead of a browser (Node 22; Linux), install it once, link the Chromium sandbox helper, and start it against the running service:
+
+```bash
+npm --prefix electron ci
+node electron/scripts/link-sandbox.mjs
+npm --prefix electron start -- --server http://127.0.0.1:8765
+```
+
+`link-sandbox.mjs` symlinks a root-owned `/opt/google/chrome/chrome-sandbox` when present; otherwise it prints the exact `sudo chown`/`chmod` commands. The sandbox is never disabled. To let Electron own the service instead (opt-in, Linux only; both flags are required):
+
+```bash
+npm --prefix electron start -- --manage-service --data-dir /absolute/workspace
+```
 
 ### Windows PowerShell
 
@@ -81,6 +64,8 @@ Activation is not required:
 ```powershell
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+npm --prefix web ci
+npm --prefix web run build
 .\.venv\Scripts\python.exe run.py --open
 ```
 
@@ -98,8 +83,8 @@ Use the same path on subsequent starts. Files include `noema.sqlite3`, an `attac
 
 ## First five minutes
 
-1. Open **Plan** and click Task. Type a sentence and Add task. Details and next actions are optional; priority remains Automatic unless you choose an override. A planned day is separate from a deadline, reminder or availability constraint.
-2. Open **Now**. Choose a focus. “Available now” excludes work with unresolved dependencies, tasks intentionally parked, and tasks waiting on an active agent. It explains the priority/ranking decision rather than invoking a model for every refresh.
+1. Open **Tasks** and click Task. Type a sentence and Add task. Details and next actions are optional; priority remains Automatic unless you choose an override. A planned day is separate from a deadline, reminder or availability constraint.
+2. Open **Overview**. Choose a focus. “Available now” excludes work with unresolved dependencies, tasks intentionally parked, and tasks waiting on an active agent. It explains the priority/ranking decision rather than invoking a model for every refresh.
 3. Open **Capture** and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
 4. Read the saved note in **Notes**. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
 5. To track a command or agent, create a task-scoped token in Settings and use the wrapper described below.
@@ -110,17 +95,17 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 
 | Area | This release |
 |---|---|
-| Interface | Responsive Now, Capture, Notes, Plan; minimal charcoal layout; original sparse dot field inside the app; optional low-rate motion and reduced-motion handling. |
+| Interface | Responsive Overview, Capture, Notes and Tasks in a typed React bundle; compact graphite layout with the original headings, subtitles and tagline; optional WebGL2 stroke terrain inside the app (motion off by default, static without WebGL2, paused when hidden, blurred or idle, never under reading or editing surfaces). |
 | Knowledge capture | Text, image uploads/paste/drop, simple sketch canvas, microphone recording after permission. Text and attachments are saved as one idempotent capture. |
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |
 | Voice | Records and saves audio. Optional faster-whisper CPU worker transcribes after saving. **No live transcript in this release.** |
 | Recovery | Local browser draft/outbox, retry on reconnect, explicit failed-upload queue, original capture, note revisions, optimistic edit-conflict detection. |
-| Tasks | Dependencies, future start, due dates, estimates, notes/session links, transparent automatic priorities, persistent manual priority overrides, manual or inferred focus. |
+| Tasks | Dependencies, future start, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
 | Next action | Deterministic “What can I do now?” selection from existing actionable tasks; unknown estimates are not fabricated. |
 | Agent lifecycle | Scoped event API and real subprocess wrapper; ordered/deduplicated events, stale-run status, durable wrapper outbox. An exited agent produces a review item, not a completed task. |
 | Reminders | Persisted schedule, in-app due queue, snooze/dismiss, due processing after server restart. Optional browser notification while the app is running. |
 | Window context | Experimental opt-in Sway metadata observer with application/title-to-task rules. Pinned focus wins. **No screenshot capture or vision inference.** |
-| Companion | Tiny browser preview plus separate experimental native GTK/Sway cat/dot helper, output/workspace placement code and click-to-expand task list. |
+| Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/cat.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
 | Portability | Markdown/JSON/attachment export. One local SQLite server, no managed cloud account or automatic synchronization of independent installations. |
 
 More precise boundaries and remaining milestones are in [BUILD_STATUS.md](docs/BUILD_STATUS.md).
@@ -206,7 +191,7 @@ The initial run registration requires a reachable server. For interactive agents
 
 ## Tiny Sway companion (experimental)
 
-The browser's cat is a **browser preview**, not a transparent desktop window. The native Linux helper is separate:
+The in-app browser kitten preview was removed at the React + Electron cutover. The native Linux helper is separate:
 
 ```bash
 export NOEMA_TOKEN='paste-an-observer-token-created-in-settings'
@@ -261,9 +246,7 @@ CPU/battery validation. Current screenshots and historical test commands are in
 [the test report](docs/TEST_REPORT.md). Automatic conversion of a minimized
 main window into the companion is not implemented; start/stop the helper
 explicitly. Windows/macOS/Android overlays are not included.
-Reliable native-presence detection does not exist, so the browser preview is
-not automatically suppressed by a guess. Event-triggered companion messages
-are not implemented.
+Event-triggered companion messages are not implemented.
 
 References: [Sway IPC](https://github.com/swaywm/sway/blob/master/sway/sway-ipc.7.scd), [GtkLayerShell](https://github.com/wmww/gtk-layer-shell).
 
@@ -278,7 +261,7 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
 ## Storage, backups, and recovery
 
 - Browser drafts/outbox contain private text and attachments. Use a trusted browser profile. Clearing site data deletes captures that have not reached the server.
-- The visible label distinguishes queued/local capture from server-saved content. Failed uploads remain in **Settings → Local capture queue** until retried or explicitly discarded.
+- The visible label distinguishes queued/local capture from server-saved content. Failed uploads remain in the **Captures on this device** dialog (open it from the status line) until retried or explicitly discarded.
 - **Settings → Export notes & tasks** creates a ZIP with JSON, Markdown notes, originals, revisions, and attachments. Tokens and raw observed context are excluded.
 - Portable export is not yet a one-click import feature.
 - Failed local storage keeps the editor open and shows **Retry local save**.
@@ -289,57 +272,49 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
 
 ## Verification
 
-```bash
-python -m pip install -e '.[test]'
-python -m pytest -q
-```
-
-The original shipped run had 62 Python tests. The visibility pass grew 80 to 88;
-the pointer pass reran 88 before/after. The device-gate preparation now passes
-**99** (88 preserved plus 11 QA-tooling tests), with **22** pure Now-state tests
-and five Rust policy tests. Tooling tests are not physical acceptance. Current
-Python tests include 19 native-companion policy/asset tests and seven summary
-API cases. Some policy cases use
-explicit client/observer/event-loop doubles. Frontend syntax is checked using
-Node as a QA tool; Node is not a runtime requirement.
-
-`qa/browser_check.py` is an optional Playwright harness. It uses the actual HTML/CSS/JS and a real disposable server, but the build environment prohibits browser URL navigation, so HTTP transport and browser storage are explicitly bridged/test-doubled. Its 14 passing checks are **not** proof of native IndexedDB, PWA, microphone, notification, or device behavior. It never resets your database.
-
-The report, screenshots of the running UI with test fixtures, and a narrowly scoped idle-backend measurement are in `qa/`. Full boundaries are in [TEST_REPORT.md](docs/TEST_REPORT.md).
-
-For current native browser persistence checks (optional QA dependencies only):
+The cutover gate, run from the repository root after `python -m pip install -e '.[test]'`
+and `node electron/scripts/link-sandbox.mjs` (see above):
 
 ```bash
-.venv/bin/pip install playwright
-CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/native_storage_check.py
-CHROMIUM_PATH=/usr/bin/google-chrome .venv/bin/python qa/browser_check.py
+npm --prefix web ci
+npm --prefix web run build
+npm --prefix web test
+npm --prefix web run e2e
+npm --prefix electron ci
+npm --prefix electron test
+.venv/bin/python -m pytest
 ```
 
-Use the path to your existing Chrome/Chromium executable. These commands do not
-install a browser or a model. Both harnesses create disposable server data;
-new results/screenshots go to `qa/continuation/`, or `NOEMA_QA_OUTPUT` when set.
-The native harness uses actual HTTP, IndexedDB, Blob storage, service-worker
-offline loading and browser-profile restart. Faults are explicitly injected.
-The older isolated harness still uses transport/storage doubles. Neither is
-an Android, microphone, PWA-installation, physical power-loss or cloud-sync test.
+The E2E suite starts `run.py` on a temporary data directory and a free port; it
+never touches your workspace. Install Playwright's Chromium once with
+`npm --prefix web exec -- playwright install chromium`. The Electron suite runs
+in a private headless Sway and needs `sway` on PATH. Results, the terrain
+budget and the main-app memory check are in [TEST_REPORT.md](docs/TEST_REPORT.md).
+These are real-browser and real-process tests with injected faults. They are not
+Android, microphone, PWA-installation, physical power-loss, cloud-sync or
+physical Sway tests. The older `qa/` browser and webview harnesses drove the
+removed UI and shell and are kept only as history.
 
 ## Source layout
 
 ```text
-run.py                  Local launcher
-noema/server.py         HTTP API, local safeguards, static assets, export
-noema/store.py          SQLite records, priority/availability policy, state transitions
-noema/models.py         Bounded API input validation
-noema/worker.py         Single optional AI/transcription worker
-public/                 Real responsive app; no build step or external assets
- tools/agent.py         Command tracking + durable event outbox
- tools/sway_context.py  Opt-in metadata observer
- tools/sway_companion.py Tiny experimental native Sway overlay
- tools/transcribe.py    Isolated CPU transcription worker
- tools/doctor.py        Read-only setup diagnostics
-tests/                  Backend/helper regression tests
-qa/                     UI harness, screenshots and actual test results
-docs/                   Status, architecture, API and security boundaries
+run.py                   Local launcher
+noema/server.py          HTTP API, local safeguards, serves web/dist, export
+noema/store.py           SQLite records, priority/availability policy, state transitions
+noema/models.py          Bounded API input validation
+noema/worker.py          Single optional AI/transcription worker
+noema/desktop_service.py Linux managed-mode lease (protocol 2)
+web/                     React + TypeScript interface (npm --prefix web run build)
+electron/                Electron desktop shell and managed lifecycle
+tools/agent.py           Command tracking + durable event outbox
+tools/sway_context.py    Opt-in metadata observer
+tools/sway_companion.py  Tiny experimental native Sway overlay (sprite: tools/assets/cat.png)
+tools/transcribe.py      Isolated CPU transcription worker
+tools/doctor.py          Read-only setup diagnostics
+tests/                   Backend, helper and cutover regression tests
+qa/                      Device-check helpers, historical harnesses and recorded results
+docs/                    Status, architecture, API and security boundaries
+experiments/ui-ab/       Variant A/B experiment evidence (history)
 ```
 
 No code has been installed on your device by creating this package. The downloaded source is the handoff point for running and continuing the project.
