@@ -10,6 +10,7 @@ import os
 import re
 from pathlib import Path
 import select
+import shlex
 import signal
 import socket
 import subprocess
@@ -52,10 +53,24 @@ def managed_env():
     return env
 
 
-def launch(data, port, owner=None, host='127.0.0.1', cwd=None):
+# The service as the venv runs it and as the AppImage ships it (packaging spec §6); DHARA_SERVICE_CMD overrides the frozen command.
+FROZEN_DEFAULT = ROOT / 'release/out/service/dhara-service/dhara-service'
+SERVICE_CMDS = {'venv': [sys.executable, str(ROOT / 'run.py')],
+                'packaged': shlex.split(os.environ.get('DHARA_SERVICE_CMD', '')) or [str(FROZEN_DEFAULT)]}
+
+
+@pytest.fixture(params=['venv', 'packaged'])
+def service_cmd(request):
+    cmd = SERVICE_CMDS[request.param]
+    if request.param == 'packaged' and not Path(cmd[0]).exists():
+        pytest.skip(f'{cmd[0]} is absent: run release/build.sh (or set DHARA_SERVICE_CMD) to test the frozen service')
+    return cmd
+
+
+def launch(cmd, data, port, owner=None, host='127.0.0.1', cwd=None):
     # Own session: on lease EOF Python signals its own process group, never pytest's.
     return subprocess.Popen(
-        [sys.executable, str(ROOT / 'run.py'), '--desktop-managed', '--host', host, '--port', str(port),
+        [*cmd, '--desktop-managed', '--host', host, '--port', str(port),
          '--data-dir', str(data), '--owner-pid', str(os.getpid() if owner is None else owner)],
         cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         env=managed_env(), start_new_session=True)
@@ -136,7 +151,7 @@ def test_set_parent_death_signal_requests_sigterm():
     ('missing', EXIT_LEASE), ('file', EXIT_LEASE), ('host', EXIT_LEASE),
     ('locked', EXIT_LOCKED), ('port', EXIT_PORT),
 ])
-def test_managed_exit_codes_never_write_the_workspace(tmp_path, case, expected):
+def test_managed_exit_codes_never_write_the_workspace(tmp_path, service_cmd, case, expected):
     root = tmp_path / 'data'
     root.mkdir(mode=0o700)
     data, owner, host, lease, held, occupant = root.resolve(), None, '127.0.0.1', LEASE, None, None
@@ -165,7 +180,7 @@ def test_managed_exit_codes_never_write_the_workspace(tmp_path, case, expected):
         occupant.listen()
         occupant.settimeout(.2)
     try:
-        process = launch(data, port, owner=owner, host=host, cwd=tmp_path)
+        process = launch(service_cmd, data, port, owner=owner, host=host, cwd=tmp_path)
         out, _ = process.communicate(lease, timeout=30)
         assert process.returncode == expected
         assert out == b''  # no readiness line
@@ -184,12 +199,12 @@ def test_managed_exit_codes_never_write_the_workspace(tmp_path, case, expected):
 
 
 @linux
-def test_managed_acknowledges_protocol_2_and_stops_on_lease_eof(tmp_path):
+def test_managed_acknowledges_protocol_2_and_stops_on_lease_eof(tmp_path, service_cmd):
     root = tmp_path / 'data'
     root.mkdir(mode=0o700)
     root = root.resolve()
     port = free_port()
-    process = launch(root, port)
+    process = launch(service_cmd, root, port)
     try:
         process.stdin.write(LEASE)
         process.stdin.flush()

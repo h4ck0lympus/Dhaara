@@ -1,0 +1,24 @@
+"""Release inputs (packaging spec §3, §6): what release/build.sh consumes is valid before any build runs."""
+import json
+import tomllib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+RELEASE = ROOT / 'release'
+PYPROJECT = tomllib.loads((ROOT / 'pyproject.toml').read_text())
+
+
+def test_versions_match_between_pyproject_and_electron():
+    # build.sh refuses to build on a mismatch (spec §3 step 6); this keeps the two manifests equal between builds.
+    assert json.loads((ROOT / 'electron/package.json').read_text())['version'] == PYPROJECT['project']['version']
+
+
+def test_release_extra_pins_pyinstaller_exactly():
+    assert PYPROJECT['project']['optional-dependencies']['release'] == ['pyinstaller==6.22.3', 'pyinstaller-hooks-contrib==2026.8']
+
+
+def test_service_spec_is_one_directory_console_with_the_web_bundle():
+    spec = (RELEASE / 'dhara-service.spec').read_text()
+    compile(spec, 'dhara-service.spec', 'exec')
+    assert "name='dhara-service'" in spec and 'console=True' in spec and 'COLLECT(' in spec
+    assert "os.path.join('web', 'dist')" in spec and 'uvicorn.lifespan.on' in spec and "excludes=['faster_whisper']" in spec

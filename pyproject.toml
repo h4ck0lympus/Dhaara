@@ -12,6 +12,7 @@ dependencies = ["fastapi==0.128.2", "uvicorn==0.48.0", "pydantic==2.13.5", "pyth
 [project.optional-dependencies]
 test = ["pytest==9.0.2"]
 speech = ["faster-whisper>=1.1,<2", "av>=11,<14"]  # faster-whisper 1.2 still passes metadata_errors to av.open; PyAV 14+ removed it
+release = ["pyinstaller==6.22.3", "pyinstaller-hooks-contrib==2026.8"]
 
 [tool.setuptools]
 packages = ["dhara", "noema"]  # rename-shim: the noema shim package ships for one release
