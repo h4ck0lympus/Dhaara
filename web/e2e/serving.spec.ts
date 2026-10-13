@@ -53,7 +53,7 @@ test('base app runs with no model and capture disabled by default', async () => 
   try {
     const state = await dhara.api<StateBody>('GET', '/api/state');
     expect(state.capabilities).toMatchObject({ organizer: false, speech: false, screen_pixels: false });
-    expect(state.settings).toMatchObject({ observation_enabled: false, motion: false, display_name: '' });
+    expect(state.settings).toMatchObject({ observation_enabled: false, motion: true, display_name: '' });
   } finally {
     await dhara.stop();
   }

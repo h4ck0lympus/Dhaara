@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
+import { performance } from 'node:perf_hooks';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -71,8 +72,9 @@ export async function startDhara(options: StartOptions = {}): Promise<DharaServe
       stderr = (stderr + chunk.toString()).slice(-4000);
       bound ||= Number(/Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/.exec(stderr)?.[1] ?? 0);
     });
-    const deadline = Date.now() + STARTUP_MS;
-    while (Date.now() < deadline) {
+    // Startup is elapsed time; wall-clock corrections must not expire it early.
+    const deadline = performance.now() + STARTUP_MS;
+    while (performance.now() < deadline) {
       if (proc.exitCode !== null || proc.signalCode !== null) throw new Error(`Dhara exited during startup (${proc.exitCode ?? proc.signalCode}):\n${stderr}`);
       if (bound) {
         port = bound;   // a restart binds the same port, so the page origin and its browser storage stay the same

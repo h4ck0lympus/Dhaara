@@ -14,7 +14,7 @@ test('loopback boot logs in automatically and never shows Unlock', async ({ page
   await gotoApp(page, dhara);
   await expect(page.getByRole('dialog', { name: 'Unlock Dhara' })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good (morning|afternoon|evening)\.$/);
-  await expect(page.getByText(COPY.tagline)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Current focus' })).toBeVisible();
 });
 
 const LEGACY: [string, string, string][] = [

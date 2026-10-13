@@ -112,7 +112,7 @@ test.describe('Settings', () => {
     const size = dialog.getByLabel('Companion size');
     await expect(size).toHaveAttribute('min', '24');
     await expect(size).toHaveAttribute('max', '72');
-    await expect(dialog.getByText('Logical pixels; native helper reads this setting.')).toBeVisible();
+    await expect(dialog.getByText(/Choose a comfortable size\. Currently/)).toBeVisible();
     await expect(dialog.getByLabel('Enable window context')).toBeVisible();
   });
 
@@ -134,7 +134,7 @@ test.describe('Settings', () => {
     let dialog = settingsDialog(page);
     await dialog.getByLabel('Companion mode').selectOption('dot');
     await expect.poll(async () => (await serverSettings(dhara)).companion).toBe('dot');
-    await expect(dialog.getByText('This browser does not connect to the desktop companion.')).toBeVisible();
+    await expect(dialog.getByText('Your desktop kitten stays separate from this window. Requires the native companion to be running.')).toBeVisible();
     await page.reload();
     await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
     await navSettings(page).click();
@@ -143,12 +143,13 @@ test.describe('Settings', () => {
     await expect(page.locator('img[src*="cat"], #companion-launch, .companion')).toHaveCount(0);
   });
 
-  test('Observation and motion start off; observation, companion mode and size reach the server', async ({ page, dhara }) => {   // handbook-trace R9 (capture disabled by default)
+  test('Observation starts off and motion starts on; observation, companion mode and size reach the server', async ({ page, dhara }) => {   // handbook-trace R9 (capture disabled by default)
     await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     const observation = dialog.getByLabel('Enable window context');
     await expect(observation).not.toBeChecked();
-    await expect(dialog.getByLabel('Enable background motion')).not.toBeChecked();
+    await expect(dialog.getByLabel('Enable background motion')).toBeChecked();
+    await dialog.getByLabel('Enable background motion').uncheck();
     await observation.check();
     await dialog.getByLabel('Companion mode').selectOption('dot');
     await dialog.getByLabel('Companion size').fill('56');
@@ -215,6 +216,6 @@ test.describe('Settings', () => {
     await navSettings(page).click();
     await expect(settingsDialog(page)).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(navLink(page, 'Notes')).toHaveAttribute('aria-current', 'page');
+    await expect(navLink(page, 'Overview')).toHaveAttribute('aria-current', 'page');
   });
 });

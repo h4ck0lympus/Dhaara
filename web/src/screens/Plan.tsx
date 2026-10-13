@@ -16,7 +16,7 @@ import { PageHeading } from '../ui/PageHeading';
 export function PlanScreen(): JSX.Element {
   const snapshot = useSnapshot().data;
   const connected = useConnected();
-  const { view } = useSearch({ from: '/plan' });
+  const { view } = useSearch({ strict: false });
   const navigate = useNavigate();
   const filter = (TASK_FILTERS.some(f => f.id === view) || view === 'upcoming' ? view : 'open') as TaskFilter | 'upcoming';
   const setFilter = (value: string) => void navigate({ to: '/plan', search: { view: value }, replace: true });

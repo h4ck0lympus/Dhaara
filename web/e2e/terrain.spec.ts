@@ -5,6 +5,11 @@ import type { DharaServer } from './server';
 const FIELD = 'canvas.background-field';
 
 test.use({ viewport: { width: 1440, height: 900 } });
+// Pixel/geometry checks require a stationary field. Animation cases opt in below;
+// the product's default-on preference is checked by serving and Settings tests.
+test.beforeEach(async ({ dhara }) => {
+  await dhara.api('PATCH', '/api/settings', { motion: false });
+});
 
 /** gotoApp loads origin + '/' + hash, so a '?e2e=1' prefix turns the seam on. Fonts are awaited so a late layout shift cannot redraw a static frame mid-test. */
 async function openField(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
@@ -33,7 +38,7 @@ async function setHidden(page: Page, hidden: boolean): Promise<void> {
 }
 
 test.describe('terrain state machine', () => {
-  test('motion defaults off: one static frame inside the app, no frame timer', async ({ page, dhara }) => {
+  test('saved motion-off preference: one static frame inside the app, no frame timer', async ({ page, dhara }) => {
     await openField(page, dhara);
     await expect(page.locator(`#root ${FIELD}`)).toHaveCount(1);
     await expectState(page, 'static');

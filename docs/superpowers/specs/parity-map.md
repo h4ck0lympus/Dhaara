@@ -65,7 +65,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 46 | experiments/ui-ab/scripts/verify.py:64 | Manual priority persists after reload | P4 | web/e2e/plan.spec.ts | green |
 | 47 | experiments/ui-ab/scripts/verify.py:65 | Unsupported input saved with honest unavailable interpretation | P4 | web/e2e/task-capture.spec.ts | green |
 | 48 | experiments/ui-ab/scripts/verify.py:67 | Repeated submit does not duplicate task | P4 | web/e2e/task-capture.spec.ts | green |
-| 49 | experiments/ui-ab/scripts/verify.py:68 | Separate focus, next actions and Tasks; colored priorities and manual completion persist without changing pin | P4 | web/e2e/now.spec.ts | green |
+| 49 | experiments/ui-ab/scripts/verify.py:68 | Focus remains pinned across task navigation and manual priority edits | P4 | `web/e2e/plan.spec.ts` › "Task-link navigation never changes pin or manual priority"; "Manual priority persists after reload"; "complete and reopen confirm with a toast; parked is not done" | green |
 | 50 | experiments/ui-ab/scripts/verify.py:69 | Image attachment preview, capture save, note edit/save/reopen, immutable original | P4 | web/e2e/notes.spec.ts | green |
 | 51 | experiments/ui-ab/scripts/verify.py:70 | Voice controls are explicitly simulated; no recording permission opened | — | — | drop (approved): the simulated voice demo is removed; the real recorder is covered by handbook-trace row R8 "No microphone permission is requested before Record" |
 | 52 | experiments/ui-ab/scripts/verify.py:71 | Companion modes persist; browser reports no native connection and contains no kitten overlay | P4 | web/e2e/settings.spec.ts | green |
@@ -118,7 +118,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 99 | qa/now_ui_check.py:163 | Capture creates a learning note, never an automatic task | P4 | web/e2e/capture.spec.ts | green |
 | 100 | qa/now_ui_check.py:173 | Add a task opens an implemented form and persists explicit intent | P4 | web/e2e/task-capture.spec.ts | green |
 | 101 | qa/now_ui_check.py:176 | Readable body/secondary text meets a 4.5 contrast ratio | P4 | web/e2e/layout.spec.ts | green |
-| 102 | qa/now_ui_check.py:182 | Primary suggestion is singular and alternatives start collapsed | P4 | web/e2e/now.spec.ts | green |
+| 102 | qa/now_ui_check.py:182 | Overview previews are bounded; full filtered task list is available | P4 | `web/src/screens/Now.test.tsx` › "caps a large available list and opens the complete filtered workspace" | green |
 | 103 | qa/now_ui_check.py:185 | No duration, deadline or progress is fabricated | P4 | web/e2e/now.spec.ts | green |
 | 104 | qa/now_ui_check.py:196 | Agent setup creates a real task-scoped token | P4 | web/e2e/now.spec.ts | green |
 | 105 | qa/now_ui_check.py:204 | Inferred focus is separately labeled | P4 | web/e2e/now.spec.ts | green |
@@ -136,7 +136,7 @@ Produced by Task 1 of `docs/superpowers/plans/2026-10-10-react-electron/01-found
 | 117 | qa/now_ui_check.py:273 | Zero running agents does not erase a reported question | P4 | web/e2e/now.spec.ts | green |
 | 118 | qa/now_ui_check.py:276 | Human-attention action opens the real task/result details | P4 | web/e2e/now.spec.ts | green |
 | 119 | qa/now_ui_check.py:279 | All-complete state has no agent onboarding prompt | P4 | web/e2e/now.spec.ts | green |
-| 120 | qa/now_ui_check.py:283 | Stale integration status is visibly unknown, not running or complete | P4 | web/e2e/now.spec.ts | green |
+| 120 | qa/now_ui_check.py:283 | Stale integration status is visibly unknown, not running or complete | P4 | `web/e2e/now.spec.ts` › "attention and stale status are honest and open the associated task" | green |
 | 121 | qa/now_ui_check.py:287 | Reconnect returns to real available work | P4 | web/e2e/offline.spec.ts | green |
 | 122 | qa/now_ui_check.py:291 | No uncaught UI JavaScript errors | P1 | web/e2e/fixtures.ts › auto fixture `guards` (runs in every spec) | green |
 | 123 | qa/settings_link_check.py:29 | Native settings URL opens actual existing dialog at startup | P4 | web/e2e/settings.spec.ts | green |

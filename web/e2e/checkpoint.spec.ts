@@ -11,6 +11,9 @@ const editor = (page: Page) => page.getByLabel('Rough learning note');
 async function startSlowSave(page: Page): Promise<void> {
   await editor(page).fill('saving slowly');
   await expect(page.locator('#draft-status')).toHaveText(S.draftSaved);
+  // Keep the delayed transaction pending until the guard has been exercised.
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(1000);
   await page.getByRole('button', { name: 'Save note' }).click();
 }
 
@@ -39,7 +42,7 @@ test.describe('Close checkpoint', () => {
     await delayIdbTransactions(page, 1500);
     await gotoApp(page, dhara, '#/capture');
     await startSlowSave(page);
-    await navLink(page, 'Notes').click();
+    await navLink(page, 'Tasks').click();
     await expect(page.getByRole('status').filter({ hasText: S.finishingLocalSave })).toBeVisible();
     expect(new URL(page.url()).hash).toBe('#/capture');
   });

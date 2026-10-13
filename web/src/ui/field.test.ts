@@ -47,7 +47,7 @@ describe('fieldState', () => {
     }
   });
 
-  it('is static when the motion setting is off (the server default) or reduced motion is set', () => {
+  it('is static when the motion setting is off or reduced motion is set', () => {
     expect(fieldState({ ...LIVE, motionSetting: false })).toBe('static');
     expect(fieldState({ ...LIVE, reducedMotion: true })).toBe('static');
     expect(fieldState({ ...LIVE, reducedMotion: true, documentHidden: true })).toBe('static');

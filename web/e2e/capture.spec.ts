@@ -165,13 +165,16 @@ test.describe('Capture', () => {
     await gotoApp(page, dhara, '#/capture');
     await editor(page).fill('Saving slowly.');
     await expect(draftStatus(page)).toHaveText(S.draftSaved);
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
     await saveButton(page).click();
-    await navLink(page, 'Notes').click();
+    await navLink(page, 'Tasks').click();
     await expect(page.getByRole('status').filter({ hasText: S.finishingLocalSave })).toBeVisible();
     await expect(page).toHaveURL(/#\/capture$/);
+    await page.clock.resume();
     await expect(editor(page)).toHaveValue('');
-    await navLink(page, 'Notes').click();
-    await expect(page).toHaveURL(/#\/notes$/);
+    await navLink(page, 'Tasks').click();
+    await expect(page).toHaveURL(/#\/plan$/);
   });
 
   test('Phone capture has no horizontal overflow', async ({ page, dhara }) => {   // browser_check.py:149-150
@@ -603,15 +606,15 @@ test.describe('Capture recording', () => {
       await saveButton(page).click();
       await expect(page.getByRole('status').filter({ hasText: S.stopRecordingBeforeSaving })).toBeVisible();
       expect((await readLocalDb(page)).outbox).toEqual([]);
-      await navLink(page, 'Notes').click();
+      await navLink(page, 'Tasks').click();
       await expect(page.getByRole('status').filter({ hasText: S.stopRecordingBeforeLeaving })).toBeVisible();
       await expect(page).toHaveURL(/#\/capture$/);
       expect(await beforeUnloadArmed(page)).toBe(true);
       await page.getByRole('button', { name: 'Stop' }).click();
       await expect(page.getByRole('group', { name: 'Recording', exact: true })).toBeHidden();
       expect(await beforeUnloadArmed(page)).toBe(false);
-      await navLink(page, 'Notes').click();
-      await expect(page).toHaveURL(/#\/notes$/);
+      await navLink(page, 'Tasks').click();
+      await expect(page).toHaveURL(/#\/plan$/);
     } finally {
       await close();
     }

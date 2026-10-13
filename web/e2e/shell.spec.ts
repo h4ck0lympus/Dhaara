@@ -91,7 +91,7 @@ test('Every control is keyboard reachable with a visible focus ring', async ({ p
     expect(focused.ring, `visible focus ring on ${focused.name}`).toBe(true);
     seen.add(focused.name);
   }
-  for (const name of ['Collapse sidebar', 'Overview', 'Capture', 'Notes', 'Tasks', 'Settings', 'Available time', 'Start']) expect(seen.has(name), name).toBe(true);
+  for (const name of ['Collapse sidebar', 'Overview', 'Tasks', 'Settings', 'Search notes…', 'Notifications', 'Capture a thought…', '+ Note', '+ Task', 'Browse notes']) expect(seen.has(name), name).toBe(true);
 });
 
 test('Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes', async ({ page, dhara }) => {

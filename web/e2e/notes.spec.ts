@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { failFetch } from './faults';
 import { expect, gotoApp, refetch, test } from './fixtures';
 import type { DharaServer } from './server';
-import { PNG, WAV, beforeUnloadArmed, createNote, editNote, expectPhoneFriendly, navLink, seedSuggestion } from './screenTest';
+import { PNG, WAV, beforeUnloadArmed, createNote, editNote, expectPhoneFriendly, seedSuggestion } from './screenTest';
 import { S } from '../src/strings';
 
 const rows = (page: Page) => page.locator('.note-row');
@@ -32,7 +32,18 @@ test.describe('Notes list', () => {
     await gotoApp(page, dhara, '#/notes');
     const requests: string[] = [];
     page.on('request', request => { if (request.url().includes('/api/search')) requests.push(request.url()); });
-    await searchBox(page).pressSequentially('zebra', { delay: 40 });
+    // Freeze browser timers so host load cannot turn a 40 ms typing interval into
+    // a 300 ms pause. Exercise successive inputs and the debounce boundary.
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
+    for (const text of ['z', 'ze', 'zeb', 'zebr', 'zebra']) {
+      await searchBox(page).fill(text);
+      await page.clock.runFor(40);
+    }
+    await page.clock.runFor(259);
+    expect(requests).toHaveLength(0);
+    await page.clock.runFor(1);
+    await page.clock.resume();
     await expect(page.getByRole('region', { name: 'Search results' })).toBeVisible();
     await expect(rows(page)).toHaveCount(1);
     await expect(rows(page)).toContainText('Pointer note');
@@ -197,8 +208,7 @@ test.describe('Note view', () => {
     await page.getByRole('button', { name: 'Save note' }).click();
     await expect(capture).toHaveValue('');
     await expect(page.locator('.saved-notice')).toContainText('Saved on your server');
-    await navLink(page, 'Notes').click();
-    await page.locator('.note-row').first().click();
+    await page.locator('.saved-notice').getByRole('button', { name: 'Open note' }).click();
     await expect(page.locator('.note-page')).toContainText('A distinct learning note');
     await expect(page.locator('.embedded-image img')).toHaveCount(1);
     await page.getByRole('button', { name: 'Edit' }).click();
@@ -291,14 +301,14 @@ test.describe('Note view', () => {
     await noteField(page).fill('unsaved words');
     expect(await beforeUnloadArmed(page)).toBe(true);
     page.once('dialog', prompt => { expect(prompt.message()).toBe(S.leaveNoteEdit); void prompt.dismiss(); });
-    await navLink(page, 'Notes').click();
+    await page.getByRole('link', { name: '← All notes', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`#/note/${note.id}$`));
     await expect(noteField(page)).toHaveValue('unsaved words');
     page.once('dialog', prompt => { expect(prompt.message()).toBe(S.leaveNoteEdit); void prompt.dismiss(); });
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(noteField(page)).toHaveValue('unsaved words');
     page.once('dialog', prompt => void prompt.accept());
-    await navLink(page, 'Notes').click();
+    await page.getByRole('link', { name: '← All notes', exact: true }).click();
     await expect(page).toHaveURL(/#\/notes$/);
   });
 

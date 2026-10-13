@@ -236,7 +236,7 @@ test('Task link adds no main navigation/layout', async ({ page, dhara }) => {
   const t = await task(dhara, 'Synthetic linked task');
   await page.goto(`${dhara.origin}/#/task/${t.id}`);
   await expect(page.getByRole('dialog', { name: 'Synthetic linked task' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveCount(4);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveCount(2);
   await expect(page.locator('.sidebar')).toHaveCount(1);
   await expect(page.locator('main.content')).toHaveCount(1);
 });
