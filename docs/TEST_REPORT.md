@@ -65,7 +65,7 @@ Result: PASS
 
 ## Terrain budget · 2026-10-12
 
-Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, dhara and run.py clean in the working tree). Spec §7 method: Electron app process tree only (the run.py service is excluded), launched through Playwright with `chromiumSandbox: true` (never `--no-sandbox`), private headless Sway (gles2, Iris Xe), 1440×900 at scale 1, motion on, reduced motion off, 30 s samples, median of 3 runs; PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so memory is cgroup accounting (anon + shmem + kernel) of the Electron scope. Harness: the throwaway bench.py plus terrain.py (decision 13B), not committed.
+Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, the package `noema` and run.py clean in the working tree). Spec §7 method: Electron app process tree only (the run.py service is excluded), launched through Playwright with `chromiumSandbox: true` (never `--no-sandbox`), private headless Sway (gles2, Iris Xe), 1440×900 at scale 1, motion on, reduced motion off, 30 s samples, median of 3 runs; PSS is unavailable under the setuid sandbox (EACCES on smaps_rollup), so memory is cgroup accounting (anon + shmem + kernel) of the Electron scope. Harness: the throwaway bench.py plus terrain.py (decision 13B), not committed.
 
 | State | CPU % of one core (budget) | iGPU busy % (budget) | Electron non-file MiB (cgroup; PSS unavailable under the setuid sandbox, EACCES on smaps_rollup) | Result |
 |---|---|---|---|---|
@@ -176,8 +176,8 @@ LD_LIBRARY_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu .ven
 LD_LIBRARY_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu .venv/bin/python qa/webview_check.py --task-capture --skip-build --no-screenshots --output qa/task-capture/webkit-external-final --xvfb /tmp/noema-webview-sdk-V3K1nA/root/usr/bin/Xvfb
 PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --offline --locked --manifest-path desktop/Cargo.toml -j 2
 node --check public/app.js
-.venv/bin/python -m compileall -q dhara qa/task_capture_check.py qa/webview_check.py qa/native_storage_check.py tests/test_task_capture.py
-desktop/target/debug/dhara-desktop --qa-stage verify
+.venv/bin/python -m compileall -q noema qa/task_capture_check.py qa/webview_check.py qa/native_storage_check.py tests/test_task_capture.py
+desktop/target/debug/noema-desktop --qa-stage verify
 rg --files qa -g '*.png' | wc -l
 sha256sum -c qa/task-capture/source-after.sha256
 ```
@@ -440,17 +440,17 @@ cargo fmt --manifest-path desktop/Cargo.toml -- --check
 node --check desktop/src/close.js
 node --check desktop/qa/scenario.js
 node --check public/app.js
-.venv/bin/python -m compileall -q dhara/desktop_service.py dhara/server.py run.py qa/webview_check.py tests/test_managed_service.py
+.venv/bin/python -m compileall -q noema/desktop_service.py noema/server.py run.py qa/webview_check.py tests/test_managed_service.py
 # Working directory docs/Noema-Documentation:
 sha256sum -c SHA256SUMS
 # Back at repository root, normal non-QA development handoff build:
 PKG_CONFIG_PATH=/tmp/noema-webview-sdk-V3K1nA/root/usr/lib/x86_64-linux-gnu/pkgconfig cargo build --offline --locked --manifest-path desktop/Cargo.toml -j 2
-desktop/target/debug/dhara-desktop --help
+desktop/target/debug/noema-desktop --help
 # Expected exit 2: QA argument is absent in the normal handoff executable.
-desktop/target/debug/dhara-desktop --qa-stage verify
+desktop/target/debug/noema-desktop --qa-stage verify
 rg --files qa -g '*.png' | wc -l
 # Generate source list using this command; saved through apply_patch:
-{ rg --files -0 dhara public desktop/src desktop/qa desktop/examples tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
+{ rg --files -0 noema public desktop/src desktop/qa desktop/examples tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
 sha256sum -c qa/managed-service/source-after.sha256
 sha256sum qa/managed-service/source-after.sha256
 ```
@@ -499,7 +499,7 @@ files were fingerprinted and all verified. The
 [before manifest](../qa/device-acceptance/source-before.sha256) SHA256 is
 `1e1e42bb6ed25d5ab613225b1638ef2832f4c79234e0bff99fdbc93ccb67548c`.
 The [final source manifest](../qa/device-acceptance/source-after.sha256) is the
-reproducible handoff fingerprint. Manifests cover `dhara`, `public`, desktop
+reproducible handoff fingerprint. Manifests cover the package `noema`, `public`, desktop
 source/QA/Cargo files, `tools`, `tests`, QA Python/C/config and active docs plus
 README/launcher/dependency files; they exclude private data, environments,
 profiles, binaries, generated evidence and the preserved documentation archive.
@@ -579,12 +579,12 @@ git ls-files -- .
 node --test tests/now_state.test.cjs
 cargo test --locked --manifest-path desktop/Cargo.toml --no-default-features --lib
 # Manifest file lists, before and after edits, were generated with:
-{ rg --files -0 dhara public desktop/src desktop/qa tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
+{ rg --files -0 noema public desktop/src desktop/qa tools tests -g '!*.pyc' -g '!__pycache__/**'; rg --files -0 qa -g '*.py' -g '*.c' -g '*.config'; rg --files -0 docs -g '*.md' -g '!docs/Noema-Documentation/**'; printf '%s\0' README.md run.py pyproject.toml requirements.txt desktop/Cargo.toml desktop/Cargo.lock; } | sort -zu | xargs -0 sha256sum
 sha256sum qa/device-acceptance/source-before.sha256
 sha256sum -c qa/device-acceptance/source-before.sha256
 .venv/bin/python qa/device_session.py --output qa/device-acceptance/session.json
 .venv/bin/python run.py --help
-desktop/target/debug/dhara-desktop --help
+desktop/target/debug/noema-desktop --help
 /usr/bin/python3 tools/sway_companion.py --help
 .venv/bin/python tools/agent.py --help
 .venv/bin/python qa/process_sample.py --help
@@ -597,7 +597,7 @@ node --test tests/now_state.test.cjs
 .venv/bin/python -m compileall -q qa/device_fixture.py qa/device_session.py qa/process_sample.py tests/test_device_tools.py
 cargo fmt --manifest-path desktop/Cargo.toml -- --check
 node --check public/app.js
-sha256sum desktop/target/debug/dhara-desktop public/cat.png public/app.js public/styles.css tools/sway_companion.py
+sha256sum desktop/target/debug/noema-desktop public/cat.png public/app.js public/styles.css tools/sway_companion.py
 rg --files qa -g '*.png' -g '*.jpg' -g '*.jpeg' -g '*.webp'
 sha256sum -c qa/device-acceptance/source-after.sha256
 # Working directory: docs/Noema-Documentation

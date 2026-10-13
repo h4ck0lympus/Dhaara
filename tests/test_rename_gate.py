@@ -18,7 +18,8 @@ ALLOWED_PATHS = (
 # Substrings that are right as they are: archive paths, the README's history line,
 # and the repository directory plus the cutover backup beside it: paths on the owner's disk, out of scope (spec §1).
 KEEP_TOKENS = ('Noema-Handbook', 'Noema-Documentation', 'formerly Noema', '/code/noema',
-               '/tmp/noema-', 'share/noema/webview', 'share/noema-dev')  # historical scratch paths and real pre-rename directories stay as recorded
+               '/tmp/noema-', 'share/noema/webview', 'share/noema-dev',
+               'noema-desktop', 'compileall -q noema', 'noema/server.py', 'files -0 noema', 'package `noema`')  # historical scratch paths, real pre-rename directories and recorded pre-rename commands stay as recorded
 # A line that keeps an old name on purpose says why: rename-shim (removed by the dated follow-up) or rename-keep (permanent).
 MARKERS = ('rename-shim:', 'rename-keep:')
 COMPAT_HEADING = re.compile(r'^## .*Compatibility with Noema')
