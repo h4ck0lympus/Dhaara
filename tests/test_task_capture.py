@@ -144,7 +144,7 @@ def test_original_is_immutable_exported_and_survives_reopen(env):
 
 
 def test_old_schema_data_survives_additive_migration(tmp_path):
-    path = tmp_path / 'noema.sqlite3'
+    path = tmp_path / 'dhara.sqlite3'
     with sqlite3.connect(path) as db:
         db.executescript(SCHEMA)
         db.execute("INSERT INTO tasks VALUES('old','Original task','Existing workflow','Existing context','Next step','todo','low',NULL,NULL,20,'[]','https://example.test','2026-10-09T00:00:00+00:00','2026-10-09T00:00:00+00:00',1)")

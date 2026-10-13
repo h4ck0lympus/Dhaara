@@ -69,3 +69,54 @@ def test_workspace_lock_uses_the_dhara_name_and_ignores_a_held_noema_lock(tmp_pa
     finally:
         held.close()
         os.close(old)
+
+
+def _old_notebook(root):
+    import sqlite3
+    path = root / 'noema.sqlite3'
+    c = sqlite3.connect(path)
+    c.execute('CREATE TABLE marker(x)'); c.execute("INSERT INTO marker VALUES('old')"); c.commit(); c.close()
+    return path
+
+
+def test_notebook_file_moves_on_a_clean_start_and_only_once(tmp_path):
+    from dhara.store import Store
+    old = _old_notebook(tmp_path)
+    store = Store(tmp_path)
+    assert store.path == tmp_path / 'dhara.sqlite3' and not old.exists()
+    with store.db() as c:
+        assert c.execute('SELECT x FROM marker').fetchone()[0] == 'old'
+    assert Store(tmp_path).path == tmp_path / 'dhara.sqlite3'   # second start: no-op
+
+
+def test_notebook_file_stays_when_journal_side_files_exist(tmp_path, caplog):
+    from dhara.store import Store
+    old = _old_notebook(tmp_path)
+    (tmp_path / 'noema.sqlite3-wal').write_bytes(b'')
+    with caplog.at_level('WARNING', logger='dhara.store'):
+        store = Store(tmp_path)
+    assert store.path == old and not (tmp_path / 'dhara.sqlite3').exists()
+    assert 'unclean close' in caplog.text
+
+
+def test_notebook_file_never_moves_over_an_existing_new_file(tmp_path, caplog):
+    from dhara.store import Store
+    Store(tmp_path)                       # creates dhara.sqlite3
+    old = _old_notebook(tmp_path)         # a stray old file appears beside it
+    with caplog.at_level('WARNING', logger='dhara.store'):
+        store = Store(tmp_path)
+    assert store.path == tmp_path / 'dhara.sqlite3' and old.exists()
+    assert 'left in place' in caplog.text
+
+
+def test_notebook_file_stays_when_the_rename_fails(tmp_path, monkeypatch, caplog):
+    from pathlib import Path
+    from dhara.store import Store
+    old = _old_notebook(tmp_path)
+    def refuse(self, target):
+        raise OSError('simulated EXDEV')
+    monkeypatch.setattr(Path, 'rename', refuse)
+    with caplog.at_level('WARNING', logger='dhara.store'):
+        store = Store(tmp_path)
+    assert store.path == old and not (tmp_path / 'dhara.sqlite3').exists()
+    assert 'simulated EXDEV' in caplog.text

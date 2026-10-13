@@ -6,6 +6,7 @@ captures and recoverable note revisions. No model calls in the attention path.
 from __future__ import annotations
 import hashlib
 import json
+import logging
 import re
 import secrets
 import sqlite3
@@ -13,6 +14,8 @@ from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from uuid import uuid4
+
+log = logging.getLogger('dhara.store')
 
 
 def now() -> str:
@@ -100,12 +103,33 @@ CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
 DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': False, 'companion': 'cat', 'companion_size': 40, 'display_name': ''}
 
 class Store:
+    NOTEBOOK = 'dhara.sqlite3'
+    OLD_NOTEBOOK = 'noema.sqlite3'  # rename-shim: the pre-rename notebook file; moved on the first clean start (spec §4.9)
+
+    def _notebook_path(self) -> Path:
+        new, old = self.root / self.NOTEBOOK, self.root / self.OLD_NOTEBOOK
+        if new.exists():
+            if old.exists():
+                log.warning('%s and %s both exist; opening %s; the old file is left in place', old.name, new.name, new.name)
+            return new
+        if not old.exists():
+            return new
+        if any((self.root / (self.OLD_NOTEBOOK + suffix)).exists() for suffix in ('-wal', '-shm')):
+            log.warning('%s has journal side files (unclean close); opening it under the old name until the next clean start', old.name)
+            return old
+        try:
+            old.rename(new)  # same directory: atomic
+        except OSError as exc:
+            log.warning('could not rename %s to %s (%s); opening the old file', old.name, new.name, exc)
+            return old
+        return new
+
     def __init__(self, root: Path):
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.blobs = self.root / 'attachments'
         self.blobs.mkdir(exist_ok=True, mode=0o700)
-        self.path = self.root / 'noema.sqlite3'
+        self.path = self._notebook_path()
         with self.db() as c:
             c.executescript(SCHEMA)
             if 'planned_on' not in {r['name'] for r in c.execute('PRAGMA table_info(tasks)')}:
