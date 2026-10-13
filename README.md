@@ -36,10 +36,11 @@ Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to bui
 Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`;
 see [docs/DESKTOP.md](docs/DESKTOP.md), "Packaged build"), make it executable and
 run it. It starts the bundled service on `~/.local/share/dhara/workspace`
-(`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. On a
-system that restricts user namespaces it prints a one-time `sudo chown`/`chmod`
-line for a copy of Chromium's sandbox helper under `~/.local/share/dhara/`, then
-runs sandboxed; it never runs without the sandbox. Contributors: the development flow below (a browser, or
+(`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. Only
+when user namespaces are unavailable and no root-owned setuid sandbox helper is
+found does it print a one-time `sudo chown`/`chmod` line for a copy of
+Chromium's sandbox helper under `~/.local/share/dhara/`; after that it runs
+sandboxed; it never runs without the sandbox. Contributors: the development flow below (a browser, or
 `npm --prefix electron start`) is unchanged and needs no AppImage.
 
 ### Linux / macOS

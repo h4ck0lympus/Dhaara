@@ -165,10 +165,13 @@ is never run with `--no-sandbox`, and the launcher refuses that flag (exit 3).
 Ubuntu 24.04 restricts unprivileged user namespaces, so Electron needs its
 root-owned setuid helper, which cannot live inside the AppImage (FUSE mounts
 ignore setuid). On start the launcher uses `CHROME_DEVEL_SANDBOX` when it is
-set, needs nothing when `unshare -Ur true` works, and otherwise uses the first
-root-owned setuid file among `~/.local/share/dhara/chrome-sandbox` and
-`/opt/google/chrome/chrome-sandbox`. When none exists it copies the bundled
-helper to `~/.local/share/dhara/chrome-sandbox` (the image is unmounted when
+set, needs nothing when `unshare -Urpn true` works (the user, pid and net
+namespaces Chromium's namespace sandbox creates), and otherwise uses the first
+root-owned setuid file among `$XDG_DATA_HOME/dhara/chrome-sandbox` (default
+`~/.local/share/dhara/chrome-sandbox`) and `/opt/google/chrome/chrome-sandbox`.
+When none exists it copies the bundled helper to
+`$XDG_DATA_HOME/dhara/chrome-sandbox` (default
+`~/.local/share/dhara/chrome-sandbox`; the image is unmounted when
 the launcher exits, so the line names that copy, not a path inside the
 AppImage), prints the one-time line with the real path and exits 3:
 
