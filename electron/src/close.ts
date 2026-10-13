@@ -1,9 +1,7 @@
 import { dialog, ipcMain, type BrowserWindow, type IpcMainEvent } from 'electron';
 import { sameOrigin } from './origin.js';
-import { CHECKPOINT_CLOSE, CLOSE_APPROVED, IPC_PAGE } from './protocol.js';
+import { CHECKPOINT_CLOSE, CHECKPOINT_FAILED, CLOSE_APPROVED, CLOSE_TIMEOUT_MS, IPC_PAGE, NOT_RESPONDING } from './protocol.js';
 
-export const CLOSE_TIMEOUT_MS = 10_000;
-export const NOT_RESPONDING = 'Noema is not responding to the close request.';
 // desktop/src/close.js:3-8: only a page that finished recovery may checkpoint. The event fires on a later task,
 // so a page-side confirm() never holds this script open: the script settling means the renderer is responsive.
 const REQUEST_CHECKPOINT = `window.__noemaCheckpointCloseReady===true ? (setTimeout(() => window.dispatchEvent(new Event('${CHECKPOINT_CLOSE}'))), true) : false`;
@@ -30,7 +28,8 @@ export function installCloseHandler(win: BrowserWindow, origin: string, onApprov
       const { response } = await dialog.showMessageBox(win, {
         type: 'warning', message: NOT_RESPONDING, buttons: ['Force close', 'Keep open'], defaultId: 1, cancelId: 1,
       });
-      if (response === 0) approve();   // Keep open leaves the request pending: a late approval still closes
+      if (response === 0) approve();
+      else requested = false;   // Keep open withdraws the request: a late answer from the recovered renderer must not close
     } finally {
       asking = false;
     }
@@ -67,7 +66,16 @@ export function installCloseHandler(win: BrowserWindow, origin: string, onApprov
     contents.executeJavaScript(REQUEST_CHECKPOINT).then((ready: unknown) => {
       // shortcut: a responsive page whose checkpoint never settles stays open until the next close; add a page 'refused' message if users hit it.
       clearTimeout(timer);   // the renderer answered; the page now decides
+      if (!requested) return;   // the user chose Keep open meanwhile
       if (ready !== true) approve();   // no ready flag: the app never recovered its drafts, so do not touch storage
-    }, () => approve());
+    }, () => {
+      clearTimeout(timer);
+      // Approve only when the renderer is really gone; a live page that failed the request keeps its unsaved work open.
+      if (gone || contents.isCrashed()) approve();
+      else {
+        requested = false;
+        void dialog.showMessageBox(win, { type: 'warning', message: CHECKPOINT_FAILED, buttons: ['OK'] }).catch(() => undefined);
+      }
+    });
   });
 }

@@ -2,15 +2,13 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { _electron, test, expect, type Page } from '@playwright/test';
+import { CLOSE_TIMEOUT_MS, NOT_RESPONDING } from '../src/protocol.js';
 import { startNoema, type NoemaServer } from '../../web/e2e/server.js';
 import { ELECTRON_BIN, MAIN, closeWindow, killAll, launchNoema, messageBoxes, openCapture, readDraft, stubMessageBox, tempDir, waitConnected, windowCount } from './fixtures.js';
 
 // Verbatim from web/src/strings.ts (contract §5): S.closeSaveInFlight and S.closeDraftFailed.
 const CLOSE_SAVE_IN_FLIGHT = 'A capture save is still finishing. Try closing again shortly.';
 const CLOSE_DRAFT_FAILED = 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.';
-// src/close.ts NOT_RESPONDING and CLOSE_TIMEOUT_MS (close.ts imports electron, so the e2e process cannot import it).
-const NOT_RESPONDING = 'Noema is not responding to the close request.';
-const CLOSE_TIMEOUT_MS = 10_000;
 
 let noema: NoemaServer;
 test.beforeEach(async () => { noema = await startNoema(); });
@@ -121,6 +119,22 @@ test('a hung renderer gets Force close / Keep open after 10 s', async () => {
   const closed = app.waitForEvent('close');
   await closeWindow(app);   // still hung: 10 s later the second prompt answers Force close
   await closed;
+});
+
+test('Keep open stays open after the hung renderer recovers', async () => {
+  const { app, window } = await openApp();
+  await stubMessageBox(app, [1]);
+  await window.evaluate(() => {
+    setTimeout(() => {
+      const end = Date.now() + 14_000;
+      while (Date.now() < end) { /* hangs past the 10 s prompt, then recovers */ }
+    }, 0);
+  });
+  await closeWindow(app);
+  await expect.poll(() => messageBoxes(app), { timeout: 20_000 }).toEqual([NOT_RESPONDING]);
+  await window.waitForTimeout(9_000);   // the loop has ended and the queued checkpoint request has run
+  expect(await windowCount(app)).toBe(1);
+  await expect(window.getByText('Server connected', { exact: true }).first()).toBeVisible();
 });
 
 test('a failed task-draft write asks before closing and keeps the window when declined', async () => {
