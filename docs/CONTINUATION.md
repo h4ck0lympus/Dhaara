@@ -1,8 +1,13 @@
 # Capture recovery continuation · 2026-10-08
 
 This is the historical capture-recovery slice. Current milestones and source
-identity live in [PROGRESS.md](PROGRESS.md). The later opt-in Rust service owner
-preserves these storage/checkpoint semantics; see [DESKTOP.md](DESKTOP.md).
+identity live in [PROGRESS.md](PROGRESS.md). At the React + Electron cutover the
+`public/app.js` storage code described below was ported to `web/src/local/db.ts`,
+`web/src/local/drafts.ts`, `web/src/local/outbox.ts` and `web/src/local/taskDraft.ts`
+with the same database (`noema-local-v1`, version 1), stores, record shapes,
+atomic Save transaction and serialised draft writes. The Electron close
+checkpoint preserves these semantics (see [DESKTOP.md](DESKTOP.md)). File
+references below are historical.
 
 The next unmet local daily-use slice is implemented: atomic browser queue/draft
 commit and visible, retryable local-save failure. This is an unreleased
@@ -12,9 +17,11 @@ continuation of the actual v0.1.0 source, not a reconstructed v0.2.0 or a UI red
 
 Noema is untracked inside the parent `/home/p4nic/code` Git repository. Its HEAD
 is `2865fba0481d7cf34aa0c22fc6fa1ab62fc9fbbd`; that is not a Noema source revision.
-Before editing, `sha256sum -c SHA256SUMS` verified all 47 original files. The
-unchanged starting manifest has SHA256
-`062799a885090fdce1c6b1b4685331e3368e345a7342e1c36947a74465e60bbe`.
+Before editing, `sha256sum -c SHA256SUMS` verified all 47 files of the original
+manifest (starting SHA256
+`062799a885090fdce1c6b1b4685331e3368e345a7342e1c36947a74465e60bbe`). That
+manifest was historical; `SHA256SUMS` was regenerated at the React + Electron
+cutover as the tracked-file manifest.
 
 Read the actual prompts/handbook under `docs/Noema-Documentation/`, current
 README/architecture/security/status/reports, tests and relevant source. The
@@ -98,9 +105,10 @@ For repeatable base-app startup, use an explicitly chosen data directory:
 
 That is a handoff command, not a claim it was run against the user's data.
 No migration is needed. Back up the complete data directory with the server
-stopped before upgrading. Keep tokens/backups private. The original top-level
-`SHA256SUMS` is a baseline identity and is intentionally not regenerated to make
-this continuation resemble the archived package.
+stopped before upgrading. Keep tokens/backups private. The top-level
+`SHA256SUMS` is the regenerated tracked-file manifest (see
+[PHYSICAL_SWAY_ACCEPTANCE.md](PHYSICAL_SWAY_ACCEPTANCE.md)); the 47-file original
+is historical.
 
 ## Evidence and limits
 
@@ -140,3 +148,6 @@ interruption without silently dropping chunks. Validate the browser/microphone
 on the actual laptop and Android separately; only then evaluate CPU speech on
 real technical recordings. Secure sync and native-shell delivery remain later
 milestones with their own authorization/device gates.
+
+Current order (see [PROGRESS.md](PROGRESS.md)): physical Sway acceptance (Stage A)
+first, then AI-assigned priority; recording checkpoints follow.

@@ -1,10 +1,27 @@
-# Build status · Noema 0.1.0 + unreleased capture recovery / Rust desktop
+# Build status · Noema 0.1.0 + React/Electron cutover
 
 The maintained [progress record and roadmap](PROGRESS.md) summarize completed
 milestones, current evidence and the next concrete step. Update it alongside
 this status and the test report after each milestone.
 
-## Latest continuation: frictionless task capture · 2026-10-09
+## Latest: React + Electron cutover · 2026-10-10
+
+The production UI is the typed React bundle in `web/`, served by FastAPI, and
+the desktop shell is Electron in `electron/`: external mode by default, Linux
+`--manage-service` (lifecycle protocol 2) as opt-in. `public/`, the Rust
+Wry/Tao shell `desktop/`, `experiments/ui-ab/hosts/wry` and
+`experiments/ui-ab/hosts/companion` were deleted; the kitten sprite moved to
+`tools/assets/cat.png`. IndexedDB `noema-local-v1` version 1 and its record
+shapes are unchanged. Headings, subtitles and the tagline are kept in
+`web/src/copy.ts` (owner decision 18B); the greeting uses the new
+`display_name` setting. Priority labels come from `priority_source` ("Auto ·
+rules", "Set by you"; "Auto · AI" once the AI-priority milestone lands). Gate
+results, the terrain budget and the main-app memory check are in
+[TEST_REPORT.md](TEST_REPORT.md). Not built here: AI-assigned priority (the next
+milestone), daily slogans and audio checkpoint recovery. Physical Sway
+acceptance (handbook §24 Stage A) remains pending and is the next validation gate.
+
+## Previous continuation: frictionless task capture · 2026-10-09
 
 Implemented one-input explicit task capture, collapsed Details, durable immutable
 originals, limited model-free planned-day/label rules, idempotent service saves,
@@ -271,7 +288,7 @@ Prior conversation material included UI concepts and a surfaced Noema UI site. A
 
 ## Runtime defaults on the i7-1270P target
 
-There is no resident language/speech/vision model. The UI has no npm build or bundled Chromium engine. Python, the browser and SQLite perform ordinary app work. The optional worker serializes AI jobs; screenshot inference is absent. Four model threads and on-demand process/model unloading are initial conservative policies, not laptop performance measurements.
+There is no resident language/speech/vision model. The UI is a prebuilt React bundle; the desktop shell bundles Chromium through Electron (about 283 MB, accepted per decision 1A). Python, the browser and SQLite perform ordinary app work. The optional worker serializes AI jobs; screenshot inference is absent. Four model threads and on-demand process/model unloading are initial conservative policies, not laptop performance measurements.
 
 The short build-container idle sample uses about 117 MiB for the backend process only and about 0.2% of one core in its 10-second sampling window. See the raw JSON for exact values and exclusions. This does not validate the earlier aspiration of a sub-100-MB complete minimized application; browser and companion measurements are still needed.
 
@@ -286,7 +303,7 @@ The short build-container idle sample uses about 117 MiB for the backend process
 ## Not implemented yet
 
 1. Periodic screenshots with local change detection and vision-assisted task inference. Current observation is explicit metadata mapping only.
-2. Complete webview desktop lifecycle/packaging and automatic companion behavior upon minimizing it; Windows/macOS/Android overlay implementations. The Rust/Wry shell above reuses the web interface; physical integrations remain unvalidated.
+2. Complete webview desktop lifecycle/packaging and automatic companion behavior upon minimizing it; Windows/macOS/Android overlay implementations. The Electron shell reuses the web interface; physical integrations remain unvalidated.
 3. Cloud accounts, hosted HTTPS sync, cross-device outbox reconciliation and encrypted remote storage. Two installations currently have separate data.
 4. Background Web Push when the browser is closed, calendar integrations, and reminders delivered while the host is powered off.
 5. Live streaming transcription, rolling recovery of unfinished recordings, audio-time-linked visual references, image understanding/search, reliable technical-term confidence marking.

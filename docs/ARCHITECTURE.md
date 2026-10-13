@@ -1,5 +1,39 @@
 # Architecture and continuation notes
 
+## React + Electron (current)
+
+The browser UI is a typed React bundle in `web/` (React, TanStack Query and
+Router with hash history, zod-validated API responses). FastAPI serves
+`web/dist` through explicit routes: `/`, content-hashed `/assets/*` (immutable),
+`/sw.js`, `/manifest.webmanifest` and `/icon.svg`. Without a build, `/` returns a
+503 that names the build command and the API keeps working. Node 22 is needed to
+build, never to run the service.
+
+Local persistence keeps IndexedDB `noema-local-v1` version 1 with the same `kv`
+(`draft`, `task-draft`, `snapshot`) and `outbox` record shapes as the old UI, so
+captures queued before the cutover upload once with their original ids. The UI
+never retries a mutation automatically; only the capture outbox and "Retry add
+task" replay, with the same idempotency key. Every edit sends
+`expected_version`; a 409 shows a conflict and never overwrites.
+
+The desktop shell is Electron (`electron/`), loading the same origin with a
+sandboxed renderer, same-origin navigation and session-only permission
+decisions. Linux `--manage-service` uses lifecycle protocol 2 (stdin lease,
+stdout acknowledgement, fixed 127.0.0.1:8765, own process group); see
+[DESKTOP.md](DESKTOP.md). The Rust Wry/Tao shell (`desktop/`), the `public/` UI
+and the browser kitten preview were removed. The Python Sway helper is unchanged
+apart from its sprite path, `tools/assets/cat.png`.
+
+The background terrain (`web/src/ui/BackgroundField.tsx`) is WebGL2: one height
+pass per frame into a 120×70 texture plus instanced strokes, 12 fps through
+`setTimeout`, a half-resolution backing store, and the states `unsupported`,
+`static`, `paused` and `animated`. Motion defaults to off and the terrain is
+never drawn under `[data-quiet]` reading or editing surfaces. Its measured cost
+is in [TEST_REPORT.md](TEST_REPORT.md).
+
+This supersedes only the handbook's "current static UI" decision (§18/§27);
+SQLite and the service are unchanged.
+
 ## Frictionless explicit task capture · 2026-10-09
 
 The existing service/UI now offer one-input Add task with collapsed Details.
@@ -61,7 +95,7 @@ Event-triggered companion attention messages remain unimplemented.
 GTK probe guards against a non-fixture socket before screenshots/commands.
 It tests real layer-shell and Rust/Wry mapping, not physical hardware input.
 
-## Now presentation refinement (unreleased)
+## Now presentation refinement (historical; ported to web/src/domain/nowState.ts)
 
 Pure helpers inside `public/app.js` classify the existing snapshot and label
 focus/reporting/observation evidence. They do not write task state, recalculate
@@ -78,7 +112,7 @@ The on-demand kitten dialog edits existing preferences through the existing
 API with serialized writes. It neither launches an observer nor captures a
 screen. No framework, service schema, inference or native helper is replaced.
 
-## Rust webview desktop shell (unreleased)
+## Rust webview desktop shell (historical; removed at the React + Electron cutover)
 
 `desktop/` uses Rust Wry/Tao to display the existing HTML/CSS/JavaScript in a
 system webview. The rejected CXX-Qt/QML presentation layer has been removed.
@@ -111,18 +145,20 @@ microphone startup and does not orchestrate the separate companion.
 
 ## Keep the app independent of inference
 
-Desktop direction: Rust is the preferred long-lived infrastructure, not a
-requirement to rewrite the notebook backend or discard its working UI. PySide6
-is not the default stack. A future Slint versus Rust/Qt-QML decision must compare
-the actual note editor (multiline code, image paste, undo, keyboard navigation,
-IME/accessibility) and cat/dot focus/minimize/restore behavior with the same
-service/data semantics. No Slint comparison prototype is implemented, and the
-retired QML dashboard is not evidence that either toolkit passes those gates.
-Keep the current webview app usable while evaluating isolated editor slices.
+Desktop direction: the shell was chosen by measurement, not preference. The
+2026-10-10 headless-Sway benchmark selected Electron over Wry/WebKitGTK (decision
+1A in the migration spec); the Slint and Rust/Qt-QML comparison is closed.
 
-The current core is one process serving a static application and an API. SQLite WAL stores durable application state. A single background thread wakes for durable jobs/reminders, and optional speech runs in a subprocess. No PostgreSQL, Redis, Celery, vector database, browser-automation agent or separate frontend build is required for this personal first release.
+The current core is one process serving a prebuilt React bundle and an API.
+SQLite WAL stores durable application state. A single background thread wakes
+for durable jobs/reminders, and optional speech runs in a subprocess. A Node
+build step produces the bundle; Node is not a runtime dependency. No PostgreSQL,
+Redis, Celery, vector database or browser-automation agent is required.
 
-The previous React/PostgreSQL proposal was intentionally simplified for the hardware/compute constraint. This is not a claim that a framework alone determines resource usage. The Rust desktop shell shares the actual web UI and API behavior; it does not replace the backend or require inference.
+The earlier React/PostgreSQL proposal was simplified for the hardware
+constraint. React returned at the cutover as a frontend only; SQLite stays. A
+framework alone does not determine resource use; measured numbers live in
+[TEST_REPORT.md](TEST_REPORT.md).
 
 ## Data model
 
@@ -180,6 +216,6 @@ Due reminder records survive restarts. Desktop notifications are merely optional
 
 ## Resource policy
 
-No heavy inference at idle. Optional AI jobs serialize. Speech is CPU INT8/four threads in an isolated process. Ollama requests use four threads and `keep_alive: 0`. Task ranking and agent state never require inference. Motion is opt-in, modest, reduced-motion aware and paused when hidden. The native Sway cat uses GTK rather than another webview.
+No heavy inference at idle. Optional AI jobs serialize. Speech is CPU INT8/four threads in an isolated process. Ollama requests use four threads and `keep_alive: 0`. Task ranking and agent state never require inference. Motion is opt-in (off by default), 12 fps, reduced-motion aware, and paused when hidden, blurred or idle for 60 s. The native Sway cat uses GTK rather than another webview.
 
-Actual full-app RSS, device battery and speech/vision latency must be measured on the laptop. The QA backend-only idle sample is not a substitute.
+The main app process tree (Electron plus the service, no AI) is measured against the handbook's < 400 MB aspiration in TEST_REPORT. Device battery and speech/vision latency must still be measured on the laptop.

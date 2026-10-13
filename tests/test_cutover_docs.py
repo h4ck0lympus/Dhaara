@@ -42,6 +42,25 @@ REQUIRED = {
         'zero or more `attachments` file parts',
         '`#/task/<id>`',
     ],
+    'docs/ARCHITECTURE.md': [
+        '## React + Electron (current)',
+        '`noema-local-v1` version 1',
+        'lifecycle protocol 2',
+    ],
+    'docs/ASSETS.md': [
+        '`tools/assets/cat.png`',
+        '`tools/sway_companion.py:271`',
+        '`tests/test_companion.py:15`',
+        '`Inter-Regular.otf`',
+        'GUST Font License',
+    ],
+    'docs/BUILD_STATUS.md': [
+        '## Latest: React + Electron cutover',
+        '`web/src/copy.ts`',
+    ],
+    'docs/CONTINUATION.md': [
+        '`web/src/local/drafts.ts`',
+    ],
 }
 
 # Current-instruction documents must not tell anyone to run the deleted shell or UI.
