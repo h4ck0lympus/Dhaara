@@ -220,8 +220,9 @@ export class ManagedService extends EventEmitter<{ crashed: [LifecycleError]; ex
     for (const key of STRIPPED_ENV) delete env[key];
     let child: Child;
     try {
-      child = spawn(python, [entryPoint, '--desktop-managed', '--host', '127.0.0.1', '--port', String(port), '--data-dir', workspace, '--owner-pid', String(process.pid)],
-        { detached: true, stdio: ['pipe', 'pipe', 'ignore'], env });
+      const args = ['--desktop-managed', '--host', '127.0.0.1', '--port', String(port), '--data-dir', workspace, '--owner-pid', String(process.pid)];
+      if (entryPoint !== '') args.unshift(entryPoint);   // a frozen service is its own entry point (packaging spec §4)
+      child = spawn(python, args, { detached: true, stdio: ['pipe', 'pipe', 'ignore'], env });
     } catch {
       this.#state = 'crashed';   // e.g. an empty --python is rejected synchronously
       throw new LifecycleError('python-missing', MESSAGES.pythonMissing);
