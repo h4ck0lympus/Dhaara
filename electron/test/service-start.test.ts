@@ -48,6 +48,12 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
     expect(managed.state).toBe('crashed');
   });
 
+  it('reports a service that dies between its ack and the identity check as a startup exit', async () => {
+    const { managed } = await fakeService('die-after-ack');
+    const error = await rejection(managed.start());
+    expect([error.code, error.message]).toEqual(['startup-exit', MESSAGES.startupExit]);
+  });
+
   it('reports a missing or empty interpreter as python-missing', async () => {
     for (const python of [path.join(tempDir(), 'missing-python'), '']) {
       const managed = service({ port: await freePort(), workspace: workspace(), python, entryPoint: FAKE, env: fakeEnv('ok') });

@@ -9,7 +9,7 @@ import threading
 import time
 
 MODES = {'ok', 'locked', 'port', 'lease', 'hang', 'early-exit', 'bad-ack', 'extra-key', 'long-ack',
-         'bad-http', 'grandchild', 'env-dump', 'pdeathsig'}
+         'bad-http', 'grandchild', 'env-dump', 'pdeathsig', 'die-after-ack'}
 mode = os.environ.get('NOEMA_FAKE_MODE', '')
 if mode not in MODES:
     sys.exit(99)
@@ -82,6 +82,10 @@ class Identity(http.server.BaseHTTPRequestHandler):
 
 
 server = http.server.HTTPServer(('127.0.0.1', port), Identity)
+if mode == 'die-after-ack':
+    print(json.dumps(ack), flush=True)
+    time.sleep(0.3)  # the listener accepts into its backlog but never answers: the identity read ends only when this process dies
+    os._exit(3)
 if mode == 'long-ack':
     sys.stdout.write('x' * 5000)
     sys.stdout.flush()

@@ -253,8 +253,9 @@ export class ManagedService extends EventEmitter<{ crashed: [LifecycleError]; ex
       if (!ackMatches(line, { instance, pid, workspace, port })) throw new LifecycleError('identity', MESSAGES.identity);
       const body = await readIdentity(port, Math.max(250, deadline - Date.now()));
       if (this.#cancelled) throw cancelledError();
-      if (!identityMatches(body, { instance, pid })) throw new LifecycleError('identity', MESSAGES.identity);
+      if (!identityMatches(body, { instance, pid })) await Promise.race([this.#exits.get(child), delay(100)]);   // a dying service's socket can close before its exit is reaped
       if (child.exitCode !== null || child.signalCode !== null) throw exitCodeError(child.exitCode);
+      if (!identityMatches(body, { instance, pid })) throw new LifecycleError('identity', MESSAGES.identity);
       this.#state = 'running';
       this.#handle = { pid, instance, origin: `http://127.0.0.1:${port}` };
       return this.#handle;
