@@ -1,8 +1,51 @@
 # Verification report · Noema 0.1.0 + React/Electron cutover
 
+The final cutover gate below ran on source revision `cfbfed53d548f039915436975bb2317ae0917d0a` (`git rev-parse HEAD` at the final run; the commit that adds this report comes after it, so it is not that revision). Every other section is an inherited report: the §21 memory and terrain measurements ran on `b13fd4d`, and the sections from "Frictionless task capture" down are earlier milestones' reports, kept unchanged.
+
 ## React + Electron cutover · 2026-10-12
 
 Executed on branch `feat/react-electron` before the cutover merge, source revision `b13fd4d97b2274011708f159936ebc0a72bea484`. The terrain budget (spec §7) and the handbook §21 memory check were measured with throwaway harnesses (decision 13B, not committed) under a private headless Sway; see the subsection below and the "Terrain budget" section. Per-process PSS could not be read under the setuid Chromium sandbox, so both use cgroup accounting.
+
+### Final gate run
+
+Gate, run from the repository root with Node 22.22.0: `npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`. Playwright runs with workers=4 and retries=0 (`web/playwright.config.ts`, unchanged). Source revision `cfbfed53d548f039915436975bb2317ae0917d0a` on `feat/react-electron`, 2026-10-12 22:03–23:03 local time. Each segment ran as its own foreground command, and a run counts only when all eight commands pass back to back. Three consecutive clean runs are recorded. Each cell is the tool's own summary line and the command's wall time. No log has a skipped, xfailed, xpassed, flaky or todo count, and `tests/test_cutover.py` guards against focused tests.
+
+| Command | Run 1 | Run 2 | Run 3 | Result |
+|---|---|---|---|---|
+| `npm --prefix web ci` | added 156 packages · 7 s | added 156 packages · 7 s | added 156 packages · 7 s | PASS |
+| `npm --prefix web run build` | built in 2.88s · 13 s | built in 3.44s · 14 s | built in 3.56s · 13 s | PASS |
+| `npm --prefix web test` | Tests 506 passed (506) · 19 s | Tests 506 passed (506) · 19 s | Tests 506 passed (506) · 23 s | PASS |
+| `npm --prefix web run e2e` | 267 passed (5.9m) · 357 s | 267 passed (5.8m) · 347 s | 267 passed (5.7m) · 343 s | PASS |
+| `npm --prefix electron ci` | added 58 packages · 8 s | added 58 packages · 7 s | added 58 packages · 7 s | PASS |
+| `node electron/scripts/link-sandbox.mjs` | installed root-owned sandbox helper used · 0 s | same · 0 s | same · 1 s | PASS |
+| `npm --prefix electron test` | Tests 210 passed (210); 35 passed (2.2m) · 150 s | Tests 210 passed (210); 35 passed (2.3m) · 151 s | Tests 210 passed (210); 35 passed (2.2m) · 146 s | PASS |
+| `.venv/bin/python -m pytest` | 205 passed, 1 warning in 8.47s · 9 s | 205 passed, 1 warning in 12.75s · 13 s | 205 passed, 1 warning in 10.08s · 10 s | PASS |
+
+Run wall time, summed over the eight commands: 563 s, 558 s and 550 s.
+
+#### Runs discarded for an infrastructure reason
+
+Two attempts were discarded and do not count as runs; neither was a test fault. During the gate the host's Wi-Fi interface removed and re-added its secondary IPv4 address (10.0.0.156) about every 3 s (`ip -ts monitor address`). Chromium treats each change as a network change and aborts in-flight requests with `net::ERR_NETWORK_CHANGED`, including requests to the 127.0.0.1 test service. A diagnostic e2e run that logged failed requests recorded this error on page loads, a stylesheet and the app's entry script.
+
+- Between runs 1 and 2: `e2e/layout.spec.ts:70` (contrast) measured a ratio of 1 for `.recommendation p`. That means equal luminance for text and body background, which happens only on an unstyled page. A probe that delayed the stylesheet by 4 s showed the app does not render before its CSS, so the stylesheet request itself failed. The trace was overwritten by the isolated reruns, which passed 3/3. The attempt was repeated from `npm --prefix web ci`.
+- Between runs 2 and 3: `e2e/notes.spec.ts:273` timed out waiting for "Server connected". Its trace shows `GET /assets/index-*.js` and `GET /assets/index-*.css` both failed with `net::ERR_NETWORK_CHANGED`, so the app never booted. The attempt was repeated from `npm --prefix web ci`.
+
+#### Flakes found and how each was hardened
+
+- `web/src/dialogs/NoteHistory.test.tsx` (409 restore; red twice in earlier full runs). The test counted note GETs, and a background refetch could make that count 3. Commit `6c48cd4` flips the server version when the 409 POST arrives, so no earlier GET can see it. The test now waits for the state it asserts: both Restore buttons render only once the refetched version 3 is the current version. It passed 10 of 10 repeated runs.
+- `web/e2e/fixtures.ts` `gotoApp`: the "Server connected" wait has an explicit 30 s bound for a cold service next to three busy workers (commit `6c48cd4`). The global `expect.timeout` of 15 s from the same commit was reverted in `cfbfed5`, because it was not hardening.
+- `web/e2e/capture.spec.ts`, empty Save: the test waits for Save to be enabled before clicking it (commit `6c48cd4`).
+- `web/e2e/capture.spec.ts`, fixed waits replaced with waits on state (commit `cfbfed5`):
+  - IME Ctrl+Enter: waits for the debounced draft to land (`draftSaved`, raw `かな`), because a save would have cancelled that draft.
+  - Quota failure, Save-cancels-debounce and paused recording: Playwright's fake clock fires every timer due in the window (`page.clock.runFor`) instead of sleeping.
+- `web/e2e/server.ts` (commit `cfbfed5`): each test service binds port 0 and reports its own port, and its health is trusted only after that report. Before, a probed free port could be bound by a sibling worker's service, and `/api/health` would then answer from the sibling. This race was latent: no failure was traced to it.
+- `notes.spec.ts:121` and `:178`, `outbox.spec.ts:149`, and the `plan.spec.ts` 409 test (named by earlier runs). Each step in these tests already waits on the UI or server state it uses. The `:178` race (Original clicked before the save closed the editor) was fixed earlier with the Edit-visible wait. The recorded failures were:
+  - "Server unreachable" on a PUT
+  - `page.goto` failures
+  - an unstyled page
+  - an outbox list that never loaded
+
+  These match the aborted-request pattern above. None of these tests failed in the three runs or in 40 repeated isolated runs.
 
 ### Handbook §21 main-app memory · measured 2026-10-12
 

@@ -9,6 +9,10 @@ atomic Save transaction and serialised draft writes. The Electron close
 checkpoint preserves these semantics (see [DESKTOP.md](DESKTOP.md)). File
 references below are historical.
 
+The current verification gate, run from the repository root, is
+`npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`;
+its latest results are in [TEST_REPORT.md](TEST_REPORT.md).
+
 The next unmet local daily-use slice is implemented: atomic browser queue/draft
 commit and visible, retryable local-save failure. This is an unreleased
 continuation of the actual v0.1.0 source, not a reconstructed v0.2.0 or a UI redesign.

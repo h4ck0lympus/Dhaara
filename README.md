@@ -272,8 +272,8 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
 
 ## Verification
 
-The cutover gate, run from the repository root after `python -m pip install -e '.[test]'`
-and `node electron/scripts/link-sandbox.mjs` (see above):
+The cutover gate, run in this order from the repository root after
+`python -m pip install -e '.[test]'`:
 
 ```bash
 npm --prefix web ci
@@ -281,6 +281,7 @@ npm --prefix web run build
 npm --prefix web test
 npm --prefix web run e2e
 npm --prefix electron ci
+node electron/scripts/link-sandbox.mjs
 npm --prefix electron test
 .venv/bin/python -m pytest
 ```

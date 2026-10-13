@@ -111,3 +111,31 @@ def test_test_report_records_main_app_memory():
     content = text('docs/TEST_REPORT.md')
     assert re.search(r'^### Handbook §21 main-app memory · measured .+\n[\s\S]*?^Result: (?:PASS|FAIL)$',
                      content, re.M)
+
+
+# The cutover gate as one command, in order (controller ruling for Phase 5 Task 10).
+GATE_COMMANDS = ['npm --prefix web ci', 'npm --prefix web run build', 'npm --prefix web test',
+                 'npm --prefix web run e2e', 'npm --prefix electron ci', 'node electron/scripts/link-sandbox.mjs',
+                 'npm --prefix electron test', '.venv/bin/python -m pytest']
+GATE = ' && '.join(GATE_COMMANDS)
+
+
+def test_readme_verification_lists_the_gate_in_order():
+    block = text('README.md').split('## Verification', 1)[1].split('```bash\n', 1)[1].split('```', 1)[0]
+    assert block.splitlines() == GATE_COMMANDS
+
+
+@pytest.mark.parametrize('name', ['docs/CONTINUATION.md', 'docs/TEST_REPORT.md'])
+def test_document_states_the_exact_gate(name):
+    assert f'`{GATE}`' in text(name)
+
+
+def test_test_report_records_a_green_final_gate():
+    content = text('docs/TEST_REPORT.md')
+    assert '### Final gate run' in content
+    section = content.split('### Final gate run', 1)[1].split('\n## ', 1)[0].split('\n### ', 1)[0]
+    assert f'`{GATE}`' in section
+    assert 'workers=4' in section and 'retries=0' in section
+    assert re.search(r'[Ss]ource revision `[0-9a-f]{40}`', section)
+    for command in GATE_COMMANDS:   # three consecutive runs, each cell the tool's own summary and wall time
+        assert re.search(rf'^\| `{re.escape(command)}` \| [^|]+ \| [^|]+ \| [^|]+ \| PASS \|$', section, re.M), command
