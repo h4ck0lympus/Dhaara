@@ -420,6 +420,7 @@ frameworks. Keep the current working app throughout.
 | 6 | Authenticated device pairing, HTTPS synchronization and conflict-safe outboxes; Android capture client. | Offline/retry/conflict/security tests and actual devices. Kotlin/Compose is a proposed Android direction, not an existing client. No cloud sync exists today. |
 | Later | Daily motivating slogan (spec §11.2): the Overview slogan changes each day by swapping `web/src/copy.ts`'s source to a list picked by date; an optional AI-generated variant uses the same local model. | No network service; stable within a day; the base app still needs no model. |
 | Backlog candidates | Phone shortcut capture, nightly export snapshot, Markdown mirror, opt-in daily prompts. Candidates only; unscheduled and not designed. | Each needs its own spec and tests before work starts. |
+| Follow-on | Reduce the animated terrain cost (fps/grid) before enabling motion by default. | Animated measured 4.33% of one core vs the < 3% budget; Paused/Hidden pass. |
 
 After Stage A, AI-assigned priority is the next build milestone; unfinished
 voice capture and long recordings follow. Whistle is only a candidate for a
