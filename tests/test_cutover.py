@@ -40,3 +40,17 @@ def test_nothing_points_at_deleted_trees():
             for number, line in enumerate(file.read_text(encoding='utf-8').splitlines(), 1)
             if STALE.search(line)]
     assert hits == []
+
+
+# A focused test silently stops the rest of its file from running in Playwright.
+FOCUSED = re.compile(r'\.only\(')
+FOCUS_SCANNED = ['web/src', 'web/e2e', 'electron/test', 'electron/e2e']
+
+
+def test_no_focused_tests():
+    hits = [f'{file.relative_to(ROOT)}:{number}'
+            for name in FOCUS_SCANNED
+            for file in sorted((ROOT / name).rglob('*.ts*')) if 'node_modules' not in file.parts
+            for number, line in enumerate(file.read_text(encoding='utf-8').splitlines(), 1)
+            if FOCUSED.search(line)]
+    assert hits == []
