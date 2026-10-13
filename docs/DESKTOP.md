@@ -122,8 +122,8 @@ credentials were sent." and the origin is never loaded.
 
 Group cleanup always runs after the child's exit is observed, so grandchildren
 do not survive a Python crash. If Electron itself dies, even from SIGTERM or
-SIGKILL, stdin EOF makes Python shut down its group (it SIGKILLs the group 8 s
-after the EOF); `PR_SET_PDEATHSIG` covers the moment before the watcher starts. Separately launched agents, browsers and the Sway
+SIGKILL, stdin EOF makes Python shut down its group (it SIGTERMs its process group at
+once and SIGKILLs it 8 s later only if the service is still running); `PR_SET_PDEATHSIG` covers the moment before the watcher starts. Separately launched agents, browsers and the Sway
 helper are never in that group.
 
 ## Close checkpoint

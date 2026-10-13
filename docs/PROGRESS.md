@@ -102,8 +102,11 @@ migration does not satisfy it; follow [the device checklist](PHYSICAL_SWAY_ACCEP
    "N capture(s) on this device" (open it and Retry if needed), then quit. Captures
    still queued in the Electron profile are not readable by the restored
    Rust/WebKit shell; this is accepted.
-2. `docs/superpowers` (spec, plans) is untracked by owner decision, so no git
-   command restores it: keep a copy outside the worktree before a rollback.
+2. In `docs/superpowers`, only `specs/parity-map.md` and `specs/handbook-trace.md`
+   are tracked; after the merge they are restorable with
+   `git checkout react-electron-cutover^2 -- docs/superpowers/specs/parity-map.md docs/superpowers/specs/handbook-trace.md`.
+   The migration spec and plans are untracked by owner decision, so no git
+   command restores them: keep a copy outside the worktree before a rollback.
    Revert the merge, then restore the docs and untracked files that the revert
    cannot bring back:
    ```bash

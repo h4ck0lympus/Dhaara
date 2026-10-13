@@ -4,7 +4,7 @@ The maintained [progress record and roadmap](PROGRESS.md) summarize completed
 milestones, current evidence and the next concrete step. Update it alongside
 this status and the test report after each milestone.
 
-## Latest: React + Electron cutover · 2026-10-10
+## Latest: React + Electron cutover · 2026-10-12
 
 The production UI is the typed React bundle in `web/`, served by FastAPI, and
 the desktop shell is Electron in `electron/`: external mode by default, Linux

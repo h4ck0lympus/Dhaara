@@ -8,7 +8,7 @@ Executed on branch `feat/react-electron` before the cutover merge, terrain on so
 
 ### Final gate run
 
-Gate, run from the repository root with Node 22.22.0: `npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`. Playwright runs with workers=4 and retries=0 (`web/playwright.config.ts`, unchanged). Source revision `cfbfed53d548f039915436975bb2317ae0917d0a` on `feat/react-electron`, 2026-10-12 22:03–23:03 local time. Each segment ran as its own foreground command, and a run counts only when all eight commands pass back to back. Three consecutive clean runs are recorded. Each cell is the tool's own summary line and the command's wall time. No log has a skipped, xfailed, xpassed, flaky or todo count, and `tests/test_cutover.py` guards against focused tests.
+Gate, run from the repository root with Node 22.22.0 (`node --version` = v22.22.0, outside the packages' `engines` range ^22.22.2, so `npm ci` prints `npm warn EBADENGINE`, which is non-fatal; `.nvmrc` says 22.23.3, which the next phase's gate uses) and Python 3.12.3 (`.venv/bin/python --version`): `npm --prefix web ci && npm --prefix web run build && npm --prefix web test && npm --prefix web run e2e && npm --prefix electron ci && node electron/scripts/link-sandbox.mjs && npm --prefix electron test && .venv/bin/python -m pytest`. Playwright runs with workers=4 and retries=0 (`web/playwright.config.ts`, unchanged). Source revision `cfbfed53d548f039915436975bb2317ae0917d0a` on `feat/react-electron`, 2026-10-12 22:03–23:03 local time. Each segment ran as its own foreground command, and a run counts only when all eight commands pass back to back. Three consecutive clean runs are recorded. Each cell is the tool's own summary line and the command's wall time. The one pytest warning is a third-party `DeprecationWarning` from starlette's test client (`anyio.abc.BlockingPortal` alias), not from Noema code. No log has a skipped, xfailed, xpassed, flaky or todo count, and `tests/test_cutover.py` guards against focused tests.
 
 | Command | Run 1 | Run 2 | Run 3 | Result |
 |---|---|---|---|---|
@@ -57,7 +57,7 @@ Source revision `54ffe98218e87873ebffe69252b4fdc55f08811b`. Private headless Swa
 | Companion Python service (run.py) | 36.4 / 36.5 | 36.6 / 36.6 |
 | Electron + service | 264.9 / 268.8 | 364.8 / 367.7 |
 
-Worst case (max memory.current of both trees, 367.7 MiB = 385.6 MB) is under 400,000,000 bytes.
+Worst case (max memory.current of both trees, 367.7 MiB = 385.6 MB) is under 400,000,000 bytes. The worst case is within ≈14 MiB (3.6%) of the budget, and the rise from the earlier run's 232 MiB shell memory.current is file-backed page cache (non-file memory unchanged at ≈229 MiB).
 
 Result: PASS
 
@@ -72,7 +72,7 @@ Source revision `b13fd4d97b2274011708f159936ebc0a72bea484` (web, electron, noema
 | Hidden: blurred in the Sway scratchpad (document.hidden stays false on Wayland) | 0.1 (< 1.0) | 0.0 (< 0.05) | 222.7 | PASS |
 
 Screen check: animated frames changed in 3/3 runs (gating: proves motion was really on); paused frames were identical in 3/3 runs (informational: any CSS animation in the app also changes the screen, and a terrain that kept drawing would already fail the Paused CPU row).
-Hidden-view visibility flags: [[False], [False], [False]]. Failed or incomplete runs discarded: 0.
+Hidden-view visibility flags: [[False], [False], [False]]. Failed or incomplete runs discarded: 0 (`complete=false` in the raw rows refers to the unavailable PSS series, not to the cgroup series used here).
 iGPU budgets: paused "~0%" is read as < 0.5%, hidden "0%" as < 0.05% (sampling rounding). The terrain table's memory column is the host-only cgroup series (non-file memory of the Electron scope in that run), while the §21 figure above is the whole Electron scope plus the service, so the two are not comparable.
 Animated misses its CPU budget (4.33% vs < 3%); iGPU is within budget. Motion is opt-in (default off), so the default states are Paused and Hidden, which pass. Thresholds, code and terrain were not changed; raised for the owner (spec §1 success criterion).
 **Overall: FAIL**

@@ -81,7 +81,7 @@ def collect(shell_pid=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--shell-pid', type=int, help='Optional fixture Rust PID: record only its xdg_shell/xwayland protocol')
+    parser.add_argument('--shell-pid', type=int, help='Optional fixture shell (Electron) PID: record only its xdg_shell/xwayland protocol')
     parser.add_argument('--output', type=Path, help='New private JSON file; existing evidence is never overwritten')
     args = parser.parse_args()
     if args.shell_pid is not None and args.shell_pid <= 1:

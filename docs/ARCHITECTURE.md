@@ -93,7 +93,10 @@ Event-triggered companion attention messages remain unimplemented.
 `qa/sway_check.py` starts an entirely private headless compositor from
 `qa/sway.config`, two synthetic outputs and a temporary service/profile. Its
 GTK probe guards against a non-fixture socket before screenshots/commands.
-It tests real layer-shell and Rust/Wry mapping, not physical hardware input.
+It tests the real GTK3/layer-shell companion mapping, not physical hardware
+input. Its Rust/Wry webview checks were removed with the shell at the cutover;
+the kitten suite has not been rerun since, and Stage A of
+`docs/PHYSICAL_SWAY_ACCEPTANCE.md` validates it.
 
 ## Now presentation refinement (historical; ported to web/src/domain/nowState.ts)
 

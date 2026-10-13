@@ -27,7 +27,7 @@ This is a **runnable local development release**, not just a UI mockup. The serv
 
 ## Start here
 
-Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. Python 3.13.5 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
+Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. Python 3.12.3 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
 
 ### Linux / macOS
 
@@ -236,9 +236,13 @@ polling switch and recent metadata reports are labeled separately. The observer
 does not read pixels, clipboard contents, keypresses or browser history. Window
 titles may still contain sensitive information.
 
-Private headless Sway/GTK/layer-shell validation now passes 31 checks with two
-synthetic outputs and disposable service/profile data, including actual metadata
-mapping with pinned focus preserved and Rust webview hide/restore. Another 41
+Private headless Sway/GTK/layer-shell validation (`qa/sway_check.py`) tests the
+GTK3/layer-shell companion mapping with two synthetic outputs and disposable
+service/profile data, including actual metadata mapping with pinned focus
+preserved. Before the cutover it passed 31 checks, three of which covered the
+Rust webview hide/restore; those were removed with the Rust shell at the
+cutover, and the kitten suite has not been rerun since. Stage A of
+[the physical Sway acceptance](docs/PHYSICAL_SWAY_ACCEPTANCE.md) validates it. Another 41
 visibility checks cover dark/light backgrounds, modes, non-modal controls,
 unchanged permissions and 100%/150%/200% compositor scaling. This is not
 physical keyboard/clipboard, microphone, physical-monitor scaling or laptop
@@ -293,8 +297,10 @@ in a private headless Sway and needs `sway` on PATH. Results, the terrain
 budget and the main-app memory check are in [TEST_REPORT.md](docs/TEST_REPORT.md).
 These are real-browser and real-process tests with injected faults. They are not
 Android, microphone, PWA-installation, physical power-loss, cloud-sync or
-physical Sway tests. The older `qa/` browser and webview harnesses drove the
-removed UI and shell and are kept only as history.
+physical Sway tests. The older `qa/` browser and webview harnesses
+(`qa/browser_check.py`, `qa/webview_check.py`, `qa/managed_screenshots.py`)
+drove the removed UI and shell and were deleted at the cutover (they remain in
+git history); only their recorded results under `qa/` stay.
 
 ## Source layout
 
@@ -313,7 +319,7 @@ tools/sway_companion.py  Tiny experimental native Sway overlay (sprite: tools/as
 tools/transcribe.py      Isolated CPU transcription worker
 tools/doctor.py          Read-only setup diagnostics
 tests/                   Backend, helper and cutover regression tests
-qa/                      Device-check helpers, historical harnesses and recorded results
+qa/                      Device-check helpers and recorded results of deleted harnesses
 docs/                    Status, architecture, API and security boundaries
 experiments/ui-ab/       Variant A/B experiment evidence (history)
 ```
