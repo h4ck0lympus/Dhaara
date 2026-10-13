@@ -20,7 +20,7 @@ const press = (init: KeyboardEventInit, target: EventTarget = document.body) => 
 describe('n opens Capture', () => {
   it('navigates with no modifier, outside fields, with no dialog', () => {
     const event = press({ key: 'n' });
-    expect(navigate).toHaveBeenCalledWith('/capture');
+    expect(navigate).toHaveBeenCalledWith('/overview');
     expect(event.defaultPrevented).toBe(true);
   });
 
@@ -77,14 +77,14 @@ describe('Ctrl/Cmd+K opens search', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it.each([{ ctrlKey: true }, { metaKey: true }])('%j navigates to Notes and focuses #note-search', init => {
+  it.each([{ ctrlKey: true }, { metaKey: true }])('%j opens the Overview library and focuses #note-search', init => {
     vi.useFakeTimers();
     const search = document.createElement('input');
     search.id = 'note-search';
     document.body.append(search);
     const event = press({ key: 'k', ...init });
     expect(event.defaultPrevented).toBe(true);
-    expect(navigate).toHaveBeenCalledWith('/notes');
+    expect(navigate).toHaveBeenCalledWith('/overview');
     vi.advanceTimersByTime(100);
     expect(document.activeElement).toBe(search);
   });

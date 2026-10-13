@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Snapshot } from '../api/schemas';
 import { makeSnapshot, makeTask } from '../test/fixtures';
 
+vi.mock('@tanstack/react-router', async () => {
+  const React = await import('react');
+  let update: (v: string) => void;
+  return { useSearch: () => { const [view, setView] = React.useState('open'); update = setView; return { view }; }, useNavigate: () => ({ search }: { search: { view: string } }) => update(search.view) };
+});
+
 vi.mock('../state/queries', () => ({ useSnapshot: vi.fn(), usePatchTask: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) }));
 vi.mock('../domain/connection', () => ({ useConnected: vi.fn() }));
 vi.mock('../local/drafts', () => ({ useCaptureDraft: () => ({ saveState: 'saved' }) }));
@@ -35,7 +41,7 @@ describe('PlanScreen', () => {
 
   it('keeps the variant B heading and offers Add task', () => {
     given(snapshot);
-    expect(screen.getByRole('heading', { level: 1, name: 'A little room to plan.' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tasks' })).toBeTruthy();
     expect(screen.getByText('Keep the next step in view.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
     expect(openDialog).toHaveBeenCalledWith({ kind: 'task-capture' });

@@ -1,3 +1,4 @@
+import { readableTaskTitle } from '../domain/tasks';
 // web/src/dialogs/TaskDetail.tsx
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -200,7 +201,7 @@ export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => v
     );
   }
   return (
-    <Dialog title={editing ? 'Edit task' : task.title} onRequestClose={() => { if (!editing || !editDirty.current || window.confirm(DISCARD_EDITS)) onClose(); }}>
+    <Dialog title={editing ? 'Edit task' : readableTaskTitle(task)} onRequestClose={() => { if (!editing || !editDirty.current || window.confirm(DISCARD_EDITS)) onClose(); }}>
       {editing
         ? <TaskEditForm task={task} tasks={snapshot?.tasks ?? []} onDone={() => setEditing(false)} onCancel={() => setEditing(false)} dirtyRef={editDirty} />
         : <TaskView task={task} snapTask={snapTask} snapshot={snapshot} onClose={onClose} onEdit={() => setEditing(true)} />}

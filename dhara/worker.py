@@ -67,6 +67,8 @@ class Worker:
     def loop(self):
         while not self.stop_event.is_set():
             try:
+                from .agent_connections import drain
+                drain(self.store)
                 self.store.tick()
                 self.process_one()
             except Exception:

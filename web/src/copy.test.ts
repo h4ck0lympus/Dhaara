@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { COPY, avatarLetter, greeting } from './copy';
 
-describe('COPY (owner decision 18B: slogans kept)', () => {
-  it('COPY keeps the variant B headings, subtitles and tagline verbatim', () => {
+describe('Notebook copy', () => {
+  it('uses compact functional headings', () => {
     expect(COPY).toEqual({
-      tagline: 'Same chaos. A calmer you.',
-      capture: { title: 'Capture a thought.', subtitle: 'A quiet place for the rough edges.' },
-      notes: { title: 'A place to return to.', subtitle: 'Your notes, with their original thinking intact.' },
-      plan: { title: 'A little room to plan.', subtitle: 'Keep the next step in view.' },
+      tagline: 'Your work, at a glance.',
+      capture: { title: 'Capture', subtitle: 'Write, record, or sketch. Organize later.' },
+      notes: { title: 'Notes', subtitle: 'Your knowledge, with its original thinking intact.' },
+      plan: { title: 'Tasks', subtitle: 'Keep the next step in view.' },
     });
   });
 });

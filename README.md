@@ -1,4 +1,4 @@
-# Dhara · 0.1.0
+# dhaara · 0.1.0
 
 Dhara (formerly Noema; the product handbook still uses the old name) — धारा, "stream". Existing installs keep their data, cookies, tokens and settings; the compatibility sections at the end of [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/SECURITY.md](docs/SECURITY.md) list what is still read under the old names for one release.
 
@@ -19,7 +19,7 @@ Task capture, the capture outbox and the browser database `dhara-local-v1`
 old browser UI upload once after the upgrade. Kitten settings stay in Settings
 for the separate Python Sway helper. Priority shows where it came from:
 "Auto · rules" or "Set by you". AI-assigned automatic priority ("Auto · AI") is
-the next milestone and is not built yet; a daily motivating slogan comes later.
+the next milestone and is not built yet. The October 13 UI brief removes decorative slogans.
 
 A quiet place for what you are learning, what your agents are doing, and what you can do next.
 
@@ -97,7 +97,7 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 
 | Area | This release |
 |---|---|
-| Interface | Responsive Overview, Capture, Notes and Tasks in a typed React bundle; compact graphite layout with the original headings, subtitles and tagline; optional WebGL2 stroke terrain inside the app (motion off by default, static without WebGL2, paused when hidden, blurred or idle, never under reading or editing surfaces). |
+| Interface | Responsive Overview, Capture, Notes and Tasks in a typed React bundle; compact graphite layout with a focus/work column, visible agent reports, upcoming deadlines and capture shortcuts; optional WebGL2 flowing dot ribbons inside the app (motion off by default, static without WebGL2, paused when hidden, blurred or idle, never under reading or editing surfaces). |
 | Knowledge capture | Text, image uploads/paste/drop, simple sketch canvas, microphone recording after permission. Text and attachments are saved as one idempotent capture. |
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |
 | Voice | Records and saves audio. Optional faster-whisper CPU worker transcribes after saving. **No live transcript in this release.** |
@@ -165,7 +165,57 @@ Recording currently becomes a saved attachment when you stop it and save the cap
 
 Reference: [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
-## Connect a local agent or command
+## Connect Claude Code or Codex once
+
+Open **Settings → Connect your agents → Connect Claude Code / Connect Codex**.
+This adds lifecycle hooks to that agent on the same computer, preserving other
+settings and backing up the original configuration. Claude Code loads the
+changes in a new session. In Codex, open `/hooks` and review/trust the dhaara
+hooks once. That review is required by Codex; dhaara does not bypass it.
+
+Subsequent sessions register automatically: **no task IDs, tokens or wrapper
+commands**. A task is created for each session when its first activity arrives,
+labelled with the agent and project folder name. Rename it if useful. Prompt
+submission/tool activity reports work, permission requests report a need for
+input, and Stop reports a result ready for review. A finished turn never marks
+a task Done. Child-agent events do not complete their parent session. Sessions
+without a recent report become unknown; the hooks do not pretend to provide
+continuous liveness during a long model/tool call.
+
+Only a hashed session identifier, agent name, project folder basename, status
+and timestamp enter the private local queue. No prompts, responses, transcripts,
+source files or screen content are copied. The queue works while the app is
+closed and drains after restart (every three seconds while the worker runs,
+and on state refresh). Replays are idempotent. Repeated identical reports are
+coalesced for 15 seconds. The queue is bounded at 10,000 events, dropping its
+oldest event if full. An unavailable/unwritable queue must not block an agent.
+
+**Disconnect** removes only the commands installed by dhaara and disables
+future ingestion for that provider. Existing tasks and reports remain.
+Advanced task-scoped tokens remain available for custom integrations.
+
+The connection also prepares a **local plugin package** for each provider,
+including its manifest, lifecycle hooks and a troubleshooting skill. Download
+it from the connection's Plugin package disclosure after choosing **Use plugin instead**.
+That switch removes direct hooks while keeping ingestion enabled. Packages target this
+computer and workspace; use either direct hooks or a plugin, not both.
+Generated sources live in `<data-dir>/agent-hooks/plugins/{claude,codex}`.
+The plugin requires its corresponding connection to remain enabled for ingestion.
+The direct installer is the normal one-click path; downloading a plugin is optional.
+
+Hook execution uses the current Python runtime in a source install. A frozen
+build currently needs a discoverable Python runtime for the standalone receiver;
+the AppImage packaging work must bundle or expose one before claiming a
+self-contained hook installation. This change does not modify that packaging work.
+Native agent hook trust/reload behavior still needs a live session check; local
+receiver execution, queues, configuration preservation and HTTP authorization
+are covered by automated tests.
+
+Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
+[Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
+[Claude Code hooks](https://code.claude.com/docs/en/hooks).
+
+## Advanced: connect another local agent or command
 
 This does not inspect arbitrary existing conversations. You deliberately wrap a command that belongs to a task.
 
@@ -210,12 +260,12 @@ export DHARA_TOKEN='paste-an-observer-token-created-in-settings'
 
 System prerequisites are **Sway, PyGObject, GTK 3, GtkLayerShell introspection bindings, and the PyGObject Cairo bridge** (often `python3-cairo` / `python3-gi-cairo`). Install the matching packages through your distribution. The system Python usually sees these bindings while a normal venv does not. The helper does not need FastAPI, a browser engine, or a model.
 
-The unchanged kitten rests inside a pale-sage rounded popup with a thin border
-and subtle shadow: default 40 logical pixels in a 56-pixel container, or 32 in
-48. Click for one available task and its saved next action; Open task opens the
-existing task dialog. Companion menu holds Cat/Dot/Hide, 24/32/40 px sizes,
+The companion uses a transparent illustrated kitten (`tools/assets/kitten-illustrated.png`)
+without a colored container. Click for an item needing your attention, or the
+next available task and its saved next action. Open task opens the existing
+task dialog. Companion menu holds Cat/Dot/Hide, 24/40/56/72 px sizes,
 observation controls and links. Click the kitten again or Close to dismiss.
-Native size is capped at 40 px; appearance changes are local and reset on restart.
+Native size is capped at 72 px; appearance changes are local and reset on restart.
 Hide lasts until helper restart. Server Hidden always wins over local Cat/Dot.
 The popup reserves no tiling space; controls are non-modal and never request
 keyboard focus. The main web layout is unchanged; task/settings links open

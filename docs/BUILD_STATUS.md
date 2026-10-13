@@ -4,6 +4,14 @@ The maintained [progress record and roadmap](PROGRESS.md) summarize completed
 milestones, current evidence and the next concrete step. Update it alongside
 this status and the test report after each milestone.
 
+## Latest: UI and automatic agent connections · 2026-10-13
+
+The current UI and hook integration changes are described in
+[PROGRESS.md](PROGRESS.md#october-13-simpler-connections-and-reference-aligned-presentation)
+and the README. Manual pairing is now an advanced option; Settings can install
+Claude Code/Codex hooks once. The companion uses a transparent illustrated asset.
+Historical milestone descriptions below describe their original versions.
+
 ## Latest: React + Electron cutover · 2026-10-12
 
 The production UI is the typed React bundle in `web/`, served by FastAPI, and

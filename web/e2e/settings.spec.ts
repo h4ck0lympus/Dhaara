@@ -6,7 +6,7 @@ import { serverState } from './nowSeed';
 import type { DharaServer } from './server';
 
 type SettingsBody = { settings: { display_name: string; observation_enabled: boolean; motion: boolean; companion: string; companion_size: number }; context_rules: unknown[] };
-const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Your workspace' });
+const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
 const serverBody = (dhara: DharaServer) => dhara.api<SettingsBody>('GET', '/api/state');
 const serverSettings = async (dhara: DharaServer) => (await serverBody(dhara)).settings;
 const navSettings = (page: Page) => page.locator('aside.sidebar').getByRole('button', { name: 'Settings' });
@@ -46,7 +46,7 @@ test.describe('Settings', () => {
   test('Settings link adds no navigation screen', async ({ page, dhara }) => {   // settings_link_check.py:31
     await gotoApp(page, dhara, '#settings');
     await expect(settingsDialog(page)).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveText(['Overview', 'Capture', 'Notes', 'Tasks']);
+    await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveText(['Overview', 'Tasks']);
     await expect(page).toHaveURL(/#\/overview$/);
   });
 
@@ -175,7 +175,7 @@ test.describe('Settings', () => {
     await dhara.api('POST', '/api/tasks', { title: 'Two Sum' });
     await gotoApp(page, dhara, '#/settings');
     let dialog = settingsDialog(page);
-    await dialog.getByText('Agent & observer tokens').click();
+    await dialog.getByText('Advanced: agent & observer tokens').click();
     await dialog.getByLabel('Label').fill('Local coding agent');
     await expect(dialog.getByRole('button', { name: 'Create token' })).toBeDisabled();
     await expect(dialog.getByText('Choose at least one task for an agent token')).toBeVisible();
@@ -191,7 +191,7 @@ test.describe('Settings', () => {
     await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
     await navSettings(page).click();
     dialog = settingsDialog(page);
-    await dialog.getByText('Agent & observer tokens').click();
+    await dialog.getByText('Advanced: agent & observer tokens').click();
     await expect(dialog.getByText('Local coding agent · agent')).toBeVisible();
     await expect(dialog.locator('.token-value')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Revoke' }).click();

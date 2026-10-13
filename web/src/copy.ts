@@ -1,10 +1,9 @@
-// All variant B headings, subtitles and the tagline (owner decision 18B). The later
-// daily-slogan feature (spec §11.2) only swaps this module's source.
+// Compact notebook copy. The October 13 brief supersedes decorative slogans.
 export const COPY = {
-  tagline: 'Same chaos. A calmer you.',
-  capture: { title: 'Capture a thought.', subtitle: 'A quiet place for the rough edges.' },
-  notes: { title: 'A place to return to.', subtitle: 'Your notes, with their original thinking intact.' },
-  plan: { title: 'A little room to plan.', subtitle: 'Keep the next step in view.' },
+  tagline: 'Your work, at a glance.',
+  capture: { title: 'Capture', subtitle: 'Write, record, or sketch. Organize later.' },
+  notes: { title: 'Notes', subtitle: 'Your knowledge, with its original thinking intact.' },
+  plan: { title: 'Tasks', subtitle: 'Keep the next step in view.' },
 } as const;
 
 export function greeting(now: Date, displayName: string): string {

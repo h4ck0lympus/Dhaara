@@ -491,8 +491,8 @@ test.describe('Capture recording', () => {
   test('Capture has one writing surface, a mic/image/sketch toolbar and one Save note action', async ({ page, dhara }) => {   // handbook-trace U13
     await gotoApp(page, dhara, '#/capture');
     const screen = page.locator('.capture-screen');
-    await expect(screen.getByRole('heading', { level: 1 })).toHaveText('Capture a thought.');
-    await expect(screen.getByText('A quiet place for the rough edges.')).toBeVisible();
+    await expect(screen.getByRole('heading', { level: 1 })).toHaveText('Capture');
+    await expect(screen.getByText('Write, record, or sketch. Organize later.')).toBeVisible();
     await expect(screen.getByRole('textbox')).toHaveCount(1);
     await expect(screen.getByLabel(/title|folder/i)).toHaveCount(0);
     for (const name of ['Record a thought', 'Image', 'Sketch']) await expect(screen.getByRole('button', { name, exact: true })).toBeVisible();

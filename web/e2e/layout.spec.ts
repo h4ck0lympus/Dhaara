@@ -46,8 +46,8 @@ test('Phone width moves the navigation to a bottom bar and gives content the ful
   expect(Math.round(bar.y + bar.height)).toBe(844);
   expect(Math.round(bar.width)).toBe(390);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Capture', 'Notes', 'Tasks']);
-  await nav.getByRole('link', { name: 'Capture' }).click();
+  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Tasks']);
+  await page.getByRole('button', { name: 'Capture a thought…', exact: true }).click();
   const content = (await page.locator('main.content').boundingBox())!;
   expect(Math.round(content.x)).toBe(0);
   expect(Math.round(content.width)).toBe(390); // no sidebar column beside the writing area
@@ -75,7 +75,7 @@ test('Readable body/secondary text meets a 4.5 contrast ratio', async ({ page, c
       return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
     };
     const background = lum(getComputedStyle(document.body).backgroundColor);
-    return ['.recommendation p', '.focus-kind', '.page-heading p', '#connection-label', '.status-summary', '.recommendation .eyebrow'].map(selector => {
+    return ['.preview-row small', '.focus-kind', '.overview-greeting', '#connection-label', '.status-summary', '.recent-notes h2'].map(selector => {
       const el = document.querySelector(selector);
       return [selector, el ? (lum(getComputedStyle(el).color) + 0.05) / (background + 0.05) : 0] as const;
     });

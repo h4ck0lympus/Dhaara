@@ -75,6 +75,11 @@ CREATE TABLE IF NOT EXISTS runs(
  session_url TEXT NOT NULL, status TEXT NOT NULL, message TEXT NOT NULL DEFAULT '',
  seq INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS hook_sessions(
+ provider TEXT NOT NULL, session TEXT NOT NULL, task_id TEXT NOT NULL REFERENCES tasks(id),
+ run_id TEXT NOT NULL REFERENCES runs(id), seq INTEGER NOT NULL,
+ observed TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(provider,session)
+);
 CREATE TABLE IF NOT EXISTS events(
  id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), seq INTEGER NOT NULL,
  kind TEXT NOT NULL, message TEXT NOT NULL, digest TEXT NOT NULL,
@@ -100,7 +105,7 @@ CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, seq);
 CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
 '''
 
-DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': False, 'companion': 'cat', 'companion_size': 40, 'display_name': ''}
+DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': True, 'companion': 'cat', 'companion_size': 40, 'display_name': ''}
 
 class Store:
     NOTEBOOK = 'dhara.sqlite3'
@@ -441,6 +446,11 @@ class Store:
         return value
 
     def snapshot(self, minutes=None):
+        from .agent_connections import drain
+        try:
+            drain(self)
+        except (OSError, sqlite3.Error):
+            log.warning('Agent updates are queued; retrying on the next refresh.')
         self.tick()
         with self.db() as c:
             tasks = [self.task_row(r) for r in c.execute('''SELECT tasks.*, task_captures.raw AS original_input,

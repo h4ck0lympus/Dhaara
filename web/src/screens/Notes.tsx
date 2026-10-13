@@ -10,7 +10,7 @@ import { PageHeading } from '../ui/PageHeading';
 import { SEARCH_DEBOUNCE_MS, SEARCH_MAX_LENGTH, foldersOf, inFolder, localNoteMatches } from './notesList';
 import '../styles/capture-notes.css';
 
-export function NotesScreen() {
+export function NotesScreen({ onOpenNote, onCapture }: { onOpenNote?: (id: string) => void; onCapture?: () => void } = {}) {
   const notes = useSnapshot().data?.notes ?? [];
   const connected = useConnected();
   const [input, setInput] = useState('');
@@ -83,7 +83,7 @@ export function NotesScreen() {
           )}
           {pending && <p className="subtle-line" role="status">Searching…</p>}
           {rows.map(note => (
-            <Link key={note.id} to="/note/$id" params={{ id: note.id }} className="note-row">
+            <Link key={note.id} to="/note/$id" params={{ id: note.id }} className="note-row" onClick={event => { if (onOpenNote) { event.preventDefault(); onOpenNote(note.id); } }}>
               <span className="note-row-title">{note.title}</span>
               <span className="note-row-meta">
                 {note.folder} · {age(note.updated_at)}{note.processing ? ` · ${note.processing}` : ''}
@@ -96,7 +96,7 @@ export function NotesScreen() {
             <div className="empty-state">
               <h2>No notes here yet.</h2>
               <p>Save a brain dump. Folder filing happens after capture, not before it.</p>
-              <Link to="/capture" className="primary">Capture a thought</Link>
+              <Link to="/capture" className="primary" onClick={event => { if (onCapture) { event.preventDefault(); onCapture(); } }}>Capture a thought</Link>
             </div>
           ))}
         </section>

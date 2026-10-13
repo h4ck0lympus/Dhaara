@@ -5,11 +5,11 @@ import { expect, gotoApp, seedLocalDb, test } from './fixtures';
 
 test.use({ viewport: { width: 1440, height: 960 } });
 
-test('Navigation shows Overview, Capture, Notes and Tasks with matching accessible names', async ({ page, dhara }) => {
+test('Navigation shows Overview and Tasks with matching accessible names', async ({ page, dhara }) => {
   await gotoApp(page, dhara);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Capture', 'Notes', 'Tasks']);
-  for (const name of ['Overview', 'Capture', 'Notes', 'Tasks']) await expect(nav.getByRole('link', { name, exact: true })).toHaveCount(1);
+  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Tasks']);
+  for (const name of ['Overview', 'Tasks']) await expect(nav.getByRole('link', { name, exact: true })).toHaveCount(1);
   await nav.getByRole('link', { name: 'Tasks' }).click();
   await expect(page).toHaveURL(/#\/plan$/);
   await expect(nav.getByRole('link', { name: 'Tasks' })).toHaveAttribute('aria-current', 'page');
@@ -33,7 +33,8 @@ test('Desktop sidebar collapses to icons and stays collapsed after reload', asyn
 test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, dhara }) => {
   await gotoApp(page, dhara);
   await page.keyboard.press('n');
-  await expect(page).toHaveURL(/#\/capture$/);
+  await expect(page).toHaveURL(/#\/overview$/);
+  await expect(page.getByLabel('Rough learning note')).toBeVisible();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Overview' }).click();
   // Test-only probe field: typing in any field must not navigate.
   await page.evaluate(() => { const probe = document.createElement('input'); probe.id = 'probe'; probe.setAttribute('aria-label', 'Probe'); document.body.append(probe); });
@@ -43,7 +44,8 @@ test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, d
   await expect(page.locator('#probe')).toHaveValue('n');
   await page.locator('#probe').blur();
   await page.keyboard.press('Control+k');
-  await expect(page).toHaveURL(/#\/notes$/);
+  await expect(page).toHaveURL(/#\/overview$/);
+  await expect(page.getByRole('searchbox', { name: 'Search notes' })).toBeVisible();
 });
 
 test('the status line reports offline in words and recovers', async ({ page, dhara, context }) => {

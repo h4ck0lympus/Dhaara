@@ -22,7 +22,7 @@ def visual_settings(settings, local_mode=None, local_size=None):
         size = int(local_size if local_size is not None else settings.get('companion_size', 40))
     except (TypeError, ValueError):
         size = 40
-    return mode, max(24, min(40, size))
+    return mode, max(24, min(72, size))
 
 
 def workspace_placement(context, workspaces):

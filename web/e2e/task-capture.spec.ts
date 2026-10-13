@@ -272,8 +272,10 @@ test('Create task form persists to real SQLite', async ({ page, dhara }) => {
 
 test('Add a task opens an implemented form and persists explicit intent', async ({ page, dhara }) => {
   await gotoApp(page, dhara);
-  await page.getByRole('region', { name: 'Next action' }).getByRole('button', { name: 'Add a task' }).click();
-  await addWithKeyboard(page, 'Explicitly chosen task');
+  await page.getByRole('button', { name: '+ Task', exact: true }).click();
+  await page.getByLabel('What do you need to do?').fill('Explicitly chosen task');
+  await page.getByLabel('What do you need to do?').press('Control+Enter');
+  await expect(page.locator('.inline-task')).toHaveCount(0);
   expect((await state(dhara)).tasks.map(t => t.title)).toEqual(['Explicitly chosen task']);
 });
 

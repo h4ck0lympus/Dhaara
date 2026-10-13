@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent, type JSX, type KeyboardEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent, type JSX, type KeyboardEvent } from 'react';
+import { useNavigationGuard } from '../routes/guards';
 import { TaskFields } from '../components/TaskFields';
 import { taskDraftStore, useTaskDraft } from '../local/taskDraft';
 import { openDialog } from '../shell/dialogs';
@@ -8,7 +9,7 @@ import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { toast } from '../ui/Toast';
 
-export function TaskCaptureDialog({ onClose }: { onClose: () => void }): JSX.Element {
+export function TaskCaptureDialog({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }): JSX.Element {
   const { draft, submitting } = useTaskDraft();
   const tasks = useSnapshot().data?.tasks ?? [];
   const qc = useQueryClient();
@@ -17,6 +18,7 @@ export function TaskCaptureDialog({ onClose }: { onClose: () => void }): JSX.Ele
   const [notice, setNotice] = useState(() => (draft.pending ? S.previousUnconfirmed : ''));
   const [error, setError] = useState('');
   const frozen = draft.pending !== null || submitting;
+  useNavigationGuard(useMemo(() => embedded && submitting ? { id: 'inline-task-saving', check: () => ({ kind: 'block' as const, toast: 'Finishing task save…' }), beforeUnload: true } : null, [embedded, submitting]));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,8 +58,7 @@ export function TaskCaptureDialog({ onClose }: { onClose: () => void }): JSX.Ele
     }
   }
 
-  return (
-    <Dialog title={S.addTask} onRequestClose={() => void requestClose()} className="task-panel">
+  const content = (
       <form ref={form} className="task-capture-form" onSubmit={e => void submit(e)} onKeyDown={onKeyDown}>
         <label className="task-input-label" htmlFor="task-input">What do you need to do?</label>
         <textarea id="task-input" name="raw" required maxLength={16000} rows={4} placeholder="Review the cleanup path" data-autofocus=""
@@ -79,6 +80,6 @@ export function TaskCaptureDialog({ onClose }: { onClose: () => void }): JSX.Ele
           <button type="submit" className="primary" disabled={submitting}>{draft.pending ? S.retryAddTask : S.addTask}</button>
         </div>
       </form>
-    </Dialog>
   );
+  return embedded ? <section className="inline-task" aria-label="Add task">{content}</section> : <Dialog title={S.addTask} onRequestClose={() => void requestClose()} className="task-panel">{content}</Dialog>;
 }

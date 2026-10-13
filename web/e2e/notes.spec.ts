@@ -14,8 +14,8 @@ test.describe('Notes list', () => {
     const older = await createNote(dhara, 'heap slot cleanup observation');
     const newer = await createNote(dhara, 'two pointers on sorted input');
     await gotoApp(page, dhara, '#/notes');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('A place to return to.');
-    await expect(page.getByText('Your notes, with their original thinking intact.')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Notes');
+    await expect(page.getByText('Your knowledge, with its original thinking intact.')).toBeVisible();
     await expect(searchBox(page)).toBeVisible();
     await expect(page.getByRole('region', { name: 'Recent notes' })).toBeVisible();
     await expect(rows(page)).toHaveCount(2);

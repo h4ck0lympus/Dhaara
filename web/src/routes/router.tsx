@@ -50,7 +50,7 @@ const overviewRoute = createRoute({ getParentRoute: () => rootRoute, path: '/ove
 const captureRoute = createRoute({ getParentRoute: () => rootRoute, path: '/capture', component: CaptureScreen });
 const notesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/notes', component: NotesScreen });
 const noteRoute = createRoute({ getParentRoute: () => rootRoute, path: '/note/$id', component: lazyRouteComponent(() => import('../screens/NoteView'), 'NoteViewScreen') });
-const planRoute = createRoute({ getParentRoute: () => rootRoute, path: '/plan', component: PlanScreen });
+const planRoute = createRoute({ getParentRoute: () => rootRoute, path: '/plan', validateSearch: (search: Record<string, unknown>): { view?: string } => ({ view: typeof search.view === 'string' ? search.view : undefined }), component: PlanScreen });
 const taskRoute = createRoute({ getParentRoute: () => rootRoute, path: '/task/$id', component: TaskLinkScreen });
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsLinkScreen });
 

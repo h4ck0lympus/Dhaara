@@ -157,8 +157,8 @@ test.describe('terrain state machine', () => {
     await expectState(page, 'unsupported');
     await expect(page.locator(FIELD)).toBeHidden();
     await expect(page.evaluate(() => window.__dharaField!.readPixel(1, 1))).rejects.toThrow('The field is not drawing');
-    await page.getByRole('navigation').getByText('Capture', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Capture a thought.' })).toBeVisible();
+    await page.getByRole('button', { name: 'Capture a thought…', exact: true }).click();
+    await expect(page.getByLabel('Rough learning note')).toBeVisible();
   });
 
   test('a lost WebGL context falls back to unsupported and a restored one resumes', async ({ page, dhara }) => {

@@ -229,7 +229,7 @@ test('Startup task link opens existing dialog over Plan', async ({ page, dhara }
   const dialog = page.getByRole('dialog', { name: 'Synthetic linked task' });
   await expect(dialog).toContainText('Read the saved synthetic action.');
   await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/plan');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('A little room to plan.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tasks');
 });
 
 test('Task link adds no main navigation/layout', async ({ page, dhara }) => {

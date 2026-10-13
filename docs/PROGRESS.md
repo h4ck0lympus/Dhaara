@@ -7,6 +7,72 @@ and what to do next. Update it after each completed milestone. Detailed commands
 and verification boundaries live in [TEST_REPORT.md](TEST_REPORT.md); older
 results stay there rather than being presented as new tests.
 
+## October 13: approved Overview workspace
+
+The latest user decisions supersede the navigation and shortcut guidance below:
+
+- Overview contains inline capture and access to the notes library. Remove the
+  separate Capture and Notes sidebar entries; retain Overview and Tasks.
+- Remove **Plan** from the proposed Overview actions. Planning belongs to the
+  user's agents and is outside this project's scope. This does not remove task
+  management; the existing internal `plan` route currently represents Tasks.
+- Defer **Ask** to a future project: a RAG-based agent pipeline for querying the
+  user's saved notes. Future answers should retrieve relevant notes and link to
+  their sources. Do not expose Ask as an active Overview action in the current
+  design; this pipeline is not implemented or required for core functionality.
+- Future capture feature: an AI model semantically classifies freeform input as
+  a note or task and saves it automatically. Preserve the original input and
+  allow easy correction of the classification. Manual Note/Task selection is
+  acceptable for the current version; this automation is not implemented.
+- Revised design proposal for large task lists: Overview's right panel is a
+  bounded, prioritized preview, with counts and links to filtered Tasks views.
+  Avoid separate tiny scrolling regions. The full Tasks workspace supports
+  search, filtering and sorting; task volume must not expand the Overview into
+  an unbounded list. The approved layout is now implemented.
+
+Implemented: inline capture (including recordings, images and sketches), inline
+note library/reader, inline task entry, two-item attention/running/upcoming
+previews and three-item available preview. Full Tasks supports linked filters,
+search, project filtering, sorting and incremental display of long lists.
+Notification bell includes read state, snooze and one-hour quiet mode; optional
+desktop notifications report actionable agent events and reminders. Opted-in
+minimized clients check for updates every 30 seconds. Notification preferences,
+read state and snoozes are local to this client, not synchronized with the kitten.
+Settings has grouped navigation and readable processing rows with diagnostic
+paths collapsed. Legacy hook titles are displayed without session hashes;
+missing semantic session titles still use an honest provider/session fallback.
+Motion defaults on for new stores; existing preferences and reduced motion are
+preserved. The detached native helper remains independent of the window;
+this UI pass does not implement a new companion lifecycle or cross-platform
+notification service. Ask/RAG and automatic capture classification stay deferred.
+
+A separate AppImage preview combines the existing package's Electron/AppDir
+with the rebuilt current-source service and web bundle at
+`/home/p4nic/code/noema-pkg/release/out/Dhara-0.1.0-ui-preview-x86_64.AppImage`.
+The original AppImage and packaging checkout source are untouched. The service
+includes the hook receiver source required for installation; the Electron runtime
+is inherited. Hook execution on frozen builds still uses an
+available system Python. See TEST_REPORT.md for acceptance limits.
+
+## October 13: simpler connections and reference-aligned presentation
+
+The new user brief supersedes the earlier requirement to retain variant B
+slogans and the pale kitten container. Overview now uses two compact columns,
+visible task-linked agent reports, upcoming deadlines, quick capture and subtle
+flowing dot ribbons. The native Sway helper uses a transparent illustrated
+kitten, supports sizes up to 72 px, and prioritizes real attention items.
+
+Settings now installs Claude Code/Codex lifecycle hooks once; subsequent
+sessions need no manual task pairing or tokens. Status travels through a private
+bounded SQLite queue, with replay deduplication, no network calls from hooks,
+and no prompt/transcript collection. Each session creates one task; Stop means
+review, never verified completion. Local plugin packages with skills are generated
+alongside direct-hook installation. See the README's connection instructions.
+
+The user's AppImage work is separate. Frozen builds still need a Python runtime
+for hooks; this change does not establish standalone package support. Live host
+hook approval/reload and physical Sway acceptance remain device checks.
+
 ## Current direction
 
 Dhara is a local-first learning notebook and task/agent workspace. The working
@@ -54,9 +120,8 @@ direction, not implemented functionality or layouts to reproduce wholesale.
 - Keep abstract graphics subtle, inside the app and outside reading/editing
   surfaces. Keep the kitten tiny, with dot/hidden modes and on-demand controls.
 - Do not reintroduce large dashboard cards, permanent overlays, decorative
-  headers or photorealistic cats from older concepts. Owner decision 18B keeps
-  the variant B headings, subtitles and tagline in `web/src/copy.ts`; a daily
-  motivating slogan is a later milestone that only swaps that module's source.
+  headers or photorealistic cats from older concepts. The October 13 brief replaces decision 18B slogans with compact functional
+  copy in `web/src/copy.ts`.
 - Mobile/tablet references do not request device implementation or establish
   device support during this Sway milestone.
 - Determine functionality from this record and actual source, never an image.

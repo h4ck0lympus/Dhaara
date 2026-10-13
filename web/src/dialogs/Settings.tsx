@@ -9,12 +9,13 @@ import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { messageOf, toast } from '../ui/Toast';
 import '../styles/capture-notes.css';
+import { AgentConnections } from '../components/AgentConnections';
 
 export const DISPLAY_NAME_MAX = 60;   // models.py SettingsInput.display_name
 export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;   // models.py:134
 export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // dhara/store.py:369 Problem(400)
 export const SETTINGS_TEXT = {
-  title: 'Your workspace',   // app.js:457
+  title: 'Settings',   // app.js:457
   offline: 'Settings load from your server. Reconnect to change them.',   // new
   nameSaved: 'Name saved.',   // new
   tokenOnce: 'Copy this token now. It will not be displayed again.',   // app.js:470
@@ -39,7 +40,7 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
   const [scope, setScope] = useState<'agent' | 'observer'>('agent');
   const [taskIds, setTaskIds] = useState<string[]>([]);
   const sizeInput = useRef<HTMLInputElement>(null);
-  const agents = useRef<HTMLDetailsElement>(null);
+  const agents = useRef<HTMLDivElement>(null);
   const tokenLabel = useRef<HTMLInputElement>(null);
   const update = useUpdateSettings();
   const createRule = useCreateRule();
@@ -60,7 +61,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
     if (section !== 'agents') return;
     const frame = requestAnimationFrame(() => {
       agents.current?.scrollIntoView?.({ block: 'nearest' });
-      tokenLabel.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [section]);
@@ -184,6 +184,10 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
 
   return (
     <Dialog title={SETTINGS_TEXT.title} onRequestClose={onClose} className="settings-dialog">
+      <nav className="settings-jump" aria-label="Settings sections">
+        {['Appearance', 'Notifications', 'Processing', 'Privacy', 'Agents', 'Data'].map(label => <button type="button" key={label} onClick={() => document.getElementById(`settings-${label.toLowerCase()}`)?.scrollIntoView({ block: 'start', behavior: 'instant' })}>{label}</button>)}
+      </nav>
+      <h3 className="settings-group-title" id="settings-appearance">Appearance &amp; companion</h3>
       {form ? (
         <>
           <form className="settings-row" onSubmit={event => void saveName(event)}>
@@ -197,24 +201,18 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
             </div>
           </form>
           <div className="settings-row">
-            <div>Screen context<p>Off by default. The Sway helper reports window metadata only. No screenshot analysis is implemented in this build.</p></div>
-            <input type="checkbox" aria-label="Enable window context" checked={form.observation_enabled} onChange={event => void patch({ observation_enabled: event.target.checked })} />
-          </div>
-          {/* app.js:477: the status reflects the server snapshot, never the optimistic toggle. */}
-          <p className="subtle-line" id="observation-status">{observationStatus(snapshot)}. Window metadata only; no screenshot observation is implemented.</p>
-          <div className="settings-row">
-            <div>Slow background motion<p>Pauses when hidden. Static by default.</p></div>
+            <div>Slow background motion<p>Gentle motion. Pauses when hidden; respects reduced motion.</p></div>
             <input type="checkbox" aria-label="Enable background motion" checked={form.motion} onChange={event => void patch({ motion: event.target.checked })} />
           </div>
           <div className="settings-row">
-            <div>Companion<p>The Sway helper reads this setting. This browser does not connect to the desktop companion.</p></div>
+            <div>Companion<p>Your desktop kitten stays separate from this window. Requires the native companion to be running.</p></div>
             <select aria-label="Companion mode" value={form.companion} onChange={event => void patch({ companion: event.target.value as Settings['companion'] })}>
               {(['cat', 'dot', 'hidden'] as const).map(mode => <option key={mode} value={mode}>{mode}</option>)}
             </select>
           </div>
           <div className="settings-row">
             {/* app.js:459 */}
-            <div>Companion size<p>Logical pixels; native helper reads this setting. Now {form.companion_size} px.</p></div>
+            <div>Companion size<p>Choose a comfortable size. Currently {form.companion_size} px.</p></div>
             <input
               ref={sizeInput}
               type="range"
@@ -233,20 +231,30 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
         <p className="notice" role="status">{SETTINGS_TEXT.offline}</p>
       )}
       {error && <p className="field-error" role="alert">{error}</p>}
+      <h3 className="settings-group-title" id="settings-notifications">Notifications</h3>
       <div className="settings-row">
-        <div>Reminder notifications<p>Opt-in browser notifications while a client is open. No push service or always-on delivery yet.</p></div>
+        <div>Desktop notifications<p>Agent input, review results and due reminders. Delivered while dhaara is running.</p></div>
         <button type="button" className="secondary" onClick={() => void toggleNotifications()}>{notify ? 'Disable notifications' : 'Enable notifications'}</button>
       </div>
       {capabilities && (
         <>
-          <h3 className="eyebrow">Local processing</h3>
-          <p className="notice">
-            Note cleanup: {capabilities.organizer ? capabilities.model : 'off — original wording is preserved'}<br />
-            Speech: {capabilities.speech ? capabilities.speech_model : 'off — recordings can still be saved'}<br />
-            No models download or load automatically. Enable them using the README’s optional setup.
-          </p>
+          <section className="processing-settings" aria-label="Capture and processing">
+            <h3 id="settings-processing" className="settings-group-title">Capture &amp; processing</h3>
+            <div className="settings-row"><div>Voice transcription<p>{capabilities.speech ? 'On this device · Ready' : 'Not configured · You can still save recordings'}</p></div><span className="pill">{capabilities.speech ? 'Available' : 'Off'}</span></div>
+            <div className="settings-row"><div>Note cleanup<p>{capabilities.organizer ? 'Local processing · Original text is preserved' : 'Your original wording is preserved'}</p></div><span className="pill">{capabilities.organizer ? 'Available' : 'Off'}</span></div>
+            <details><summary>Advanced details</summary><p className="small muted">Models are optional and never downloaded automatically.</p><dl><dt>Note model</dt><dd>{capabilities.model || 'Not configured'}</dd><dt>Speech model</dt><dd>{capabilities.speech_model || 'Not configured'}</dd></dl></details>
+          </section>
         </>
       )}
+      <h3 className="settings-group-title" id="settings-privacy">Privacy &amp; context</h3>
+      {form && <>
+          <div className="settings-row">
+            <div>Screen context<p>Off by default. The Sway helper reports window metadata only. No screenshot analysis is implemented in this build.</p></div>
+            <input type="checkbox" aria-label="Enable window context" checked={form.observation_enabled} onChange={event => void patch({ observation_enabled: event.target.checked })} />
+          </div>
+          {/* app.js:477: the status reflects the server snapshot, never the optimistic toggle. */}
+          <p className="subtle-line" id="observation-status">{observationStatus(snapshot)}. Window metadata only; no screenshot observation is implemented.</p>
+      </>}
       <details className="settings-section">
         <summary>Window-to-task rules</summary>
         <p className="subtle-line">A known application or title maps to a task. Unmatched windows do not become made-up focus claims. Pinned focus wins.</p>
@@ -273,8 +281,10 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
           </div>
         </form>
       </details>
-      <details ref={agents} className="settings-section" open={agentsOpen} onToggle={event => setAgentsOpen(event.currentTarget.open)}>
-        <summary>Agent &amp; observer tokens</summary>
+      <h3 className="settings-group-title" id="settings-agents">Agents</h3>
+      <div ref={agents}><AgentConnections /></div>
+      <details className="settings-section" onToggle={event => setAgentsOpen(event.currentTarget.open)}>
+        <summary>Advanced: agent &amp; observer tokens</summary>
         <p className="subtle-line">An agent token can report runs and read only the tasks you choose. Observer tokens may report window context and read the small companion summary. Never paste tokens into notes.</p>
         {tokens.isError && <p className="field-error" role="alert">{tokens.error.message}</p>}
         <ul className="history-list">
@@ -314,7 +324,7 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
         )}
         <p className="subtle-line">Use the generated task-scoped token with tools/agent.py. The wrapper tracks only the command you explicitly start; it does not attach to arbitrary browser sessions. See the README for the exact command and token environment setup.</p>
       </details>
-      <h3 className="eyebrow">Keep your data</h3>
+      <h3 className="settings-group-title" id="settings-data">Your data</h3>
       <p className="subtle-line">One SQLite database and an attachments directory on the server. This build does not automatically deploy or synchronize independent servers.</p>
       <div className="inline-actions">
         <a href="/api/export" className="secondary" download>Export notes &amp; tasks</a>

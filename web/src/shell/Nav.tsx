@@ -9,8 +9,6 @@ const LEGACY_SIDEBAR_KEY = 'noema-sidebar-collapsed';   // rename-shim: read unt
 type Item = { to: '/overview' | '/capture' | '/notes' | '/plan'; label: string; icon: IconName; prefix?: string };
 const ITEMS: Item[] = [
   { to: '/overview', label: 'Overview', icon: 'home' },
-  { to: '/capture', label: 'Capture', icon: 'pen' },
-  { to: '/notes', label: 'Notes', icon: 'notes', prefix: '/note/' },
   { to: '/plan', label: 'Tasks', icon: 'task-check' },
 ];
 
@@ -29,13 +27,13 @@ export function Nav(): JSX.Element {
   return (
     <aside className="sidebar" data-collapsed={collapsed ? 'true' : 'false'}>
       <div className="brand">
-        <span>Dhara</span>
+        <span>dhaara</span>
         <button type="button" className="icon-button collapse-toggle" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed} onClick={toggle}><Icon name="sidebar" /></button>
       </div>
       <nav aria-label="Main navigation">
         {ITEMS.map(item => {
-          const active = pathname === item.to || (item.prefix !== undefined && pathname.startsWith(item.prefix));
+          const active = (item.to === '/overview' && (pathname === '/capture' || pathname === '/notes' || pathname.startsWith('/note/'))) || pathname === item.to || (item.prefix !== undefined && pathname.startsWith(item.prefix));
           return (
             <Link key={item.to} to={item.to} className={active ? 'nav-item active' : 'nav-item'} aria-current={active ? 'page' : undefined}>
               <Icon name={item.icon} /><span className="nav-label">{item.label}</span>

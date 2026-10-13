@@ -29,6 +29,7 @@ beforeEach(() => {
   tokenList = [];
   stateStatus = 200;
   calls = stubFetch(call => {
+    if (call.url === '/api/agent-connections') return jsonResponse(200, { connections: [] });
     if (call.url.startsWith('/api/state')) return stateStatus === 200 ? jsonResponse(200, snapshot) : jsonResponse(stateStatus, { detail: 'Service unavailable' });
     if (call.url === '/api/settings' && call.method === 'PATCH') {
       return patchStatus === 200

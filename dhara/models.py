@@ -139,3 +139,8 @@ class SettingsInput(Input):
     def strip_display_name(cls, value):
         # Strip before the length check; non-strings fall through to the str check and are rejected, never coerced.
         return value.strip() if isinstance(value, str) else value
+
+
+class AgentConnectionInput(Input):
+    enabled: bool
+    mode: Literal['hooks', 'plugin'] = 'hooks'

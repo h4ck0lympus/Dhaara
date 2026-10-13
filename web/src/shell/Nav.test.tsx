@@ -20,19 +20,19 @@ beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); })
 afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); });
 
 describe('Nav', () => {
-  it('shows Overview, Capture, Notes, Tasks with matching accessible names', async () => {
+  it('shows Overview and Tasks with matching accessible names', async () => {
     renderNavAt('/overview');
     const nav = await screen.findByRole('navigation', { name: 'Main navigation' });
     const links = [...nav.querySelectorAll('a')];
-    expect(links.map(a => a.textContent)).toEqual(['Overview', 'Capture', 'Notes', 'Tasks']);
-    for (const name of ['Overview', 'Capture', 'Notes', 'Tasks']) expect(screen.getByRole('link', { name })).toBeTruthy();
+    expect(links.map(a => a.textContent)).toEqual(['Overview', 'Tasks']);
+    for (const name of ['Overview', 'Tasks']) expect(screen.getByRole('link', { name })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Tasks' }).getAttribute('href')).toBe('/plan');
   });
 
-  it('marks Notes current while a note is open', async () => {
+  it('marks Overview current while a legacy note link is open', async () => {
     renderNavAt('/note/abc');
-    expect((await screen.findByRole('link', { name: 'Notes' })).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBeNull();
+    expect((await screen.findByRole('link', { name: 'Overview' })).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Tasks' }).getAttribute('aria-current')).toBeNull();
   });
 
   it('collapses to icons, keeps accessible names and remembers the choice', async () => {

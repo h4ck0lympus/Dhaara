@@ -34,7 +34,7 @@ async function ackState(id: string): Promise<SavedCapture['state']> {
   return isOutboxItem(item) && item.error ? 'rejected' : 'queued';
 }
 
-export function CaptureScreen() {
+export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boolean; onOpenNote?: (id: string) => void } = {}) {
   const { draft, saveState, saving } = useCaptureDraft();
   const snapshot = useSnapshot().data ?? null;
   const queryClient = useQueryClient();
@@ -46,9 +46,9 @@ export function CaptureScreen() {
   const recording = recorder.phase !== 'idle';
   const recordingGuard = useMemo<NavigationGuard | null>(
     () => (recording
-      ? { id: 'recording', check: to => (to !== '/capture' ? { kind: 'block', toast: S.stopRecordingBeforeLeaving } : null), beforeUnload: true }
+      ? { id: 'recording', check: to => (to !== (embedded ? '/overview' : '/capture') ? { kind: 'block', toast: S.stopRecordingBeforeLeaving } : null), beforeUnload: true }
       : null),
-    [recording],
+    [recording, embedded],
   );
   useNavigationGuard(recordingGuard);
 
@@ -127,7 +127,7 @@ export function CaptureScreen() {
   return (
     <div className="screen capture-screen" data-quiet onKeyDown={onKeyDown}>
       <OfflineNotice />
-      <PageHeading title={COPY.capture.title} subtitle={COPY.capture.subtitle} />
+      {!embedded && <PageHeading title={COPY.capture.title} subtitle={COPY.capture.subtitle} />}
       <fieldset className="capture-fieldset" disabled={saving}>
         <legend className="sr-only">Capture</legend>
         <div
@@ -210,7 +210,7 @@ export function CaptureScreen() {
       {saved && (
         <SavedNotice
           saved={saved}
-          onOpenNote={id => void navigate({ to: '/note/$id', params: { id } })}
+          onOpenNote={id => onOpenNote ? onOpenNote(id) : void navigate({ to: '/note/$id', params: { id } })}
           onOpenQueue={() => openDialog({ kind: 'outbox' })}
           onDismiss={() => setSaved(null)}
         />

@@ -14,14 +14,16 @@ export function installKeyboard(navigate: (to: string) => void): () => void {
     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k'
       && !isDialogOpen() && !isUnlockOpen()) {
       event.preventDefault();
-      navigate('/notes');
+      navigate('/overview');
+      setTimeout(() => window.dispatchEvent(new CustomEvent('dhaara-overview-pane', { detail: 'notes' })), 50);
       setTimeout(() => document.querySelector<HTMLInputElement>('#note-search')?.focus(), 100); // app.js:563
       return;
     }
     if (event.key === 'n' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey
       && !isField(document.activeElement) && !isDialogOpen() && !isUnlockOpen()) {
       event.preventDefault();
-      navigate('/capture');
+      navigate('/overview');
+      setTimeout(() => window.dispatchEvent(new CustomEvent('dhaara-overview-pane', { detail: 'capture' })), 50);
     }
   };
   document.addEventListener('keydown', onKeyDown);

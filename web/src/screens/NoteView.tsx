@@ -46,9 +46,13 @@ export function downloadText(filename: string, text: string): void {
 
 export function NoteViewScreen() {
   const { id } = useParams({ from: '/note/$id' });
+  return <EmbeddedNote id={id} />;
+}
+
+export function EmbeddedNote({ id, onBack }: { id: string; onBack?: () => void }) {
   const note = useNote(id);
   // Keep showing loaded data when a background refetch fails, so an open edit is never unmounted.
-  if (note.data) return <NotePage key={id} note={note.data} refetch={async () => (await note.refetch()).data} />;
+  if (note.data) return <NotePage key={id} onBack={onBack} note={note.data} refetch={async () => (await note.refetch()).data} />;
   if (note.isError) {
     return (
       <div className="screen note-screen" data-quiet>
@@ -57,7 +61,7 @@ export function NoteViewScreen() {
           <h1>{NOTE_TEXT.unavailable}</h1>
           <p>{note.error.message}</p>
         </header>
-        <Link to="/notes" className="text-button">← All notes</Link>
+        <Link to="/notes" className="text-button" onClick={e => { if (onBack) { e.preventDefault(); onBack(); } }}>← All notes</Link>
       </div>
     );
   }
@@ -69,7 +73,7 @@ export function NoteViewScreen() {
   );
 }
 
-function NotePage({ note, refetch }: { note: Note; refetch: () => Promise<Note | undefined> }) {
+function NotePage({ note, refetch, onBack }: { note: Note; refetch: () => Promise<Note | undefined>; onBack?: () => void }) {
   const [view, setView] = useState<'note' | 'original'>('note');
   const [edit, setEdit] = useState<EditForm | null>(null);
   const [formError, setFormError] = useState<FormError | null>(null);
@@ -161,7 +165,7 @@ function NotePage({ note, refetch }: { note: Note; refetch: () => Promise<Note |
   return (
     <div className="screen note-screen" data-quiet>
       <OfflineNotice />
-      <Link to="/notes" className="text-button">← All notes</Link>
+      <Link to="/notes" className="text-button" onClick={e => { if (onBack) { e.preventDefault(); onBack(); } }}>← All notes</Link>
       <article className="note-page" data-quiet>
         <div className="note-meta">
           <span>{note.folder} · {age(note.updated_at)}</span>

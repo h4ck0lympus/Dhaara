@@ -1,3 +1,4 @@
+import { readableTaskTitle } from '../domain/tasks';
 // web/src/components/TaskRow.tsx
 import type { JSX } from 'react';
 import type { SnapshotTask } from '../api/schemas';
@@ -29,7 +30,7 @@ export function TaskRow({ task }: { task: SnapshotTask }): JSX.Element {
   if (review && link) lead = <a className="review-link text-button" href={link} target="_blank" rel="noopener noreferrer">Review result ↗</a>;
   else if (review) lead = <button type="button" className="review-link text-button" onClick={open}>Review result</button>;
   else lead = (
-    <button type="button" className={done ? 'task-check done' : 'task-check'} aria-label={`${done ? 'Reopen' : 'Complete'} ${task.title}`}
+    <button type="button" className={done ? 'task-check done' : 'task-check'} aria-label={`${done ? 'Reopen' : 'Complete'} ${readableTaskTitle(task)}`}
       disabled={patch.isPending} onClick={() => void toggle()}>{done && <Icon name="check" size={13} />}</button>
   );
 
@@ -37,7 +38,7 @@ export function TaskRow({ task }: { task: SnapshotTask }): JSX.Element {
     <div className="task-row" data-task={task.id}>
       {lead}
       <button type="button" className="task-title" onClick={open}>
-        <span>{task.title}</span>
+        <span>{readableTaskTitle(task)}</span>
         <small>{taskMeta(task)}</small>
       </button>
       <PriorityControl task={task} />

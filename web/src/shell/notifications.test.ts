@@ -110,3 +110,28 @@ describe('notifyDueReminders', () => {
     expect(shown).toHaveLength(1);
   });
 });
+
+describe('agent notifications', () => {
+  it('reports actionable states once, even when timestamps change', async () => {
+    const { makeRun } = await import('../test/fixtures');
+    const { notifyAgentUpdates, notificationItems } = await load();
+    const run = makeRun({ id: 'run', task_id: 't1', status: 'needs_input', effective_status: 'needs_input' });
+    const state = makeSnapshot({ tasks: [makeTask('t1', { title: 'Review firmware' })], runs: [run] });
+    notifyAgentUpdates(state);
+    notifyAgentUpdates({ ...state, runs: [{ ...run, updated_at: '2026-10-13T14:00:00Z' }] });
+    expect(shown).toHaveLength(1);
+    expect(shown[0].options.body).toBe('Review firmware');
+    expect(notificationItems(state)[0].action).toBe('Respond');
+    notifyAgentUpdates({ ...state, runs: [{ ...run, effective_status: 'working' }] });
+    expect(shown).toHaveLength(1);
+  });
+  it('quiet mode silences desktop delivery without removing in-app updates', async () => {
+    const { makeRun } = await import('../test/fixtures');
+    const { notifyAgentUpdates, notificationItems, MUTE_KEY } = await load();
+    localStorage.setItem(MUTE_KEY, String(Date.now() + 60000));
+    const state = makeSnapshot({ runs: [makeRun({ id: 'run', task_id: 't1', status: 'review', effective_status: 'review' })] });
+    notifyAgentUpdates(state);
+    expect(shown).toHaveLength(0);
+    expect(notificationItems(state)).toHaveLength(1);
+  });
+});

@@ -1,164 +1,102 @@
-// web/src/screens/Now.tsx
 import { useNavigate } from '@tanstack/react-router';
-import type { JSX } from 'react';
+import { useEffect, useState } from 'react';
 import { confirmFocusChange } from '../components/focus';
-import { TaskRow } from '../components/TaskRow';
-import { COPY, greeting } from '../copy';
+import { greeting } from '../copy';
 import { useConnected } from '../domain/connection';
-import { age } from '../domain/format';
 import { focusKind, nowState } from '../domain/nowState';
-import { RUN_LABEL, waitingReason } from '../domain/tasks';
+import { age, dateLabel } from '../domain/format';
+import { readableTaskTitle, RUN_LABEL, type TaskFilter } from '../domain/tasks';
 import { openDialog } from '../shell/dialogs';
 import { OfflineNotice } from '../shell/OfflineNotice';
-import { useSetFocus, useSnapshot, useTimeBudget } from '../state/queries';
-import { S } from '../strings';
+import { useSetFocus, useSnapshot } from '../state/queries';
 import { Icon } from '../ui/Icon';
-import { PageHeading } from '../ui/PageHeading';
 import { toastError } from '../ui/Toast';
+import { CaptureScreen } from './Capture';
+import { NotesScreen } from './Notes';
+import { EmbeddedNote } from './NoteView';
+import { TaskCaptureDialog } from '../dialogs/TaskCapture';
+import { allowNavigation } from '../routes/guards';
 
-const BUDGETS = [10, 15, 30, 60];
-const REPORTED = ['working', 'needs_input', 'unknown'];
-
-export function NowScreen(): JSX.Element {
-  const query = useSnapshot();
-  const snapshot = query.data ?? null;
+export function NowScreen() {
+  const snapshot = useSnapshot().data;
   const connected = useConnected();
-  const [budget, setBudget] = useTimeBudget();
-  const setFocus = useSetFocus();
   const navigate = useNavigate();
-  const n = nowState(snapshot, connected, budget);
-  const primary = n.primary;
-  const focusTask = n.focus;
-  const focusRecord = snapshot?.focus ?? null;
-  const pinned = focusRecord?.pinned ?? false;
+  const setFocus = useSetFocus();
+  const [pane, setPane] = useState<'home' | 'capture' | 'task' | 'notes'>('home');
+  const [noteId, setNoteId] = useState<string | null>(null);
   const tasks = snapshot?.tasks ?? [];
-  const runs = snapshot?.runs ?? [];
-  const needsYou = connected ? (snapshot?.attention ?? []).filter(t => t.id !== primary?.id) : [];
-  const alternatives = n.alternatives.filter(t => !needsYou.some(a => a.id === t.id));
-  const reported = runs.filter(r => REPORTED.includes(r.effective_status));
-  const openTask = (id: string) => openDialog({ kind: 'task', id });
-
-  async function changeFocus(taskId: string | null) {
-    if (!confirmFocusChange(focusRecord, taskId)) return;
-    try { await setFocus.mutateAsync({ taskId }); } catch (error) { toastError(error); }
+  const focus = tasks.find(t => t.id === snapshot?.focus?.task_id);
+  const attention = connected ? snapshot?.attention ?? [] : [];
+  const attentionIds = new Set(attention.map(t => t.id));
+  const available = (connected ? snapshot?.available ?? [] : []).filter(t => !attentionIds.has(t.id) && t.id !== focus?.id);
+  const running = (connected ? snapshot?.runs ?? [] : []).filter(r => r.effective_status === 'working' && !attentionIds.has(r.task_id) && r.task_id !== focus?.id);
+  const used = new Set([focus?.id, ...attentionIds, ...available.slice(0, 3).map(t => t.id), ...running.map(r => r.task_id)]);
+  const upcoming = tasks.filter(t => t.status !== 'done' && t.status !== 'parked' && t.due_at)
+    .sort((a, b) => Date.parse(a.due_at!) - Date.parse(b.due_at!));
+  const nextDue = upcoming.filter(t => !used.has(t.id));
+  function show(next: typeof pane, id: string | null = null) {
+    // Inline panes honor the same recording, saving and unsaved-edit guards as routes.
+    if (!allowNavigation('/overview/pane')) return;
+    setPane(next); setNoteId(id);
+    if (next === 'capture') setTimeout(() => document.querySelector<HTMLTextAreaElement>('#capture-input')?.focus(), 0);
+    if (next === 'task') setTimeout(() => document.querySelector<HTMLTextAreaElement>('#task-input')?.focus(), 0);
   }
-
-  const eyebrow = !primary ? 'Workspace'
-    : n.mode === 'unknown' ? 'Status unknown'
-    : n.kind === 'attention' ? `Needs you · ${snapshot?.attention.length ?? 0}`
-    : 'Available now';
-
-  let recommendation: JSX.Element;
-  if (primary) {
-    const reason = n.kind === 'attention' ? primary.attention_reason : primary.next_action || primary.recommendation_reason || 'Continue your selected focus.';
-    const startsFocus = n.kind === 'available' && !pinned; // app.js:196 — never replaces a pin
-    const label = n.mode === 'unknown' ? 'Check agent status' : n.kind === 'attention' ? 'Open for review'
-      : n.kind === 'focus' ? 'Resume' : pinned ? 'View next action' : 'Start';
-    recommendation = (
-      <>
-        <h2>{primary.title}</h2>
-        <p>{reason}</p>
-        <div className="inline-actions">
-          <button type="button" className="primary" onClick={() => (startsFocus ? void changeFocus(primary.id) : openTask(primary.id))}>{label}</button>
-          {startsFocus && <button type="button" className="quiet-button" onClick={() => openTask(primary.id)}>Details</button>}
-          {primary.estimate_minutes != null && <span className="small dim">{primary.estimate_minutes} min · your estimate</span>}
-        </div>
-      </>
-    );
-  } else {
-    recommendation = (
-      <div className="empty">
-        <h2>{n.title}</h2>
-        <p>{n.explanation}</p>
-        <div className="inline-actions">
-          <button type="button" className="secondary" onClick={() => void navigate({ to: '/capture' })}>Capture a thought</button>
-          {connected
-            ? <button type="button" className="text-button" onClick={() => openDialog({ kind: 'task-capture' })}>Add a task</button>
-            : <button type="button" className="text-button" onClick={() => void query.refetch()}>Retry connection</button>}
+  useEffect(() => {
+    const listener = (event: Event) => show((event as CustomEvent).detail === 'notes' ? 'notes' : 'capture');
+    window.addEventListener('dhaara-overview-pane', listener);
+    return () => window.removeEventListener('dhaara-overview-pane', listener);
+  });
+  const all = (filter: TaskFilter | 'upcoming') => void navigate({ to: '/plan', search: { view: filter } });
+  const openTask = (id: string) => openDialog({ kind: 'task', id });
+  return <div className="now-page overview-v2" data-now-state={nowState(snapshot ?? null, connected, null).mode}>
+    <OfflineNotice />
+    <div className="overview-columns">
+      <div className="overview-work">
+        <h1 className="overview-greeting">{greeting(new Date(), snapshot?.settings.display_name ?? '')}</h1>
+        <div className={`overview-center ${pane === 'home' ? 'resting' : 'editing'}`}>
+          {pane === 'home' ? <div className="particle-space" aria-hidden="true" /> : <div className="inline-workspace" data-quiet>
+            <div className="section-header"><span>{noteId ? 'Your note' : pane === 'capture' ? 'Capture a thought' : pane === 'task' ? 'New task' : 'Your library'}</span>
+              <button type="button" className="quiet-button" onClick={() => show('home')}>Close <Icon name="close" size={15} /></button></div>
+            {pane === 'capture' && <CaptureScreen embedded onOpenNote={id => show('notes', id)} />}
+            {pane === 'task' && <TaskCaptureDialog embedded onClose={() => { setPane('home'); }} />}
+            {pane === 'notes' && (noteId ? <><EmbeddedNote id={noteId} onBack={() => show('notes')} /></> : <NotesScreen onOpenNote={id => show('notes', id)} onCapture={() => show('capture')} />)}
+          </div>}
+          {pane === 'home' && <button type="button" className="quick-capture" onClick={() => show('capture')}><Icon name="pen" /><span>Capture a thought…</span><Icon name="image" /><Icon name="mic" /></button>}
+          <div className="overview-shortcuts">
+            <button type="button" onClick={() => show('capture')}><Icon name="notes" />+ Note</button>
+            <button type="button" onClick={() => show('task')}><Icon name="task-check" />+ Task</button>
+          </div>
+          {pane !== 'notes' && <section className="recent-notes" aria-label="Recent notes">
+            <div className="section-header"><h2>Recent notes</h2><button type="button" className="quiet-button" onClick={() => show('notes')}>Browse notes <Icon name="arrow" size={15} /></button></div>
+            {(snapshot?.notes ?? []).slice(0, 2).map(note => <button type="button" key={note.id} onClick={() => show('notes', note.id)}>{note.title}</button>)}
+            {!snapshot?.notes.length && <p className="small muted">Your saved thoughts will appear here.</p>}
+          </section>}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="now-page" data-now-state={n.mode}>
-      <PageHeading title={greeting(new Date(), snapshot?.settings.display_name ?? '')} subtitle={COPY.tagline} />
-      <OfflineNotice />
-      {focusTask && focusRecord && (
-        <div className="focus-line" data-quiet="">
-          <span className="eyebrow">Current focus</span>
-          <button type="button" className="task-title" onClick={() => openTask(focusTask.id)}>{focusTask.title}</button>
-          <span className="focus-kind" data-focus-kind={focusRecord.pinned ? 'pinned' : focusRecord.source === 'context' ? 'inferred' : 'manual'}>
-            {(connected ? '' : S.lastKnown) + focusKind(focusRecord) + (focusTask.project ? ' · ' + focusTask.project : '')}
-          </span>
-          <button type="button" className="quiet-button" onClick={() => void changeFocus(null)}>{pinned ? 'Unpin & clear' : 'Clear'}</button>
-        </div>
-      )}
-      <section className="recommendation" aria-label="Next action" data-quiet="">
-        <div className="section-header">
-          <span className="eyebrow">{eyebrow}</span>
-          {connected && n.open.length > 0 && (
-            <select aria-label="Available time" value={budget ?? ''} onChange={e => setBudget(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">Any duration</option>
-              {BUDGETS.map(v => <option key={v} value={v}>{v} minutes</option>)}
-            </select>
-          )}
-        </div>
-        {recommendation}
-        {alternatives.length > 0 && (
-          <details className="alternatives">
-            <summary>{alternatives.length} other actionable task{alternatives.length === 1 ? '' : 's'}</summary>
-            {alternatives.map(t => <TaskRow key={t.id} task={t} />)}
-          </details>
-        )}
-      </section>
-      {needsYou.length > 0 && (
-        <section className="needs-you" aria-label="Needs you" data-quiet="">
-          <h2 className="eyebrow">Needs you</h2>
-          {needsYou.map(t => (
-            <button type="button" key={t.id} className="attention-row" onClick={() => openTask(t.id)}>
-              <span>{t.title}</span><small>{t.attention_reason}</small>
-            </button>
-          ))}
+      <aside className="overview-activity" aria-label="Parallel work and commitments" data-quiet>
+        <section aria-label="Current focus">
+          <div className="section-header"><h2>Current focus</h2><button type="button" className="quiet-button" onClick={() => all('open')}>Change</button></div>
+          {focus ? <><button type="button" className="preview-row focus-preview" onClick={() => openTask(focus.id)}><span>{readableTaskTitle(focus)}</span><small>{focus.next_action || 'Open task to continue'}</small><small className="focus-kind">{!connected ? 'Last known · ' : ''}{snapshot?.focus ? focusKind(snapshot.focus) : ''}</small></button>
+            <button type="button" className="quiet-button" onClick={() => { if (confirmFocusChange(snapshot?.focus ?? null, null)) void setFocus.mutateAsync({ taskId: null }).catch(toastError); }}>{snapshot?.focus?.pinned ? 'Unpin & clear' : 'Clear focus'}</button></> : <p className="small muted">Choose a task when you’re ready.</p>}
         </section>
-      )}
-      {(tasks.length > 0 || runs.length > 0) && (
-        <details className="agent-status" data-quiet="" open={n.mode === 'unknown' || !connected}>
-          <summary>Agent reports <span className="count">{reported.length}</span></summary>
-          <p className="small dim" id="integration-status">{n.integration}</p>
-          {reported.map(r => (
-            <div className="run-row" key={r.id}>
-              <button type="button" className="task-title" onClick={() => openTask(r.task_id)}>
-                <span>{tasks.find(t => t.id === r.task_id)?.title ?? r.agent}</span>
-                <small>{`${r.agent} · ${RUN_LABEL[r.effective_status]} · last report ${age(r.updated_at)}`}</small>
-              </button>
-            </div>
-          ))}
-          {connected && n.open.some(t => t.status !== 'parked') && (
-            <>
-              <button type="button" className="text-button" onClick={() => openDialog({ kind: 'settings', section: 'agents' })}>Set up agent reporting</button>
-              <p className="small muted">Task-scoped tokens and the command wrapper; no automatic agent launch.</p>
-            </>
-          )}
-        </details>
-      )}
-      {n.waiting.length > 0 && (
-        <details className="waiting-work" data-quiet="">
-          <summary>Waiting work <span className="count">{n.waiting.length}</span></summary>
-          {n.waiting.map(t => (
-            <div className="run-row" key={t.id}>
-              <button type="button" className="task-title" onClick={() => openTask(t.id)}>
-                <span>{t.title}</span><small>{waitingReason(t, tasks)}</small>
-              </button>
-            </div>
-          ))}
-        </details>
-      )}
-      {primary && (
-        <button type="button" className="add-later" onClick={() => openDialog({ kind: 'task-capture' })}>
-          <Icon name="plus" size={16} />Add something for later
-        </button>
-      )}
+        <section aria-label="Needs attention"><div className="section-header"><h2>Needs attention</h2><button type="button" className="count" aria-label={`View all ${attention.length} attention items`} onClick={() => all('needs-you')}>{attention.length}</button></div>
+          {attention.slice(0, 2).map(t => <button type="button" key={t.id} className="preview-row" onClick={() => openTask(t.id)}><span>{readableTaskTitle(t)}</span><small>{t.runs.some(r => r.effective_status === 'unknown') ? 'No recent updates · Check status' : t.attention_reason}</small></button>)}
+          {!attention.length && <p className="small muted">{connected ? 'Nothing needs your attention.' : 'Reconnect to check for updates.'}</p>}
+          {attention.length > 2 && <button type="button" className="quiet-button" onClick={() => all('needs-you')}>View all {attention.length}</button>}
+        </section>
+        <section aria-label="Available next"><div className="section-header"><h2>Available next</h2><button type="button" className="count" aria-label="View available tasks" onClick={() => all('available')}>{available.length}</button></div>
+          {available.slice(0, 3).map(t => <button type="button" className="preview-row available-preview" key={t.id} onClick={() => openTask(t.id)}><Icon name="task-check" size={16} /><span>{readableTaskTitle(t)}</span><small>{t.estimate_minutes ? `${t.estimate_minutes}m` : ''}</small></button>)}
+          {!available.length && <p className="small muted">No other available tasks.</p>}
+        </section>
+        <section aria-label="Running"><div className="section-header"><h2>Running</h2><button type="button" className="count" aria-label="View running tasks" onClick={() => all('running')}>{running.length}</button></div>
+          {running.slice(0, 2).map(r => <button type="button" className="preview-row" key={r.id} onClick={() => openTask(r.task_id)}><span><i className="run-indicator run-working" />{readableTaskTitle(tasks.find(t => t.id === r.task_id) ?? { title: r.agent })}</span><small>{r.agent} · {RUN_LABEL[r.effective_status]} · {age(r.updated_at)}</small></button>)}
+          {!running.length && <p className="small muted">No agents reporting work.</p>}
+        </section>
+        <section aria-label="Upcoming"><div className="section-header"><h2>Upcoming</h2><button type="button" className="count" aria-label="View upcoming tasks" onClick={() => all('upcoming')}>{upcoming.length}</button></div>
+          {nextDue.slice(0, 2).map(t => <button type="button" className="preview-row" key={t.id} onClick={() => openTask(t.id)}><span>{readableTaskTitle(t)}</span><small>{dateLabel(t.due_at)}</small></button>)}
+          {!nextDue.length && <p className="small muted">No additional deadlines ahead.</p>}
+        </section>
+      </aside>
     </div>
-  );
+  </div>;
 }

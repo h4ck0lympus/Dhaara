@@ -2,7 +2,7 @@ import { useBlocker } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { toast } from '../ui/Toast';
 
-export type GuardId = 'recording' | 'capture-saving' | 'note-edit';
+export type GuardId = 'inline-task-saving' | 'recording' | 'capture-saving' | 'note-edit';
 export type GuardVerdict = { kind: 'block'; toast: string } | { kind: 'confirm'; message: string } | null;
 export type NavigationGuard = { id: GuardId; check(toPath: string): GuardVerdict; beforeUnload: boolean };
 

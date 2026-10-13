@@ -36,7 +36,7 @@ def test_truthful_observation(summary, connected, expected):
 @pytest.mark.parametrize('settings,mode,size,expected', [
     ({}, None, None, ('cat', 40)),
     ({'companion': 'dot', 'companion_size': 24}, None, None, ('dot', 24)),
-    ({'companion': 'cat', 'companion_size': 72}, None, None, ('cat', 40)),
+    ({'companion': 'cat', 'companion_size': 72}, None, None, ('cat', 72)),
     ({'companion': 'hidden'}, 'dot', None, ('hidden', 40)),
     ({'companion': 'cat'}, 'hidden', None, ('hidden', 40)),
     ({'companion': 'dot'}, 'cat', 32, ('cat', 32)),

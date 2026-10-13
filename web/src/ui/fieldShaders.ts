@@ -57,20 +57,17 @@ void main(){
  float end=float(gl_VertexID);
  vec4 t=texelFetch(heights,clamp(ivec2(round(point.xy*vec2(size-1))),ivec2(0),size-1),0);
  float height=(t.x-.5)*HEIGHT_RANGE;
- vec2 slope=(t.yz-.5)*SLOPE_RANGE;
- float comb=t.w*TAU;
- vec2 ndc=gridNdc(point.xy);
- vec3 ground=groundAt(ndc,aspect);
- vec3 normal=normalize(vec3(-slope.x,1.,-slope.y));
- float steep=smoothstep(.12,1.05,length(slope));
- vec3 direction=normalize(normal+vec3(cos(comb),0.,sin(comb))*(.35+steep*.6));
- vec3 world=vec3(ground.x,height,ground.z)+direction*end*(.025+steep*.7)*(.5+point.z);
- vec3 view=world-EYE;
- float depth=dot(view,FORWARD);
- float light=max(dot(normal,normalize(vec3(-.55,.62,-.56))),0.);
- shade=(.07+1.1*pow(light,2.4))*mix(.32,1.,end)*exp(-depth*.055)*(.72+.28*smoothstep(-.6,.9,height));
- shade*=.55+.45*smoothstep(-1.,.6,ndc.x+ndc.y*.6);
- gl_Position=depth<.2?vec4(2.,2.,2.,1.):vec4(view.x/(F*aspect),dot(view,UP)/F,0.,depth);
+ // Original flowing ribbons: tiny luminous marks on a gently folded sheet.
+ // Reuse the existing slow height field, visibility gating and pixel budget.
+ float x=(point.x*2.-1.)*1.12;
+ float row=point.y*2.-1.;
+ float wave=sin(x*3.7+row*.8+height*.32)*.18;
+ wave+=sin(x*6.1-row*1.6)*.065;
+ float y=row*.72+wave-.12;
+ float ribbon=pow(.5+.5*cos(row*8.+x*1.4),5.);
+ shade=(.05+ribbon*.38)*(.45+point.z*.55);
+ shade*=1.-smoothstep(.65,1.2,abs(row));
+ gl_Position=vec4(x+(end-.5)*.0022,y,0.,1.);
 }
 `;
 

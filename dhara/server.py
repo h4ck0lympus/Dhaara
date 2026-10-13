@@ -134,6 +134,38 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         if identity['scope']=='admin': return
         if task_id not in identity['task_ids']: raise Problem(403,'Token is not authorized for this task')
 
+    @app.get('/api/agent-connections')
+    def agent_connections():
+        from .agent_connections import connection_status
+        return connection_status(store)
+
+    @app.post('/api/agent-connections/{provider}')
+    def configure_agent(provider: str, data: AgentConnectionInput, request: Request):
+        # Installation changes this computer's agent configuration. Never let a
+        # remote browser mistake it for configuration of its own computer.
+        if not request.client or request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+            raise Problem(403, 'Connect agents from dhaara on this computer.')
+        from .agent_connections import configure
+        try:
+            return configure(store, provider, data.enabled, mode=data.mode)
+        except OSError:
+            raise Problem(409, 'Could not write the agent configuration. Check this computer’s file permissions.') from None
+
+    @app.get('/api/agent-connections/{provider}/plugin')
+    def agent_plugin(provider: str):
+        if provider not in ('claude', 'codex'):
+            raise Problem(404, 'Unknown agent')
+        folder = store.root / 'agent-hooks' / 'plugins' / provider
+        if not folder.exists():
+            raise Problem(404, 'Connect this agent once to prepare its local plugin.')
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for path in folder.rglob('*'):
+                if path.is_file():
+                    archive.write(path, 'dhaara/' + str(path.relative_to(folder)))
+        return Response(stream.getvalue(), media_type='application/zip',
+                        headers={'Content-Disposition': f'attachment; filename="dhaara-{provider}-plugin.zip"'})
+
     @app.get('/api/health')
     def health(): return {'ok':True,'version':__version__}
 
@@ -333,6 +365,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     def companion():
         state=store.snapshot()
         return {'settings':state['settings'],'context':state['context'],'focus':state['focus'],
+                'attention':[{'id':t['id'],'title':t['title'],'next_action':t['attention_reason']} for t in state['attention'][:3]],
                 'next':[{'id':t['id'],'title':t['title'],'priority':t['effective_priority'],
                          'next_action':t['next_action']} for t in state['available'][:3]],
                 'needs_you':len(state['attention'])}

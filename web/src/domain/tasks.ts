@@ -94,3 +94,11 @@ export function keepTimestamps(values: TaskEditable, original: Task): Pick<TaskE
   const keep = (edited: string | null, stored: string | null) => (localDateInput(edited) === localDateInput(stored) ? stored : edited);
   return { due_at: keep(values.due_at, original.due_at), not_before: keep(values.not_before, original.not_before) };
 }
+
+/** Hide legacy transport identifiers without inventing a task description. */
+export function readableTaskTitle(task: { title: string }): string {
+  const match = /^(Codex|Claude Code) · (.+) · [a-f0-9]{6}$/.exec(task.title);
+  if (!match) return task.title;
+  const project = /^(?:g-p-|[a-f0-9]{20})/.test(match[2]) ? '' : match[2];
+  return `${match[1]} session${project ? ` in ${project}` : ''}`;
+}
