@@ -21,7 +21,7 @@ def env(tmp_path,monkeypatch):
     for key in (prefix+name for prefix in PREFIXES for name in ('MODEL','SPEECH_MODEL')): monkeypatch.delenv(key,raising=False)
     app=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
     with TestClient(app) as c:
-        c.headers.update({'Authorization':'Bearer '+ADMIN,'X-Noema-Request':'1'})
+        c.headers.update({'Authorization':'Bearer '+ADMIN,'X-Dhara-Request':'1'})
         yield c,app.state.store,app.state.worker
 
 def task(c,**kw):
@@ -167,7 +167,7 @@ def test_dns_rebinding_host_rejected(env):
  c,s,w=env;assert c.get('/api/state',headers={'Host':'attacker.test'}).status_code==400
 
 def test_cookie_write_needs_marker(env):
- c,s,w=env;c.headers.pop('Authorization');c.post('/api/session',json={});c.headers.pop('X-Noema-Request');assert c.post('/api/tasks',json={'title':'Injected'}).status_code==403
+ c,s,w=env;c.headers.pop('Authorization');c.post('/api/session',json={});c.headers.pop('X-Dhara-Request');assert c.post('/api/tasks',json={'title':'Injected'}).status_code==403
 
 def test_basic_task_persistence(env):
  c,s,w=env;t=task(c);assert s.task(t['id'])['title']==t['title'];assert len(s.snapshot()['available'])==1
@@ -322,3 +322,26 @@ def test_restart_persistence(tmp_path):
   c.headers['Authorization']='Bearer '+ADMIN;t=task(c);n=capture(c)
  restarted=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
  assert restarted.state.store.task(t['id']);assert restarted.state.store.note(n['id'])['raw']==n['raw']
+
+def test_old_session_cookie_signs_in_until_login_rewrites_it(env):
+ c,s,w=env;c.headers.pop('Authorization')
+ assert c.get('/api/state').status_code==401
+ old={'Cookie':'noema_session='+ADMIN}   # rename-shim: a cookie written before the rename, sent as the browser still sends it
+ assert c.get('/api/state',headers=old).status_code==200
+ r=c.post('/api/session',json={},headers=old);assert r.status_code==200
+ cookies=r.headers.get_list('set-cookie')
+ assert any(h.startswith('dhara_session='+ADMIN) and 'HttpOnly' in h for h in cookies)
+ assert any(h.startswith('noema_session=') and 'Max-Age=0' in h for h in cookies)   # rename-shim: login clears the old cookie
+ assert c.cookies.get('dhara_session')==ADMIN
+ assert c.get('/api/state').status_code==200
+ r=c.delete('/api/session');cleared=r.headers.get_list('set-cookie')
+ assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','noema_session'))   # rename-shim
+ assert c.get('/api/state').status_code==401
+
+def test_request_marker_dual_read(env):
+ c,s,w=env;c.headers.pop('Authorization');c.headers.pop('X-Dhara-Request')
+ assert c.post('/api/session',json={}).status_code==403
+ assert c.post('/api/session',json={},headers={'X-Dhara-Request':'1'}).status_code==200
+ assert c.post('/api/tasks',json={'title':'No marker'}).status_code==403
+ assert c.post('/api/tasks',json={'title':'Old marker'},headers={'X-Noema-Request':'1'}).status_code==201   # rename-shim: old header accepted for one release
+ assert c.post('/api/tasks',json={'title':'New marker'},headers={'X-Dhara-Request':'1'}).status_code==201

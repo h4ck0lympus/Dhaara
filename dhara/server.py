@@ -24,6 +24,11 @@ from .worker import Worker
 ROOT=Path(__file__).resolve().parents[1]
 MAX_UPLOAD=32*1024*1024
 MAX_BODY=64*1024*1024
+SESSION_COOKIE='dhara_session'
+LEGACY_SESSION_COOKIE='noema_session'   # rename-shim: read and cleared for one release (cookies live 14 days)
+def has_request_marker(request):
+    """Same-origin marker: the new header, or the pre-rename header for one release."""
+    return request.headers.get('x-dhara-request')=='1' or request.headers.get('x-noema-request')=='1'   # rename-shim: old header
 
 class HashedAssets(StaticFiles):
     """Vite output under dist/assets is content-hashed, so a URL never changes content."""
@@ -101,7 +106,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             return JSONResponse({'detail':'Request exceeds 64 MB'},status_code=413)
         identity=None
         authorization=request.headers.get('authorization','')
-        raw_token=authorization[7:] if authorization.startswith('Bearer ') else request.cookies.get('noema_session','')
+        raw_token=authorization[7:] if authorization.startswith('Bearer ') else (request.cookies.get(SESSION_COOKIE) or request.cookies.get(LEGACY_SESSION_COOKIE,''))   # rename-shim: an old cookie signs in until it expires
         if raw_token:
             if secrets.compare_digest(raw_token.encode(),admin.encode()): identity={'scope':'admin','task_ids':[]}
             else: identity=store.auth_token(raw_token)
@@ -109,7 +114,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         path=request.url.path
         if path.startswith('/api/') and path not in ('/api/health','/api/session','/api/desktop-instance'):
             if not identity: return JSONResponse({'detail':'Unlock Noema to continue'},status_code=401)
-            if not authorization and request.method not in ('GET','HEAD') and request.headers.get('x-noema-request')!='1':
+            if not authorization and request.method not in ('GET','HEAD') and not has_request_marker(request):
                 return JSONResponse({'detail':'Missing same-origin request marker'},status_code=403)
             if identity['scope']!='admin':
                 allowed=(identity['scope']=='agent' and (path=='/api/runs' or path.startswith('/api/runs/') or path.startswith('/api/agent/tasks/')))
@@ -139,7 +144,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/session')
     async def session(request:Request):
-        if request.headers.get('x-noema-request')!='1': raise Problem(403,'Missing request marker')
+        if not has_request_marker(request): raise Problem(403,'Missing request marker')
         try: body=await request.json()
         except ValueError: raise Problem(400,'Expected a JSON object')
         if not isinstance(body,dict): raise Problem(400,'Expected a JSON object')
@@ -150,12 +155,13 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         local=peer in ('127.0.0.1','::1','testclient') and host in ('127.0.0.1','localhost','::1','testserver') and not any(x in request.headers for x in ('forwarded','x-forwarded-for','x-forwarded-host'))
         if not (local and not supplied) and not secrets.compare_digest(supplied.encode(),admin.encode()): raise Problem(401,'Invalid access token')
         response=JSONResponse({'ok':True})
-        response.set_cookie('noema_session',admin,httponly=True,samesite='strict',secure=request.url.scheme=='https',max_age=60*60*24*14)
+        response.set_cookie(SESSION_COOKIE,admin,httponly=True,samesite='strict',secure=request.url.scheme=='https',max_age=60*60*24*14)
+        response.delete_cookie(LEGACY_SESSION_COOKIE)   # rename-shim: the next login clears the old cookie
         return response
 
     @app.delete('/api/session')
     def logout():
-        response=JSONResponse({'ok':True}); response.delete_cookie('noema_session'); return response
+        response=JSONResponse({'ok':True}); response.delete_cookie(SESSION_COOKIE); response.delete_cookie(LEGACY_SESSION_COOKIE); return response   # rename-shim: clear both
 
     @app.get('/api/state')
     def state(minutes:int|None=None):
