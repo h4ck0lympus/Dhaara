@@ -31,7 +31,7 @@ function latestSnapshot(qc: QueryClient): Snapshot | undefined {
 async function start(): Promise<void> {
   const legacy = rewriteLegacyHash(location.hash);
   if (legacy) history.replaceState(null, '', legacy);
-  await migrateLocalDb();   // rename spec §4.4: before any draft store opens the new database
+  await migrateLocalDb();   // rename-shim: moves pre-rename local data before any draft store opens the new database (rename spec §4.4)
   const qc = createQueryClient();
   const [, , cached] = await Promise.allSettled([captureDraftStore.load(), taskDraftStore.load(), readCachedSnapshot()]);
   if (cached.status === 'fulfilled' && cached.value) qc.setQueryData(queryKeys.snapshot(null), cached.value);

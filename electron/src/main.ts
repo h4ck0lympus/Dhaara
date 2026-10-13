@@ -37,7 +37,7 @@ function readOptions(): { options: CliOptions; profile: string } {
     if (options === 'help') exitWith(0, HELP_TEXT);
     const resolved = resolveProfile(options.profile, process.env, process.cwd());
     // An explicit --profile is never moved; the default location adopts the pre-rename one once (rename spec §4.6), before setPath and the lock.
-    const profile = options.profile === null ? adoptLegacyProfile(resolved, legacyProfile(process.env), (line) => process.stderr.write(`${line}\n`)) : resolved;
+    const profile = options.profile === null ? adoptLegacyProfile(resolved, legacyProfile(process.env), (line) => process.stderr.write(`${line}\n`)) : resolved;   // rename-shim: adopts the pre-rename profile directory once
     prepareProfile(profile);
     return { options, profile };
   } catch (error) {

@@ -14,7 +14,7 @@ test = ["pytest==9.0.2"]
 speech = ["faster-whisper>=1.1,<2"]
 
 [tool.setuptools]
-packages = ["dhara", "dhara"]
+packages = ["dhara", "noema"]  # rename-shim: the noema shim package ships for one release
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

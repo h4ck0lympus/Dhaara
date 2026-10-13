@@ -335,7 +335,7 @@ def test_old_session_cookie_signs_in_until_login_rewrites_it(env):
  assert c.cookies.get('dhara_session')==ADMIN
  assert c.get('/api/state').status_code==200
  r=c.delete('/api/session');cleared=r.headers.get_list('set-cookie')
- assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','dhara_session'))   # rename-shim
+ assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','noema_session'))   # rename-shim: logout clears both cookie names
  assert c.get('/api/state').status_code==401
 
 def test_request_marker_dual_read(env):
