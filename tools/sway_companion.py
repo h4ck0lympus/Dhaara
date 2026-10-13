@@ -268,7 +268,7 @@ class Companion:
             else:
                 self.button.get_style_context().remove_class('dot-mode')
                 self.button.set_size_request(size + 16, size + 16)
-                sprite = Path(__file__).resolve().parents[1] / 'public/cat.png'
+                sprite = Path(__file__).resolve().parents[1] / 'tools/assets/cat.png'
                 pixbuf = self.GdkPixbuf.Pixbuf.new_from_file(str(sprite))
                 height = max(1, round(size * pixbuf.get_height() / pixbuf.get_width()))
                 pixbuf = pixbuf.scale_simple(size * scale, height * scale,
