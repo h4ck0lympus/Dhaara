@@ -14,6 +14,7 @@ EXIT_LOCKED = 10
 EXIT_PORT = 11
 EXIT_LEASE = 12
 PR_SET_PDEATHSIG = 1
+LOCK_NAME = '.dhara-service.lock'
 # Managed development mode never enables optional models, remote access or another data dir.
 STRIPPED_NAMES = ('MODEL', 'SPEECH_MODEL', 'TOKEN', 'ACCESS_TOKEN', 'ALLOWED_HOSTS', 'ALLOW_REMOTE_MODEL', 'DATA_DIR')
 STRIPPED_ENV = tuple(prefix + name for prefix in PREFIXES for name in STRIPPED_NAMES)
@@ -26,7 +27,7 @@ def workspace_lock(root):
     if sys.platform != 'linux':
         return None
     import fcntl
-    fd = os.open(root / '.noema-service.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    fd = os.open(root / LOCK_NAME, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:

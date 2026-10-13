@@ -52,3 +52,20 @@ def test_managed_launch_strips_both_prefixes():
     assert PREFIXES == ('DHARA_', 'NOEMA_')
     assert set(STRIPPED_ENV) == {prefix + name for prefix in PREFIXES for name in STRIPPED_NAMES}
     assert {'DHARA_DATA_DIR', 'NOEMA_DATA_DIR', 'DHARA_ACCESS_TOKEN', 'NOEMA_ACCESS_TOKEN'} <= set(STRIPPED_ENV)
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason='the flock lock is Linux-only')
+def test_workspace_lock_uses_the_dhara_name_and_ignores_a_held_noema_lock(tmp_path):
+    import fcntl
+    from dhara.desktop_service import LOCK_NAME, workspace_lock
+    old = os.open(tmp_path / '.noema-service.lock', os.O_RDWR | os.O_CREAT, 0o600)
+    fcntl.flock(old, fcntl.LOCK_EX | fcntl.LOCK_NB)   # a pre-rename shell still holding its lock must not block
+    held = workspace_lock(tmp_path)
+    try:
+        assert LOCK_NAME == '.dhara-service.lock'
+        assert (tmp_path / LOCK_NAME).exists()
+        with pytest.raises(ValueError):
+            workspace_lock(tmp_path)
+    finally:
+        held.close()
+        os.close(old)
