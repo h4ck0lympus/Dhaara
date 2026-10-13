@@ -6,7 +6,7 @@ import { MESSAGES } from '../src/lifecycle.js';
 import { STARTUP_TEXT } from '../src/protocol.js';
 import { live, readPids } from '../test/proc.js';
 import { closeWindow, killAll, launchNoema, openCapture, readDraft, tempDir, waitConnected } from './fixtures.js';
-import { FAKE, appPage, mainUrl, managedSetup, ownedServices, runElectron, servicePid, startupPage } from './managed.js';
+import { FAKE, appPage, mainUrl, managedSetup, overlayBounds, ownedServices, runElectron, servicePid, startupPage } from './managed.js';
 
 test.afterEach(killAll);
 
@@ -38,6 +38,11 @@ test('an occupied port shows the occupied message with Retry, never contacts the
   await expect(startup.locator('#retry')).toBeEnabled();
   await expect(startup.locator('#cancel')).toHaveText('Cancel / Quit');
   expect(await mainUrl(app)).not.toMatch(/^http/);
+  // startup: a full-window curtain (polled: Sway may still be resizing the new window)
+  await expect.poll(async () => {
+    const { content, views } = await overlayBounds(app);
+    return views.some((view) => view.x === 0 && view.y === 0 && view.width === content.width && view.height === content.height);
+  }).toBe(true);
   expect(contacts).toBe(0);
   await new Promise<void>((resolve) => occupant.close(() => resolve()));
   await startup.locator('#retry').click();
@@ -90,6 +95,15 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
   await expect(overlay.locator('#retry')).toBeEnabled();
   await expect(overlay.locator('#cancel')).toHaveText('Quit');
   await expect(page.getByText('Offline · local drafts', { exact: true }).first()).toBeVisible();   // service-down, not a reload
+  // Crashed: only a bottom strip, so the still-loaded page (editor, offline status) stays visible and usable above it.
+  await expect.poll(async () => {
+    const { content, views } = await overlayBounds(first.app);
+    return views.some((view) => view.x === 0 && view.width === content.width && view.height <= 120 && view.y + view.height === content.height);
+  }).toBe(true);
+  const { views } = await overlayBounds(first.app);
+  const box = await editor.boundingBox();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(Math.min(...views.map((view) => view.y)));
+  await editor.click();
   await editor.fill('Typed after the crash, right before Quit.');   // inside the debounce: only the checkpoint saves it
   const closed = first.app.waitForEvent('close');
   await overlay.locator('#cancel').click();
@@ -98,6 +112,25 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
   const reopened = await appPage(second.app, m.origin);
   await waitConnected(reopened);
   expect((await readDraft(reopened))?.raw).toBe('Typed after the crash, right before Quit.');
+});
+
+test('SIGTERM runs the close checkpoint and stops the owned service', async () => {
+  const m = await managedSetup();
+  const first = await launchNoema(m.args, { env: m.env });
+  const page = await appPage(first.app, m.origin);
+  await waitConnected(page);
+  const editor = await openCapture(page);
+  await editor.fill('Typed right before SIGTERM.');   // inside the debounce: only the checkpoint saves it
+  const pid = await servicePid(m.origin);
+  const child = first.app.process();
+  const exited = new Promise((resolve) => child.once('exit', resolve));
+  child.kill('SIGTERM');
+  await exited;
+  await expect.poll(() => live(pid), { timeout: 10_000 }).toBe(false);
+  const second = await launchNoema(m.args, { env: m.env, profile: first.profile });
+  const reopened = await appPage(second.app, m.origin);
+  await waitConnected(reopened);
+  expect((await readDraft(reopened))?.raw).toBe('Typed right before SIGTERM.');
 });
 
 test('command-line errors exit 2 before any window or directory exists; --help exits 0', async () => {

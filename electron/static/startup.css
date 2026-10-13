@@ -7,3 +7,6 @@ main { max-width: 34rem; padding: 24px; }
 button { min-height: 44px; padding: 0 16px; border: 1px solid #4a4d48; border-radius: 8px; background: #1c1e1b; color: inherit; font: inherit; cursor: pointer; }
 button:disabled { opacity: .55; cursor: default; }
 button:focus-visible { outline: 2px solid #c9d4c3; outline-offset: 2px; }
+[data-mode=overlay] { min-height: 0; height: 100vh; border-top: 1px solid #4a4d48; }
+[data-mode=overlay] main { display: flex; align-items: center; gap: 16px; width: 100%; max-width: none; padding: 8px 16px; }
+[data-mode=overlay] #status { flex: 1; margin: 0; }

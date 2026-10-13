@@ -81,3 +81,11 @@ export function runElectron(args: string[], env: Record<string, string> = {}): P
     });
   });
 }
+
+/** Window content size and the bounds of every child view over it (the startup/crash overlay is one of them). */
+export function overlayBounds(app: ElectronApplication) {
+  return app.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    return { content: win.getContentBounds(), views: win.contentView.children.map((view) => view.getBounds()) };
+  });
+}

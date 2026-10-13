@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, session, WebContentsView, type IpcMainEvent } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, WebContentsView, type IpcMainEvent } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HELP_TEXT, parseArgs, userArgv, type CliOptions } from './cli.js';
@@ -14,6 +14,13 @@ const REPO_ROOT = path.resolve(DIST, '../..');
 const STARTUP_PAGE = path.resolve(DIST, '../static/startup.html');
 // spec §6.3 webPreferences; never --no-sandbox.
 const SANDBOXED = { sandbox: true, contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged } as const;
+
+// A bare launch on a Wayland session without Xwayland must still open a window (tests pass --ozone-platform=wayland explicitly).
+app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+// The default menu's Ctrl+R/F5 reload would land a crashed page on a Chromium error page that Retry can never recover.
+Menu.setApplicationMenu(null);
+
+const OVERLAY_STRIP_HEIGHT = 96;
 
 type ShellState = 'starting' | 'loaded' | 'crashed' | 'stopping';
 
@@ -60,19 +67,21 @@ function dispatchPageEvent(win: BrowserWindow, name: string): void {
   if (!win.isDestroyed()) void win.webContents.executeJavaScript(`window.dispatchEvent(new Event('${name}'))`).catch(() => undefined);
 }
 
-/** The local startup/crash page: its own sandboxed view and preload, laid over the whole window (spec §6.4.6). */
+/** The local startup/crash page (spec §6.4.6): a full-window curtain at startup, a bottom strip once a page is loaded so it stays usable. */
+function fitOverlay(win: BrowserWindow, view: WebContentsView, mode: StartupStatus['mode']): void {
+  const { width, height } = win.getContentBounds();
+  const strip = mode === 'overlay' ? Math.min(OVERLAY_STRIP_HEIGHT, height) : height;
+  view.setBounds({ x: 0, y: height - strip, width, height: strip });
+}
+
 function createOverlay(win: BrowserWindow, current: () => StartupStatus): WebContentsView {
   const view = new WebContentsView({ webPreferences: { preload: path.join(DIST, 'startup-preload.cjs'), ...SANDBOXED } });
   view.setBackgroundColor('#101110');
   view.webContents.on('will-navigate', (event) => event.preventDefault());
   view.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   view.webContents.on('did-finish-load', () => view.webContents.send(IPC_STARTUP_STATUS, current()));
-  const fit = () => {
-    const { width, height } = win.getContentBounds();
-    view.setBounds({ x: 0, y: 0, width, height });
-  };
-  win.on('resize', fit);
-  fit();
+  win.contentView.on('bounds-changed', () => fitOverlay(win, view, current().mode));
+  fitOverlay(win, view, current().mode);
   void view.webContents.loadFile(STARTUP_PAGE).catch(() => undefined);
   return view;
 }
@@ -103,6 +112,7 @@ function runManaged(options: CliOptions, dataDir: string): void {
     if (win === null || win.isDestroyed()) return;
     overlay ??= createOverlay(win, () => status);
     if (!win.contentView.children.includes(overlay)) win.contentView.addChildView(overlay);
+    fitOverlay(win, overlay, status.mode);
     overlay.webContents.send(IPC_STARTUP_STATUS, status);
   };
   const hide = () => {

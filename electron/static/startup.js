@@ -5,6 +5,7 @@ const cancel = document.getElementById('cancel');
 retry.addEventListener('click', () => window.noemaStartup.retry());
 cancel.addEventListener('click', () => window.noemaStartup.cancel());
 window.noemaStartup.onStatus((next) => {
+  document.body.dataset.mode = next.mode;
   status.textContent = next.text;
   retry.disabled = next.busy;
   cancel.textContent = next.mode === 'overlay' ? 'Quit' : 'Cancel / Quit';

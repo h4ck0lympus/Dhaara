@@ -32,6 +32,10 @@ test.afterAll(async () => {
   offServer?.close();
 });
 
+test('no application menu exists, so no reload or devtools accelerator is registered', async () => {
+  expect(await app.evaluate(({ Menu }) => Menu.getApplicationMenu())).toBeNull();
+});
+
 test.beforeEach(() => {
   offHits = 0;
 });
