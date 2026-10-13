@@ -25,6 +25,7 @@ from dhara.env import strip
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--before-source', type=Path)
+    parser.add_argument('--output', type=Path, help='Write evidence to a new directory')
     suite = parser.add_mutually_exclusive_group()
     suite.add_argument('--visibility', action='store_true', help='Kitten visibility/scaling acceptance')
     suite.add_argument('--pointer', action='store_true', help='Native compositor pointer delivery acceptance')
@@ -33,7 +34,7 @@ def main():
     if args.pointer and args.before_source:
         parser.error('--pointer tests current native interaction, not archived source')
     phase = 'before' if args.before_source else 'after'
-    output = ROOT / ('qa/companion-input' if args.pointer else
+    output = args.output or ROOT / ('qa/companion-input' if args.pointer else
                      'qa/kitten-visibility' if args.visibility else 'qa/sway') / phase
     output.mkdir(parents=True, exist_ok=True)
     if args.pointer:

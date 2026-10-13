@@ -1,6 +1,95 @@
 # Verification report · Dhara 0.1.0 + React/Electron cutover
 
-The final cutover gate below ran on source revision `cfbfed53d548f039915436975bb2317ae0917d0a` (`git rev-parse HEAD` at the final run; the commit that adds this report comes after it, so it is not that revision). Every other section is an inherited report: the terrain measurements ran on `b13fd4d` and the §21 memory measurement on `54ffe98`, and the sections from "Frictionless task capture" down are earlier milestones' reports, kept unchanged.
+The final cutover gate below ran on source revision `cfbfed53d548f039915436975bb2317ae0917d0a` (`git rev-parse HEAD` at the final run; the commit that adds this report comes after it, so it is not that revision). Apart from the October 13 hook/UI section, the remaining sections are inherited reports: the terrain measurements ran on `b13fd4d` and the §21 memory measurement on `54ffe98`, and the sections from "Frictionless task capture" down are earlier milestones' reports, kept unchanged.
+
+
+
+## October 13: fullscreen layout correction
+
+Removed the Overview's 1160 px width cap and 690 px center-height cap. Its
+workspace now uses available window width/height through Grid and Flexbox;
+the activity panel stays at the right inset, capture fills its column, and
+recent notes remain near the bottom. Long editors stay in document flow.
+Production build/typecheck and `overview-resize.spec.ts` passed. The test checks
+1200×800, the reported 1924×1030 size, 2560×1440 and 3440×1440, then sidebar
+collapse, inline capture and a return to 390 px mobile width. Screenshots are
+in `qa/dhaara-design/responsive/`. The preview AppImage was repacked with UID/GID
+1000 and atomically replaced; its running mounted predecessor is not truncated.
+
+## October 13: preview AppImage ownership correction
+
+The initial preview accidentally used appimagetool's default root ownership.
+The user reported that the launcher rejected UID 0 versus their UID 1000.
+Repacked the same preview path with `-force-uid 1000 -force-gid 1000`, matching
+release/build.sh. `unsquashfs -lln` confirms the actual embedded Electron binary
+is owned by 1000/1000. A direct AppImage launch (without extraction or disabling
+the sandbox) created a native window in a private headless Sway session using a
+temporary profile and external test service. Evidence log:
+`/tmp/dhaara-image-native-6cg42_8j/launch.log`.
+The original release is unchanged. Updated digest is in
+`qa/dhaara-design/overview-v2/AppImage.sha256`; the reusable repack script there
+preserves the builder's UID/GID to prevent repeating this mistake.
+
+## October 13: approved Overview workspace
+
+- Targeted frontend component tests: 85 passed across Overview, Tasks, navigation,
+  keyboard shortcuts, capture, note reader, Settings, task entry, notifications
+  and snapshot queries. Final follow-ups for notification persistence and Settings
+  also passed. Legacy Overview assertions were replaced with the approved preview
+  and inline-workspace contract; domain scheduling tests remain unchanged.
+- Backend core: 66 passed after changing the new-store motion default; existing
+  stored preferences remain intact.
+- Browser acceptance: 25 passed across `now.spec.ts`, `layout.spec.ts` and
+  `overview-workspace.spec.ts`. Includes real inline note/task saves, library,
+  notification read state/actions, linked task filters, capped lists, offline
+  honesty, pin confirmation, stale status, responsive layouts, contrast, touch
+  targets and visibly changing particles with reduced-motion fallback.
+- Production build/typecheck passed. Existing main-chunk size warning remains
+  (approximately 544 kB before gzip). No fresh full-suite or full native gate is
+  claimed for this UI revision.
+- Screenshots: `qa/dhaara-design/overview-v2-desktop.png`,
+  `overview-v2-phone.png`; packaged-service checks in
+  `qa/dhaara-design/overview-v2/`.
+- Preview: `/home/p4nic/code/noema-pkg/release/out/Dhara-0.1.0-ui-preview-x86_64.AppImage`.
+  Built in an isolated copy of the existing AppDir with the current web bundle
+  and a fresh PyInstaller service from current source (including agent_hook.py
+  as a data asset). The original packaged backend lacked /api/agent-connections;
+  this was caught during Settings inspection and corrected by rebuilding. Its
+  frozen service was tested with a temporary data directory in Chromium:
+  connection, agent-connections endpoint, inline save, Settings and motion toggle.
+  Electron runtime and native companion lifecycle are inherited, not revalidated. Original release and packaging source are untouched.
+- Desktop notification delivery requires opt-in and OS permission. In-app feed
+  remains available without either. Native OS delivery and full AppImage launch
+  on the physical desktop were not exercised; client-hidden polling is enabled
+  only while opted in. Read/snooze/quiet state is client-local, not shared with
+  the detached kitten. Screen observation is still separately permissioned.
+
+## October 13: automatic hooks and UI correction
+
+- New local receiver tests execute installed commands and generated Claude/Codex
+  plugin commands with documented hook payloads. They cover permission/resume/
+  review transitions, parallel session separation, ignored child events,
+  offline ordered delivery, crash replay, config preservation, disconnect,
+  admin/local-client authorization and plugin downloads. These are injected
+  events, not claims that live host trust/reload was exercised.
+- Backend: the full suite passed 256 tests; the subsequent plugin-mode switch
+  and affected backend/doc gates passed 104 tests.
+- Frontend: 514 existing unit tests pass outside the sandbox; two new connection
+  control tests also pass. Four subprocess
+  stderr assertions failed inside the sandbox and passed outside it.
+- Browser: 93/94 selected checks initially passed; the remaining check used the
+  old Capture heading and passed after its expectation was corrected. The set
+  covers Overview, Settings, responsive layout and the background's rendering,
+  reduced motion, visibility/idle gating, context loss and quiet reading areas.
+- Native: 28 checks pass in a private headless Sway session using the existing
+  temporary GtkLayerShell typelib. No system package installation was needed.
+  The test found and verified a fix for dismissed popovers reopening during
+  appearance updates. This is not physical Sway/device acceptance.
+- Same-fixture UI screenshots: `qa/dhaara-design/before-desktop.png`,
+  `before-phone.png`, `after-desktop.png`, `after-phone.png`. Native evidence:
+  `qa/dhaara-design/native/`. The new kitten PNG's alpha channel was inspected;
+  surrounding pixels are transparent. The former sprite is preserved.
+
 
 ## React + Electron cutover · 2026-10-12
 

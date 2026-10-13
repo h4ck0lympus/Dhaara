@@ -113,8 +113,8 @@ def main():
                 buttons = [w.get_label() for w in widgets(app.popover) if isinstance(w, Gtk.Button)]
                 check('Hide companion' in buttons and 'Pause this observer' in buttons,
                       'Real companion menu exposes hide and local observation pause')
-                check('56 px' not in buttons and '40 px' in buttons,
-                      'Native size controls remain tiny')
+                check('72 px' in buttons and '40 px' in buttons,
+                      'Native size controls include small illustrated-kitten sizes')
                 check(GtkLayerShell.get_keyboard_mode(window) == GtkLayerShell.KeyboardMode.NONE
                       and not app.popover.get_modal(),
                       'Opened controls stay non-modal and never request keyboard focus')
