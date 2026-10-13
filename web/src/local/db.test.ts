@@ -19,9 +19,9 @@ afterEach(() => {
 const blob = (text: string, type = 'image/png') => new Blob([text], { type });
 
 describe('openDb', () => {
-  it('opens noema-local-v1 version 1 with the public/app.js stores and caches the connection', async () => {
+  it('opens dhara-local-v1 version 1 with the public/app.js stores and caches the connection', async () => {
     const first = await db.openDb();
-    expect(first.name).toBe('noema-local-v1');
+    expect(first.name).toBe('dhara-local-v1');
     expect(first.version).toBe(1);
     expect([...first.objectStoreNames].sort()).toEqual(['kv', 'outbox']);
     expect(first.transaction('outbox').objectStore('outbox').keyPath).toBe('id');
@@ -33,7 +33,7 @@ describe('openDb', () => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     });
     await expect(db.openDb()).rejects.toThrow('The operation is insecure.');
-    await expect(db.openDb()).resolves.toMatchObject({ name: 'noema-local-v1' });
+    await expect(db.openDb()).resolves.toMatchObject({ name: 'dhara-local-v1' });
   });
 
   it('reports a blocked open as "Close other Noema tabs"', async () => {
@@ -47,7 +47,7 @@ describe('openDb', () => {
   it('closes on versionchange and forgets the cached connection', async () => {
     const first = await db.openDb();
     const upgraded = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('noema-local-v1', 2);
+      const request = indexedDB.open('dhara-local-v1', 2);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
       request.onblocked = () => reject(new Error('blocked: the old connection did not close'));

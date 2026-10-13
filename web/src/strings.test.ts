@@ -18,6 +18,7 @@ describe('S', () => {
       draftMemory: 'Draft in this tab · not uploaded',
       localSaveFailedToast: 'Local save failed. Keep this page open and retry; this draft has not been uploaded.',
       localSaveErrorNotice: 'Latest local save failed. Keep this page open.',
+      migrationFailed: 'Local data could not be migrated; keep this page open and retry.',
       retryLocalSave: 'Retry local save',
       networkError: 'Server unreachable. Your saved captures remain queued on this device.',
       unexpectedResponse: 'The server sent an unexpected response.',

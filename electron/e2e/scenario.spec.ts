@@ -47,7 +47,7 @@ async function closeAndWait(app: ElectronApplication): Promise<void> {
 
 function taskDraftRaw(page: Page): Promise<string | null> {
   return page.evaluate(() => new Promise<string | null>((resolve, reject) => {
-    const open = indexedDB.open('noema-local-v1', 1);
+    const open = indexedDB.open('dhara-local-v1', 1);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const tx = open.result.transaction('kv', 'readonly');

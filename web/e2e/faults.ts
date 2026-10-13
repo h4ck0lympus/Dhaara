@@ -152,7 +152,7 @@ export async function blockIdbOpen(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const original = IDBFactory.prototype.open;
     IDBFactory.prototype.open = function (this: IDBFactory, name: string, version?: number) {
-      if (name !== 'noema-local-v1') return original.call(this, name, version);
+      if (name !== 'dhara-local-v1') return original.call(this, name, version);
       const request = Object.assign(new EventTarget(), {
         onblocked: null as ((this: unknown, event: Event) => unknown) | null,
         onsuccess: null,

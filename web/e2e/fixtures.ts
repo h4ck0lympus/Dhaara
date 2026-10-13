@@ -1,4 +1,5 @@
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
+import { DB_NAME } from '../src/local/db';
 import { S } from '../src/strings';
 import { startNoema, type NoemaServer } from './server';
 
@@ -51,11 +52,12 @@ export async function gotoApp(page: Page, noema: NoemaServer, hash = '#/overview
   await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });   // a cold service plus three busy siblings
 }
 
-// The one place that opens noema-local-v1; the same upgrade as public/app.js:30-43 (and web/src/local/db.ts),
-// so seeded records are exactly what the v1 UI stored.
-export function openLocalDb(): Promise<IDBDatabase> {
+// The one place that opens the local database (the app's by default; LEGACY_DB_NAME from src/local/migrate.ts for a
+// pre-rename seed). Same upgrade as web/src/local/db.ts, so seeded records are exactly what the old UI stored. This
+// function is serialised into the page, so the default stays an inline literal.
+export function openLocalDb(name = 'dhara-local-v1'): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('noema-local-v1', 1);
+    const request = indexedDB.open(name, 1);
     request.onupgradeneeded = () => {
       request.result.createObjectStore('kv');
       request.result.createObjectStore('outbox', { keyPath: 'id' });
@@ -73,11 +75,11 @@ function inLocalDb<A, R>(page: Page, body: (open: typeof openLocalDb, arg: A) =>
 
 type Seed = { draft?: SeedDraft; taskDraft?: unknown; outbox?: SeedDraft[] };
 
-export async function seedLocalDb(page: Page, origin: string, seed: Seed): Promise<void> {
+export async function seedLocalDb(page: Page, origin: string, seed: Seed, dbName = DB_NAME): Promise<void> {
   await page.goto(origin + '/api/health'); // same origin, no app code competing for the database
   await inLocalDb(
     page,
-    async (open, seed: Seed) => {
+    async (open, { seed, dbName }: { seed: Seed; dbName: string }) => {
       const toRecord = (item: SeedDraft) => ({
         id: item.id,
         raw: item.raw,
@@ -85,7 +87,7 @@ export async function seedLocalDb(page: Page, origin: string, seed: Seed): Promi
         files: item.files.map((file) => ({ name: file.name, blob: new Blob([Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0))], { type: file.type }) })),
         ...(item.error === undefined ? {} : { error: item.error }),
       });
-      const db = await open();
+      const db = await open(dbName);
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(['kv', 'outbox'], 'readwrite');
         if (seed.draft) tx.objectStore('kv').put(toRecord(seed.draft), 'draft');
@@ -97,7 +99,7 @@ export async function seedLocalDb(page: Page, origin: string, seed: Seed): Promi
       });
       db.close();
     },
-    seed,
+    { seed, dbName },
   );
 }
 

@@ -83,7 +83,7 @@ test.describe('fault injection', () => {
     const outcome = await page.evaluate(
       () =>
         new Promise<string>((resolve) => {
-          const request = indexedDB.open('noema-local-v1', 1);
+          const request = indexedDB.open('dhara-local-v1', 1);
           request.onblocked = () => setTimeout(() => resolve('blocked'), 200);
           request.onsuccess = () => resolve('opened');
         }),

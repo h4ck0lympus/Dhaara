@@ -8,7 +8,7 @@ beforeEach(() => {
 
 function openV1(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('noema-local-v1', 1);
+    const request = indexedDB.open('dhara-local-v1', 1);
     request.onupgradeneeded = () => {
       request.result.createObjectStore('kv');
       request.result.createObjectStore('outbox', { keyPath: 'id' });
@@ -28,7 +28,7 @@ function addOutbox(db: IDBDatabase, ids: string[]): Promise<string> {
 }
 
 describe('Vitest IndexedDB environment (contract §9)', () => {
-  it('opens noema-local-v1 version 1 with the public/app.js stores', async () => {
+  it('opens dhara-local-v1 version 1 with the public/app.js stores', async () => {
     const db = await openV1();
     expect([...db.objectStoreNames].sort()).toEqual(['kv', 'outbox']);
     expect(db.transaction('outbox').objectStore('outbox').keyPath).toBe('id');

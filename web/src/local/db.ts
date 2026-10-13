@@ -1,9 +1,9 @@
-// IndexedDB layer (spec §4.4, contract §4.1): the same database, version, stores and record shapes as public/app.js,
-// so drafts and captures queued by the old UI stay valid.
+// IndexedDB layer (spec §4.4, contract §4.1): version 1 and the kv/outbox stores and record shapes that public/app.js defined;
+// local/migrate.ts moves the pre-rename database here, so queued captures stay valid.
 import type { TaskEditable } from '../api/schemas';
 import { S } from '../strings';
 
-export const DB_NAME = 'noema-local-v1';
+export const DB_NAME = 'dhara-local-v1';
 export const DB_VERSION = 1;
 export type StoredFile = { name: string; blob: Blob };
 export type Draft = { id: string; raw: string; task_id: string; files: StoredFile[] }; // kv['draft']
@@ -11,7 +11,7 @@ export type OutboxItem = Draft & { error?: string }; // outbox, keyPath 'id'
 export type TaskDraftPending = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };
 export type TaskDraft = { id: string; raw: string; fields: Partial<TaskEditable>; pending: TaskDraftPending | null }; // kv['task-draft']
 export type KvValues = { draft: Draft; 'task-draft': TaskDraft; snapshot: unknown };
-export type LocalErrorCode = 'blocked' | 'open-failed' | 'aborted';
+export type LocalErrorCode = 'blocked' | 'open-failed' | 'aborted' | 'migrate';
 type StoreName = 'kv' | 'outbox';
 
 export class LocalStoreError extends Error {

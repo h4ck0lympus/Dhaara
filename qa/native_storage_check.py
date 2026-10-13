@@ -27,7 +27,7 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 RAW = 'free_slot(0x1234) may leave a pointer. Not confirmed; changing size did not help.'
 READ = """async ({store, key}) => {
   const db = await new Promise((resolve, reject) => {
-    const r = indexedDB.open('noema-local-v1', 1);
+    const r = indexedDB.open('dhara-local-v1', 1);
     r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
   });
   try {

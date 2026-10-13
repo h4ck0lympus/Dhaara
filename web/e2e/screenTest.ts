@@ -31,7 +31,7 @@ export async function waitForServiceWorker(page: Page): Promise<void> {
 export async function readDraftFileBytes(page: Page): Promise<Buffer> {
   const bytes = await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('noema-local-v1', 1);
+      const request = indexedDB.open('dhara-local-v1', 1);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });

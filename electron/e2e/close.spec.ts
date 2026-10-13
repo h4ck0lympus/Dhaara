@@ -55,7 +55,7 @@ test('a capture save in flight keeps the window open with a toast and no not-res
   await window.evaluate(() => new Promise<void>((resolve, reject) => {
     const w = window as typeof window & { __holdOutbox?: boolean };
     w.__holdOutbox = true;
-    const open = indexedDB.open('noema-local-v1', 1);
+    const open = indexedDB.open('dhara-local-v1', 1);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const store = open.result.transaction('outbox', 'readwrite').objectStore('outbox');

@@ -93,5 +93,6 @@ export const S = {
   closeCheckpointFailed: 'Could not checkpoint your draft. Keep Noema open and retry the local save.', // 612
   draftsNotSaved: 'Could not save your drafts on this device.', // new
   updateReady: 'Noema was updated. Your drafts are saved on this device.', // new
+  migrationFailed: 'Local data could not be migrated; keep this page open and retry.', // rename spec §4.4
   reload: 'Reload', // new
 } as const;

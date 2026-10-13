@@ -6,7 +6,9 @@ import { onUnauthorized } from './api/client';
 import type { Snapshot } from './api/schemas';
 import { boot } from './api/session';
 import { connection, installConnectionListeners } from './domain/connection';
+import { LocalStoreError } from './local/db';
 import { captureDraftStore } from './local/drafts';
+import { migrateLocalDb } from './local/migrate';
 import { taskDraftStore } from './local/taskDraft';
 import { installLegacyHashRewrite, installModalLinks, rewriteLegacyHash } from './routes/legacy';
 import { createAppRouter, openModalLink } from './routes/router';
@@ -16,6 +18,7 @@ import { registerServiceWorker } from './shell/serviceWorker';
 import { requestUnlock } from './shell/unlock';
 import { createQueryClient } from './state/queryClient';
 import { installRefetchTriggers, queryKeys, readCachedSnapshot } from './state/queries';
+import { S } from './strings';
 import './styles/base.css';
 import './styles/shell.css';
 import './styles/ui.css';
@@ -28,6 +31,7 @@ function latestSnapshot(qc: QueryClient): Snapshot | undefined {
 async function start(): Promise<void> {
   const legacy = rewriteLegacyHash(location.hash);
   if (legacy) history.replaceState(null, '', legacy);
+  await migrateLocalDb();   // rename spec §4.4: before any draft store opens the new database
   const qc = createQueryClient();
   const [, , cached] = await Promise.allSettled([captureDraftStore.load(), taskDraftStore.load(), readCachedSnapshot()]);
   if (cached.status === 'fulfilled' && cached.value) qc.setQueryData(queryKeys.snapshot(null), cached.value);
@@ -53,16 +57,34 @@ async function start(): Promise<void> {
   registerServiceWorker();
 }
 
-// public/app.js:616 — never leave a blank page when startup itself throws.
-function showStartupFailure(): void {
+// public/app.js:616 — never leave a blank page when startup itself throws. With `retry`, the user retries in place
+// (rename spec §4.4: the pre-rename database is moved before anything else touches local storage).
+function showStartupFailure(message: string, retry = false): void {
   const main = document.createElement('main');
   main.dataset.quiet = '';
   const title = document.createElement('h1');
   title.textContent = 'Noema';
-  const message = document.createElement('p');
-  message.textContent = 'Could not open the workspace. Check the server and reload.';
-  main.append(title, message);
+  const text = document.createElement('p');
+  text.setAttribute('role', 'alert');
+  text.textContent = message;
+  main.append(title, text);
+  if (retry) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'text-button';
+    button.textContent = S.retry;
+    button.onclick = () => {
+      main.remove();
+      void start().catch(onStartupError);
+    };
+    main.append(button);
+  }
   document.getElementById('root')?.replaceChildren(main);
 }
 
-void start().catch(showStartupFailure);
+function onStartupError(error: unknown): void {
+  if (error instanceof LocalStoreError) showStartupFailure(error.message, true);
+  else showStartupFailure('Could not open the workspace. Check the server and reload.');
+}
+
+void start().catch(onStartupError);

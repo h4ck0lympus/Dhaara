@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test';
+import { DB_NAME } from '../src/local/db';
+import { LEGACY_DB_NAME } from '../src/local/migrate';
 import { S } from '../src/strings';
 import { failFetch, loseAck } from './faults';
 import { expect, gotoApp, PNG_1PX, putOutboxItem, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
@@ -31,6 +33,19 @@ test('Upgrade: a v1 outbox item and drafts upload exactly once with the original
   const local = await readLocalDb(page);
   expect(local.draft).toEqual({ ...draft, files: [] }); // drafts stay on the device; Save is the only notebook boundary
   expect(local.taskDraft).toEqual(taskDraft);
+});
+
+test('Upgrade from the pre-rename build: a queued capture in the old database is moved and uploads once with its id', async ({ page, noema }) => {
+  const draft: SeedDraft = { id: 'draft-legacy-0001', raw: 'still typing', task_id: '', files: [] };
+  await seedLocalDb(page, noema.origin, { draft, outbox: [QUEUED] }, LEGACY_DB_NAME);
+  await openApp(page, noema);
+  await expect.poll(async () => (await notes(noema)).map((note) => note.id)).toEqual([QUEUED.id]);
+  await expect.poll(() => outboxIds(page)).toEqual([]);
+  await expect.poll(() => page.evaluate(async () => (await indexedDB.databases()).map((info) => info.name))).toEqual([DB_NAME]);
+  expect((await readLocalDb(page)).draft).toEqual({ ...draft, files: [] });
+  await page.reload();
+  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  expect((await notes(noema)).map((note) => note.id)).toEqual([QUEUED.id]);   // uploaded exactly once, original capture_id
 });
 
 test('Reconnect flushes queued capture to real server', async ({ page, noema }) => {
@@ -149,7 +164,7 @@ test.describe('Outbox dialog', () => {
   test('An unreadable queued record is listed with Discard only', async ({ page, noema }) => {
     await seedLocalDb(page, noema.origin, {});
     await page.evaluate(() => new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('noema-local-v1', 1);
+      const request = indexedDB.open('dhara-local-v1', 1);
       request.onsuccess = () => {
         const tx = request.result.transaction('outbox', 'readwrite');
         tx.objectStore('outbox').put({ id: 'broken-0001', raw: 42 });

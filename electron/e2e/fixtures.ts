@@ -121,7 +121,7 @@ export type LocalDraft = { raw: string; files: { name: string; bytes: number[] }
 /** Reads kv['draft'] from the page's real IndexedDB (desktop/qa/scenario.js:6-14). The app must have opened it first. */
 export function readDraft(page: Page): Promise<LocalDraft> {
   return page.evaluate(() => new Promise<LocalDraft>((resolve, reject) => {
-    const open = indexedDB.open('noema-local-v1', 1);
+    const open = indexedDB.open('dhara-local-v1', 1);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const db = open.result;
@@ -151,7 +151,7 @@ export function readDraft(page: Page): Promise<LocalDraft> {
 
 export function outboxIds(page: Page): Promise<string[]> {
   return page.evaluate(() => new Promise<string[]>((resolve, reject) => {
-    const open = indexedDB.open('noema-local-v1', 1);
+    const open = indexedDB.open('dhara-local-v1', 1);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const db = open.result;
