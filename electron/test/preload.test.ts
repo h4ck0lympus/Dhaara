@@ -21,7 +21,7 @@ describe('sandboxed preloads cannot import protocol.ts, so their literals are pi
     expect(literal(source, 'IPC_STARTUP_RETRY')).toBe(protocol.IPC_STARTUP_RETRY);
     expect(literal(source, 'IPC_STARTUP_CANCEL')).toBe(protocol.IPC_STARTUP_CANCEL);
     expect(literal(source, 'IPC_STARTUP_STATUS')).toBe(protocol.IPC_STARTUP_STATUS);
-    expect(source).toContain("exposeInMainWorld('noemaStartup'");
+    expect(source).toContain("exposeInMainWorld('dharaStartup'");
   });
 
   it('page event names equal web/src/events.ts', () => {

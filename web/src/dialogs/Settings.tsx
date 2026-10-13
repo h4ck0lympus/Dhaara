@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Settings, SettingsPatch, TokenCreated } from '../api/schemas';
 import { observationStatus } from '../domain/nowState';
 import { openDialog } from '../shell/dialogs';
-import { NOTIFICATIONS_KEY } from '../shell/notifications';
+import { NOTIFICATIONS_KEY, notificationsOptedIn } from '../shell/notifications';
 import { useCreateRule, useCreateToken, useDeleteRule, useRevokeToken, useSnapshot, useTokens, useUpdateSettings } from '../state/queries';
 import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
@@ -20,14 +20,6 @@ export const SETTINGS_TEXT = {
   tokenOnce: 'Copy this token now. It will not be displayed again.',   // app.js:470
 } as const;
 
-function notificationsOn(): boolean {
-  try {
-    return localStorage.getItem(NOTIFICATIONS_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 function pick(source: Settings, changes: SettingsPatch): SettingsPatch {
   return Object.fromEntries(Object.keys(changes).map(key => [key, source[key as keyof SettingsPatch]])) as SettingsPatch;
 }
@@ -39,7 +31,7 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
   const [name, setName] = useState(snapshot?.settings.display_name ?? '');
   const savedSize = useRef(snapshot?.settings.companion_size ?? 40);
   const [error, setError] = useState<string | null>(null);
-  const [notify, setNotify] = useState(notificationsOn);
+  const [notify, setNotify] = useState(notificationsOptedIn);
   const [agentsOpen, setAgentsOpen] = useState(section === 'agents');
   const [ruleError, setRuleError] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState<string | null>(null);

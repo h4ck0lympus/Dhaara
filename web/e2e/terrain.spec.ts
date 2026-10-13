@@ -17,7 +17,7 @@ async function enableMotion(noema: NoemaServer): Promise<void> {
 }
 
 function frames(page: Page): Promise<number> {
-  return page.evaluate(() => window.__noemaField!.frames);
+  return page.evaluate(() => window.__dharaField!.frames);
 }
 
 async function expectState(page: Page, state: 'animated' | 'static' | 'paused' | 'unsupported'): Promise<void> {
@@ -156,7 +156,7 @@ test.describe('terrain state machine', () => {
     await openField(page, noema);
     await expectState(page, 'unsupported');
     await expect(page.locator(FIELD)).toBeHidden();
-    await expect(page.evaluate(() => window.__noemaField!.readPixel(1, 1))).rejects.toThrow('The field is not drawing');
+    await expect(page.evaluate(() => window.__dharaField!.readPixel(1, 1))).rejects.toThrow('The field is not drawing');
     await page.getByRole('navigation').getByText('Capture', { exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Capture a thought.' })).toBeVisible();
   });
@@ -179,7 +179,7 @@ test.describe('terrain state machine', () => {
   test('the test seam is absent without ?e2e=1', async ({ page, noema }) => {
     await gotoApp(page, noema);
     await expectState(page, 'static');
-    expect(await page.evaluate(() => window.__noemaField === undefined)).toBe(true);
+    expect(await page.evaluate(() => window.__dharaField === undefined)).toBe(true);
   });
 });
 
@@ -192,7 +192,7 @@ function centerBox(page: Page): Box {
 
 function litIn(page: Page, box: Box, step = 6): Promise<{ total: number; lit: number }> {
   return page.evaluate(async ({ box, step }) => {
-    const field = window.__noemaField!;
+    const field = window.__dharaField!;
     const reads: Promise<[number, number, number, number]>[] = [];
     for (let y = box.top + step / 2; y < box.top + box.height; y += step) {
       for (let x = box.left + step / 2; x < box.left + box.width; x += step) {
@@ -207,7 +207,7 @@ function litIn(page: Page, box: Box, step = 6): Promise<{ total: number; lit: nu
 // step 2 CSS px = every backing pixel at DPR 1 (0.5× store), so a 1-px stroke under a quiet surface cannot slip between samples.
 function quietPixels(page: Page, step = 2): Promise<{ total: number; lit: number }> {
   return page.evaluate(async (step) => {
-    const field = window.__noemaField!;
+    const field = window.__dharaField!;
     const rects = Array.from(document.querySelectorAll('[data-quiet]'), (element) => element.getBoundingClientRect())
       .filter((rect) => rect.width > 1 && rect.height > 1);
     const reads: Promise<[number, number, number, number]>[] = [];
@@ -370,7 +370,7 @@ test.describe('terrain pixels', () => {
     await expect.poll(async () => (await quietPixels(page)).total).toBeGreaterThan(0);
     expect((await quietPixels(page)).lit).toBe(0);
     const outside = await page.evaluate(async () => {
-      const field = window.__noemaField!;
+      const field = window.__dharaField!;
       const rects = Array.from(document.querySelectorAll('[data-quiet]'), (element) => element.getBoundingClientRect());
       const main = document.querySelector('main.content')!.getBoundingClientRect();
       const reads: Promise<[number, number, number, number]>[] = [];

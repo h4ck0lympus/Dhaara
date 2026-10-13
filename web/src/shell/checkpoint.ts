@@ -36,9 +36,9 @@ export function installCheckpointClose(): () => void {
 
   const listener = () => { void checkpoint(); };
   window.addEventListener(CHECKPOINT_CLOSE, listener);
-  window.__noemaCheckpointCloseReady = true;   // only after the listener exists (spec §6.3)
+  window.__dharaCheckpointCloseReady = true;   // only after the listener exists (spec §6.3)
   return () => {
     window.removeEventListener(CHECKPOINT_CLOSE, listener);
-    delete window.__noemaCheckpointCloseReady;
+    delete window.__dharaCheckpointCloseReady;
   };
 }

@@ -203,12 +203,12 @@ test('closing before the page finished loading closes at once without a checkpoi
 test('a loaded page that never set the ready flag closes without a checkpoint request', async () => {
   const first = await openApp();
   await first.window.evaluate(() => {
-    delete (window as typeof window & { __noemaCheckpointCloseReady?: true }).__noemaCheckpointCloseReady;
-    window.addEventListener('noema:checkpoint-close', () => localStorage.setItem('noema-test-checkpoint', 'dispatched'), { capture: true });
+    delete (window as typeof window & { __dharaCheckpointCloseReady?: true }).__dharaCheckpointCloseReady;
+    window.addEventListener('dhara:checkpoint-close', () => localStorage.setItem('dhara-test-checkpoint', 'dispatched'), { capture: true });
   });
   const closed = first.app.waitForEvent('close');
   await closeWindow(first.app);
   await closed;
   const second = await openApp(first.profile);
-  expect(await second.window.evaluate(() => localStorage.getItem('noema-test-checkpoint'))).toBeNull();
+  expect(await second.window.evaluate(() => localStorage.getItem('dhara-test-checkpoint'))).toBeNull();
 });

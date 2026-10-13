@@ -19,7 +19,7 @@ import { toast } from '../ui/Toast';
 import { installCheckpointClose } from './checkpoint';
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
-const requestClose = () => window.dispatchEvent(new Event('noema:checkpoint-close'));
+const requestClose = () => window.dispatchEvent(new Event('dhara:checkpoint-close'));
 let postMessage: ReturnType<typeof vi.fn>;
 let uninstall: () => void = () => {};
 
@@ -43,26 +43,26 @@ describe('installCheckpointClose', () => {
   it('does nothing in an ordinary browser without the desktop bridge', async () => {
     delete window.ipc;
     uninstall = installCheckpointClose();
-    expect(window.__noemaCheckpointCloseReady).toBeUndefined();
+    expect(window.__dharaCheckpointCloseReady).toBeUndefined();
     requestClose();
     await settle();
     expect(captureDraftStore.persist).not.toHaveBeenCalled();
   });
 
   it('marks the page ready only once the listener is installed, and unmarks it on cleanup', () => {
-    expect(window.__noemaCheckpointCloseReady).toBeUndefined();
+    expect(window.__dharaCheckpointCloseReady).toBeUndefined();
     uninstall = installCheckpointClose();
-    expect(window.__noemaCheckpointCloseReady).toBe(true);
+    expect(window.__dharaCheckpointCloseReady).toBe(true);
     uninstall();
     uninstall = () => {};
-    expect(window.__noemaCheckpointCloseReady).toBeUndefined();
+    expect(window.__dharaCheckpointCloseReady).toBeUndefined();
   });
 
   it('saves both drafts, then approves the close', async () => {
     state.task.draft.raw = 'add a task later';
     uninstall = installCheckpointClose();
     requestClose();
-    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('noema:close-approved'));
+    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('dhara:close-approved'));
     expect(vi.mocked(captureDraftStore.persist).mock.invocationCallOrder[0]).toBeLessThan(postMessage.mock.invocationCallOrder[0]);
     expect(vi.mocked(taskDraftStore.persist).mock.invocationCallOrder[0]).toBeLessThan(postMessage.mock.invocationCallOrder[0]);
   });
@@ -109,7 +109,7 @@ describe('installCheckpointClose', () => {
     expect(postMessage).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     requestClose();
-    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('noema:close-approved'));
+    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('dhara:close-approved'));
   });
 
   it('asks before risking a draft whose write failed, and closes only when the user accepts', async () => {
@@ -122,7 +122,7 @@ describe('installCheckpointClose', () => {
     expect(postMessage).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     requestClose();
-    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('noema:close-approved'));
+    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('dhara:close-approved'));
   });
 
   it('closes an empty draft whose write failed without asking', async () => {
@@ -147,7 +147,7 @@ describe('installCheckpointClose', () => {
     expect(postMessage).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     requestClose();
-    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('noema:close-approved'));
+    await vi.waitFor(() => expect(postMessage).toHaveBeenCalledWith('dhara:close-approved'));
   });
 
   it('reports an unexpected checkpoint failure as an error and keeps the window open', async () => {

@@ -4,7 +4,7 @@ import { delayIdbTransactions, failIdbWrite, stubIpc } from './faults';
 import { expect, gotoApp, readLocalDb, test } from './fixtures';
 import { createNote, navLink } from './screenTest';
 
-const requestClose = (page: Page) => page.evaluate(() => { window.dispatchEvent(new Event('noema:checkpoint-close')); });
+const requestClose = (page: Page) => page.evaluate(() => { window.dispatchEvent(new Event('dhara:checkpoint-close')); });
 const ipcMessages = (page: Page) => page.evaluate(() => (window as unknown as { __ipcMessages?: string[] }).__ipcMessages ?? []);
 const editor = (page: Page) => page.getByLabel('Rough learning note');
 
@@ -18,10 +18,10 @@ test.describe('Close checkpoint', () => {
   test('The checkpoint saves a draft typed just before closing', async ({ page, noema }) => {
     await stubIpc(page);
     await gotoApp(page, noema, '#/capture');
-    expect(await page.evaluate(() => window.__noemaCheckpointCloseReady)).toBe(true);
+    expect(await page.evaluate(() => window.__dharaCheckpointCloseReady)).toBe(true);
     await editor(page).fill('typed right before closing');
     await requestClose(page);
-    await expect.poll(() => ipcMessages(page)).toEqual(['noema:close-approved']);
+    await expect.poll(() => ipcMessages(page)).toEqual(['dhara:close-approved']);
     expect(((await readLocalDb(page)).draft as { raw: string }).raw).toBe('typed right before closing');
   });
 
@@ -59,7 +59,7 @@ test.describe('Close checkpoint', () => {
     const accepted = page.waitForEvent('dialog').then(prompt => prompt.accept());
     await requestClose(page);
     await accepted;
-    await expect.poll(() => ipcMessages(page)).toEqual(['noema:close-approved']);
+    await expect.poll(() => ipcMessages(page)).toEqual(['dhara:close-approved']);
   });
 
   test('An unsaved note edit asks before closing; declining keeps the edit', async ({ page, noema }) => {
@@ -78,7 +78,7 @@ test.describe('Close checkpoint', () => {
 
   test('An ordinary browser never marks itself ready for the desktop close', async ({ page, noema }) => {
     await gotoApp(page, noema, '#/capture');
-    expect(await page.evaluate(() => window.__noemaCheckpointCloseReady)).toBeUndefined();
+    expect(await page.evaluate(() => window.__dharaCheckpointCloseReady)).toBeUndefined();
   });
 
   test('A failed chunk load after an update saves the draft, then offers Reload', async ({ page, noema }) => {

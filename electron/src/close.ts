@@ -4,7 +4,7 @@ import { CHECKPOINT_CLOSE, CHECKPOINT_FAILED, CLOSE_APPROVED, CLOSE_TIMEOUT_MS, 
 
 // desktop/src/close.js:3-8: only a page that finished recovery may checkpoint. The event fires on a later task,
 // so a page-side confirm() never holds this script open: the script settling means the renderer is responsive.
-const REQUEST_CHECKPOINT = `window.__noemaCheckpointCloseReady===true ? (setTimeout(() => window.dispatchEvent(new Event('${CHECKPOINT_CLOSE}'))), true) : false`;
+const REQUEST_CHECKPOINT = `window.__dharaCheckpointCloseReady===true ? (setTimeout(() => window.dispatchEvent(new Event('${CHECKPOINT_CLOSE}'))), true) : false`;
 
 export function installCloseHandler(win: BrowserWindow, origin: string, onApproved: () => void): void {
   const contents = win.webContents;

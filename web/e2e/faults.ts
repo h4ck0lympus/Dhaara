@@ -8,9 +8,9 @@ type FetchAction =
   | { kind: 'lose-ack' };
 type FetchRule = { path: PathPattern; method: string | null; times: number; action: FetchAction };
 type FaultWindow = Window & {
-  __noemaFetchRules?: FetchRule[];
-  __noemaHoldGates?: Record<number, Promise<void>>;
-  __noemaHoldRelease?: Record<number, () => void>;
+  __dharaFetchRules?: FetchRule[];
+  __dharaHoldGates?: Record<number, Promise<void>>;
+  __dharaHoldRelease?: Record<number, () => void>;
   __ipcMessages?: string[];
 } & Record<string, unknown>;
 
@@ -24,9 +24,9 @@ function pattern(path: string | RegExp): PathPattern {
 async function addFetchRule(page: Page, rule: FetchRule): Promise<void> {
   await page.addInitScript((rule: FetchRule) => {
     const w = window as unknown as FaultWindow;
-    if (!w.__noemaFetchRules) {
+    if (!w.__dharaFetchRules) {
       const rules: FetchRule[] = [];
-      w.__noemaFetchRules = rules;
+      w.__dharaFetchRules = rules;
       const original = window.fetch.bind(window);
       const matches = (r: FetchRule, url: URL, method: string) =>
         r.times > 0 &&
@@ -49,15 +49,15 @@ async function addFetchRule(page: Page, rule: FetchRule): Promise<void> {
           await original(input, init);
           throw new TypeError('Failed to fetch');
         }
-        await w.__noemaHoldGates?.[action.id];
+        await w.__dharaHoldGates?.[action.id];
         try {
           return await original(input, init);
         } finally {
-          (w[`__noemaHoldSettled${action.id}`] as () => void)();
+          (w[`__dharaHoldSettled${action.id}`] as () => void)();
         }
       };
     }
-    w.__noemaFetchRules.push(rule);
+    w.__dharaFetchRules.push(rule);
   }, rule);
 }
 
@@ -78,20 +78,20 @@ export async function holdFetch(page: Page, path: string | RegExp): Promise<{ re
   const settled = new Promise<void>((resolve) => {
     settle = resolve;
   });
-  await page.exposeFunction(`__noemaHoldSettled${id}`, () => settle());
+  await page.exposeFunction(`__dharaHoldSettled${id}`, () => settle());
   await page.addInitScript((id: number) => {
     const w = window as unknown as FaultWindow;
-    w.__noemaHoldGates ??= {};
-    w.__noemaHoldRelease ??= {};
-    w.__noemaHoldGates[id] = new Promise<void>((resolve) => {
-      w.__noemaHoldRelease![id] = resolve;
+    w.__dharaHoldGates ??= {};
+    w.__dharaHoldRelease ??= {};
+    w.__dharaHoldGates[id] = new Promise<void>((resolve) => {
+      w.__dharaHoldRelease![id] = resolve;
     });
   }, id);
   await addFetchRule(page, { path: pattern(path), method: null, times: 1, action: { kind: 'hold', id } });
   return {
     released: () => settled,
     release: async () => {
-      await page.evaluate((id) => (window as unknown as FaultWindow).__noemaHoldRelease?.[id]?.(), id);
+      await page.evaluate((id) => (window as unknown as FaultWindow).__dharaHoldRelease?.[id]?.(), id);
     },
   };
 }

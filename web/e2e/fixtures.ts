@@ -15,12 +15,12 @@ export async function guardContext(context: BrowserContext): Promise<() => void>
   const violations: string[] = [];
   const errors: string[] = [];
   // exposeFunction/addInitScript on the context survive navigations, so every document of every page is covered.
-  await context.exposeFunction('__noemaReportCsp', (violation: string) => {
+  await context.exposeFunction('__dharaReportCsp', (violation: string) => {
     violations.push(violation);
   });
   await context.addInitScript(() => {
     document.addEventListener('securitypolicyviolation', (event) => {
-      const report = (window as unknown as { __noemaReportCsp(v: string): void }).__noemaReportCsp;
+      const report = (window as unknown as { __dharaReportCsp(v: string): void }).__dharaReportCsp;
       report(`${event.effectiveDirective} blocked ${event.blockedURI} at ${event.sourceFile}:${event.lineNumber}`);
     });
   });
@@ -165,7 +165,7 @@ export async function expectFontsLoaded(page: Page): Promise<void> {
 // Forces a snapshot refetch (the same trigger the service-up event gives the page) and waits for it to land.
 export async function refetch(page: Page): Promise<void> {
   const response = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/state' && r.ok());
-  await page.evaluate(() => window.dispatchEvent(new Event('noema:service-up')));
+  await page.evaluate(() => window.dispatchEvent(new Event('dhara:service-up')));
   await response;
 }
 

@@ -3,7 +3,8 @@ import { useState, type JSX } from 'react';
 import { Icon, type IconName } from '../ui/Icon';
 import { openDialog } from './dialogs';
 
-export const SIDEBAR_KEY = 'noema-sidebar-collapsed';
+export const SIDEBAR_KEY = 'dhara-sidebar-collapsed';
+const LEGACY_SIDEBAR_KEY = 'noema-sidebar-collapsed';   // rename-shim: read until the next toggle writes the new key
 
 type Item = { to: '/overview' | '/capture' | '/notes' | '/plan'; label: string; icon: IconName; prefix?: string };
 const ITEMS: Item[] = [
@@ -14,7 +15,7 @@ const ITEMS: Item[] = [
 ];
 
 function readCollapsed(): boolean {
-  try { return localStorage.getItem(SIDEBAR_KEY) === '1'; } catch { return false; }
+  try { return (localStorage.getItem(SIDEBAR_KEY) ?? localStorage.getItem(LEGACY_SIDEBAR_KEY)) === '1'; } catch { return false; }
 }
 
 export function Nav(): JSX.Element {

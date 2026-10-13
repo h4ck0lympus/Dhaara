@@ -9,7 +9,7 @@ type Shown = { title: string; body?: string; tag?: string; icon?: string };
 test.beforeEach(async ({ page }) => {
   // Test-only Notification double: records what the page shows; permission is already granted.
   await page.addInitScript(() => {
-    localStorage.setItem('noema-notifications', '1');
+    localStorage.setItem('dhara-notifications', '1');
     const shown: unknown[] = [];
     (window as unknown as { __shown: unknown[] }).__shown = shown;
     class FakeNotification {

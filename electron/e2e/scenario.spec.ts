@@ -178,7 +178,7 @@ test('crash: service-down keeps the page; offline Save queues; repeated Retry gi
   await overlay.locator('#retry').click();
   // Bypass the disabled button: main itself must serialise these into the one attempt.
   await overlay.evaluate(() => {
-    const startup = (window as unknown as { noemaStartup: { retry(): void } }).noemaStartup;
+    const startup = (window as unknown as { dharaStartup: { retry(): void } }).dharaStartup;
     for (let i = 0; i < 3; i += 1) startup.retry();
   });
   await waitConnected(page);

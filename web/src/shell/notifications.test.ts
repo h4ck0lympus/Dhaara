@@ -29,14 +29,14 @@ async function load() {
 beforeEach(() => {
   shown = []; permission = 'granted'; throwOnCreate = false;
   vi.stubGlobal('Notification', FakeNotification);
-  localStorage.setItem('noema-notifications', '1');
+  localStorage.setItem('dhara-notifications', '1');
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear(); });
 
 describe('notifyDueReminders', () => {
   it('notifies a due reminder once per id per session, tagged with the id', async () => {
     const { notifyDueReminders, NOTIFICATIONS_KEY } = await load();
-    expect(NOTIFICATIONS_KEY).toBe('noema-notifications');
+    expect(NOTIFICATIONS_KEY).toBe('dhara-notifications');
     notifyDueReminders(snapshot(reminder('r1', 'due')));
     notifyDueReminders(snapshot(reminder('r1', 'due')));
     expect(shown).toHaveLength(1);
@@ -61,9 +61,9 @@ describe('notifyDueReminders', () => {
 
   it('does nothing unless opted in and granted, and does not replay later (app.js:94-96)', async () => {
     const { notifyDueReminders } = await load();
-    localStorage.setItem('noema-notifications', '0');
+    localStorage.setItem('dhara-notifications', '0');
     notifyDueReminders(snapshot(reminder('r1', 'due')));
-    localStorage.setItem('noema-notifications', '1');
+    localStorage.setItem('dhara-notifications', '1');
     notifyDueReminders(snapshot(reminder('r1', 'due')));
     expect(shown).toHaveLength(0);
     permission = 'default';
@@ -96,5 +96,17 @@ describe('notifyDueReminders', () => {
     const { notifyDueReminders } = await load();
     expect(() => notifyDueReminders(snapshot(reminder('r1', 'due')))).not.toThrow();
     (window as { Notification?: unknown }).Notification = original;
+  });
+
+  it('honours an opt-in stored under the pre-rename key, and the new key wins once written', async () => {
+    const { notifyDueReminders, NOTIFICATIONS_KEY } = await load();
+    expect(NOTIFICATIONS_KEY).toBe('dhara-notifications');
+    localStorage.clear();
+    localStorage.setItem('noema-notifications', '1');   // rename-shim: legacy key
+    notifyDueReminders(snapshot(reminder('r1', 'due')));
+    expect(shown).toHaveLength(1);
+    localStorage.setItem(NOTIFICATIONS_KEY, '0');
+    notifyDueReminders(snapshot(reminder('r2', 'due')));
+    expect(shown).toHaveLength(1);
   });
 });

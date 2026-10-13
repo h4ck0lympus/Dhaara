@@ -35,17 +35,17 @@ describe('BackgroundField', () => {
   it('installs no test seam without ?e2e=1', () => {
     withoutWebGl2();
     render(<BackgroundField motion />);
-    expect(window.__noemaField).toBeUndefined();
+    expect(window.__dharaField).toBeUndefined();
   });
 
   it('installs the seam only with ?e2e=1, rejects reads while not drawing, and removes it on unmount', async () => {
     withoutWebGl2();
     window.history.replaceState(null, '', '/?e2e=1');
     const { unmount } = render(<BackgroundField motion />);
-    expect(window.__noemaField?.frames).toBe(0);
-    await expect(window.__noemaField!.readPixel(0, 0)).rejects.toThrow('The field is not drawing');
+    expect(window.__dharaField?.frames).toBe(0);
+    await expect(window.__dharaField!.readPixel(0, 0)).rejects.toThrow('The field is not drawing');
     unmount();
-    expect(window.__noemaField).toBeUndefined();
+    expect(window.__dharaField).toBeUndefined();
   });
 });
 

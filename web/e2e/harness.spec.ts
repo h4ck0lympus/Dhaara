@@ -20,18 +20,18 @@ test('seedLocalDb writes v1-shaped records that readLocalDb reads back in key or
   expect(db.taskDraft).toEqual(taskDraft);
 });
 
-type HarnessWindow = Window & { openNoemaDb(): Promise<IDBDatabase>; pending?: Promise<number>; __ipcMessages?: string[] };
+type HarnessWindow = Window & { openDharaDb(): Promise<IDBDatabase>; pending?: Promise<number>; __ipcMessages?: string[] };
 
 test.describe('fault injection', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(`window.openNoemaDb = ${openLocalDb}`);
+    await page.addInitScript(`window.openDharaDb = ${openLocalDb}`);
   });
 
   test('failIdbWrite aborts only the matching write, once, with the injected error', async ({ page, noema }) => {
     await failIdbWrite(page, { store: 'kv', key: 'draft', error: 'QuotaExceededError' });
     await page.goto(noema.origin + '/api/health');
     const outcomes = await page.evaluate(async () => {
-      const db = await (window as unknown as HarnessWindow).openNoemaDb();
+      const db = await (window as unknown as HarnessWindow).openDharaDb();
       const put = (key: string) =>
         new Promise<string>((resolve) => {
           const tx = db.transaction('kv', 'readwrite');
@@ -48,7 +48,7 @@ test.describe('fault injection', () => {
     await failIdbWrite(page, { store: 'outbox', key: 'doomed', error: 'AbortError' });
     await page.goto(noema.origin + '/api/health');
     const outcomes = await page.evaluate(async () => {
-      const db = await (window as unknown as HarnessWindow).openNoemaDb();
+      const db = await (window as unknown as HarnessWindow).openDharaDb();
       const add = (id: string) =>
         new Promise<string>((resolve) => {
           const tx = db.transaction('outbox', 'readwrite');
@@ -65,7 +65,7 @@ test.describe('fault injection', () => {
     await delayIdbTransactions(page, 400);
     await page.goto(noema.origin + '/api/health');
     const elapsed = await page.evaluate(async () => {
-      const db = await (window as unknown as HarnessWindow).openNoemaDb();
+      const db = await (window as unknown as HarnessWindow).openDharaDb();
       const started = performance.now();
       await new Promise<void>((resolve) => {
         const tx = db.transaction('kv', 'readwrite');
@@ -145,7 +145,7 @@ test.describe('fault injection', () => {
   test('stubIpc records close approvals posted to the Electron bridge', async ({ page, noema }) => {
     await stubIpc(page);
     await page.goto(noema.origin + '/api/health');
-    await page.evaluate(() => window.ipc?.postMessage('noema:close-approved'));
-    expect(await page.evaluate(() => (window as unknown as HarnessWindow).__ipcMessages)).toEqual(['noema:close-approved']);
+    await page.evaluate(() => window.ipc?.postMessage('dhara:close-approved'));
+    expect(await page.evaluate(() => (window as unknown as HarnessWindow).__ipcMessages)).toEqual(['dhara:close-approved']);
   });
 });

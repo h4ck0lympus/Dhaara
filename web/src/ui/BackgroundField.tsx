@@ -155,7 +155,7 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
       if (!frameTimer && !seamTimer) seamTimer = window.setTimeout(() => { seamTimer = 0; draw(); }, 0);
     });
   }
-  if (e2e) window.__noemaField = { get frames() { return frames; }, readPixel };
+  if (e2e) window.__dharaField = { get frames() { return frames; }, readPixel };
 
   const context = canvas.getContext('webgl2', CONTEXT_OPTIONS);
   if (!context) {
@@ -163,7 +163,7 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
     return {
       setMotion() {},
       stop() {
-        if (e2e) delete window.__noemaField;
+        if (e2e) delete window.__dharaField;
       },
     };
   }
@@ -415,7 +415,7 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
       canvas.removeEventListener('webglcontextrestored', onRestored);
       release();
       rejectReads();
-      if (e2e) delete window.__noemaField;
+      if (e2e) delete window.__dharaField;
     },
   };
 }

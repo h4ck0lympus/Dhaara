@@ -61,4 +61,13 @@ describe('Nav', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Settings' }));
     expect(openDialog).toHaveBeenCalledWith({ kind: 'settings' });
   });
+
+  it('honours a collapsed flag stored under the pre-rename key until the next toggle', async () => {
+    expect(SIDEBAR_KEY).toBe('dhara-sidebar-collapsed');
+    localStorage.setItem('noema-sidebar-collapsed', '1');   // rename-shim: legacy key
+    renderNavAt('/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'Expand sidebar' }));
+    expect(document.querySelector('.sidebar')!.getAttribute('data-collapsed')).toBe('false');
+    expect(localStorage.getItem(SIDEBAR_KEY)).toBe('0');
+  });
 });
