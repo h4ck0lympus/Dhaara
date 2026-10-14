@@ -132,7 +132,9 @@ test.describe('terrain state machine', () => {
     await page.clock.install();
     await openField(page, dhara);
     await expectState(page, 'animated');
-    // Restart the 60 s window from a known instant, so page-load time cannot push the 59 s check past the timeout.
+    // Freeze the fake clock first: it otherwise keeps ticking in real time, and under load the latency between the
+    // move, the jump and the read ate the one-second margin before the 60 s pause. Then restart the window from the move.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     await page.mouse.move(10, 10);
     await page.clock.fastForward(59_000);
     await expectState(page, 'animated');
