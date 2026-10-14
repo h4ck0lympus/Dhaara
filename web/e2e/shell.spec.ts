@@ -79,16 +79,18 @@ test('Every control is keyboard reachable with a visible focus ring', async ({ p
   await dhara.api('POST', '/api/tasks', { title: 'Read the ownership chapter' });
   await gotoApp(page, dhara);
   const seen = new Set<string>();
+  const readFocused = () => page.evaluate(() => {
+    const el = document.activeElement as HTMLElement | null;
+    if (!el || el === document.body) return null;
+    const style = getComputedStyle(el);
+    return { name: el.getAttribute('aria-label') || el.textContent?.trim() || el.tagName, ring: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 2 };
+  });
   for (let i = 0; i < 20; i += 1) {
     await page.keyboard.press('Tab');
-    const focused = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el || el === document.body) return null;
-      const style = getComputedStyle(el);
-      return { name: el.getAttribute('aria-label') || el.textContent?.trim() || el.tagName, ring: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) >= 2 };
-    });
+    const focused = await readFocused();
     if (!focused) continue;
-    expect(focused.ring, `visible focus ring on ${focused.name}`).toBe(true);
+    // The :focus-visible outline can land a frame after focus moves under load: wait for it on the control that holds focus.
+    await expect.poll(async () => (await readFocused())?.ring ?? false, { message: `visible focus ring on ${focused.name}` }).toBe(true);
     seen.add(focused.name);
   }
   for (const name of ['Collapse sidebar', 'Overview', 'Tasks', 'Settings', 'Search notes…', 'Notifications', 'Capture a thought…', '+ Note', '+ Task', 'Browse notes']) expect(seen.has(name), name).toBe(true);
