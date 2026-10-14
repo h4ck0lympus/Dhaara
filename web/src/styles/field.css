@@ -1,0 +1,14 @@
+/* Terrain canvas: a fixed decorative layer inside the app (spec §7). The backing store is 0.5x; CSS upscales it. */
+.background-field {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Without WebGL2 the app's own background is the static fallback; nothing animated is drawn. */
+.background-field[data-state='unsupported'] {
+  display: none;
+}

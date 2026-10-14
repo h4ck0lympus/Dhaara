@@ -14,6 +14,8 @@ import subprocess
 import sys
 import time
 from uuid import uuid4
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tools/ scripts run from anywhere; dhara/ is beside them
+from dhara.env import strip
 from client import Client
 
 class Outbox:
@@ -56,7 +58,7 @@ def main():
     send('started','Command started. Output stays in your terminal.')
     child_env=os.environ.copy()
     # Do not hand this integration credential or an admin token to the wrapped command.
-    for key in ('NOEMA_TOKEN','NOEMA_ACCESS_TOKEN'):child_env.pop(key,None)
+    strip(child_env,('TOKEN','ACCESS_TOKEN'))
     process=None
     try:
         process=subprocess.Popen(command,env=child_env,start_new_session=os.name=='posix')
@@ -66,7 +68,7 @@ def main():
             try:code=process.wait(timeout=30);break
             except subprocess.TimeoutExpired:send('heartbeat','Process is still running; no completion claim.')
         send('completed' if code==0 else 'failed',f'Process exited with status {code}. '+('Review the result before completing the task.' if code==0 else 'Check the terminal output.'))
-        print(f'\nNoema run {run_id}: '+('ready for review' if code==0 else 'failed'))
+        print(f'\nDhara run {run_id}: '+('ready for review' if code==0 else 'failed'))
         return code if 0<=code<=255 else 1
     except KeyboardInterrupt:
         if process and process.poll() is None:

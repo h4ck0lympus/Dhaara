@@ -21,11 +21,13 @@ import httpx
 from playwright.sync_api import Error as PlaywrightError, expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from dhara.env import env, strip
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=')
 RAW = 'free_slot(0x1234) may leave a pointer. Not confirmed; changing size did not help.'
 READ = """async ({store, key}) => {
   const db = await new Promise((resolve, reject) => {
-    const r = indexedDB.open('noema-local-v1', 1);
+    const r = indexedDB.open('dhara-local-v1', 1);
     r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error);
   });
   try {
@@ -40,23 +42,23 @@ FAULTS = """
 // Explicit fault injection, never included in production assets.
 const originalPut = IDBObjectStore.prototype.put;
 IDBObjectStore.prototype.put = function(value, key) {
-  if (window.noemaFault === 'abort-reset' && key === 'draft' && value.raw === '')
+  if (window.dharaFault === 'abort-reset' && key === 'draft' && value.raw === '')
     throw new DOMException('Injected reset failure', 'QuotaExceededError');
-  if (window.noemaFault === 'quota' && key === 'draft')
+  if (window.dharaFault === 'quota' && key === 'draft')
     throw new DOMException('Injected quota failure', 'QuotaExceededError');
   const request = originalPut.apply(this, arguments);
-  if (window.noemaEditDuringWrite && key === 'draft' && value.raw === 'First draft write') {
+  if (window.dharaEditDuringWrite && key === 'draft' && value.raw === 'First draft write') {
     request.addEventListener('success', () => {
-      window.noemaEditDuringWrite=false;
+      window.dharaEditDuringWrite=false;
       const editor=document.querySelector('#brain-dump');
       editor.value='Newer input during first write';
       editor.dispatchEvent(new Event('input'));
       request.transaction.addEventListener('complete', () => setTimeout(() => {
-        window.noemaStatusAfterOldCommit=document.querySelector('#draft-status').textContent;
+        window.dharaStatusAfterOldCommit=document.querySelector('#draft-status').textContent;
       }, 0));
     });
   }
-  if (window.noemaFault === 'abort-transaction' && key === 'draft' && value.raw === '')
+  if (window.dharaFault === 'abort-transaction' && key === 'draft' && value.raw === '')
     request.addEventListener('success', () => request.transaction.abort());
   return request;
 };
@@ -71,12 +73,10 @@ class Server:
             self.port = sock.getsockname()[1]
         self.url = f'http://127.0.0.1:{self.port}'
         self.token = secrets.token_urlsafe(32)
-        self.env = os.environ.copy()
-        self.env['NOEMA_ACCESS_TOKEN'] = self.token
-        self.env.pop('NOEMA_MODEL', None)
-        self.env.pop('NOEMA_SPEECH_MODEL', None)
+        self.env = strip(os.environ.copy(), ('MODEL', 'SPEECH_MODEL'))
+        self.env['DHARA_ACCESS_TOKEN'] = self.token
         self.client = httpx.Client(base_url=self.url, headers={
-            'Authorization': 'Bearer ' + self.token, 'X-Noema-Request': '1'
+            'Authorization': 'Bearer ' + self.token, 'X-Dhara-Request': '1'
         }, timeout=10, trust_env=False)
         self.process = None
 
@@ -108,7 +108,7 @@ class Server:
 
 
 def run(capture_screenshots=True):
-    output = Path(os.getenv('NOEMA_QA_OUTPUT', str(ROOT/'qa/continuation/native-storage')))
+    output = Path(env('QA_OUTPUT', str(ROOT/'qa/continuation/native-storage')))
     output.mkdir(parents=True, exist_ok=True)
     checks, errors = [], []
 
@@ -123,7 +123,7 @@ def run(capture_screenshots=True):
         page.wait_for_function(
             f'async n => (await ({READ})({{store:"outbox",key:null}})).length === n', arg=count)
 
-    with tempfile.TemporaryDirectory(prefix='noema-native-storage-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='dhara-native-storage-') as temporary:
         root = Path(temporary)
         server = Server(root)
         context = None
@@ -154,10 +154,10 @@ def run(capture_screenshots=True):
                 page.evaluate('navigator.serviceWorker.ready.then(() => true)')
                 page.wait_for_function('() => navigator.serviceWorker.controller !== null')
                 check('Real loopback navigation and native service worker control')
-                page.evaluate('window.noemaEditDuringWrite=true')
+                page.evaluate('window.dharaEditDuringWrite=true')
                 page.locator('#brain-dump').fill('First draft write')
-                page.wait_for_function('() => window.noemaStatusAfterOldCommit !== undefined')
-                check('Older committed draft cannot label newer input as saved', page.evaluate('window.noemaStatusAfterOldCommit') == 'Saving draft on this device…')
+                page.wait_for_function('() => window.dharaStatusAfterOldCommit !== undefined')
+                check('Older committed draft cannot label newer input as saved', page.evaluate('window.dharaStatusAfterOldCommit') == 'Saving draft on this device…')
                 expect(page.locator('#draft-status')).to_have_text('Draft on this device · not uploaded')
                 assert read(page, 'kv', 'draft')['raw'] == 'Newer input during first write'
                 page.locator('#brain-dump').fill(RAW)
@@ -207,7 +207,7 @@ def run(capture_screenshots=True):
                 context.set_offline(True)
                 page.locator('#brain-dump').fill('A draft that must survive an aborted Save.')
                 expect(page.locator('#draft-status')).to_have_text('Draft on this device · not uploaded')
-                page.evaluate("window.noemaFault='abort-reset'")
+                page.evaluate("window.dharaFault='abort-reset'")
                 page.locator('#save-capture').click()
                 expect(page.locator('#local-save-error')).to_be_visible()
                 expect(page.locator('#brain-dump')).to_have_value('A draft that must survive an aborted Save.')
@@ -217,13 +217,13 @@ def run(capture_screenshots=True):
                 expect(page.locator('#brain-dump')).to_have_value('A draft that must survive an aborted Save.')
                 check('Reload recovers original draft after transaction abort')
 
-                page.evaluate("window.noemaFault='abort-transaction'")
+                page.evaluate("window.dharaFault='abort-transaction'")
                 page.locator('#save-capture').click()
                 expect(page.locator('#local-save-error')).to_be_visible()
                 queue_count(page, 0)
                 check('Native abort after request success still rolls back both stores', read(page, 'kv', 'draft')['raw'] == 'A draft that must survive an aborted Save.')
 
-                page.evaluate("window.noemaFault='quota'")
+                page.evaluate("window.dharaFault='quota'")
                 page.locator('#brain-dump').fill('Exact unsaved edit after simulated quota failure.')
                 expect(page.locator('#local-save-error')).to_be_visible()
                 expect(page.locator('#draft-status')).to_have_text('Local save failed · keep this page open')
@@ -232,7 +232,7 @@ def run(capture_screenshots=True):
                 page.set_viewport_size({'width': 390, 'height': 844})
                 check('Recovery control fits phone viewport', page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
                 if capture_screenshots: page.screenshot(path=str(output/'storage-error-phone.png'), full_page=True)
-                page.evaluate("window.noemaFault='' ")
+                page.evaluate("window.dharaFault='' ")
                 page.locator('[data-action=retry-local-save]').click()
                 expect(page.locator('#local-save-error')).to_be_hidden()
                 check('Retry commits recovered edit through native IndexedDB', read(page, 'kv', 'draft')['raw'] == 'Exact unsaved edit after simulated quota failure.')
@@ -276,7 +276,7 @@ def run(capture_screenshots=True):
 
                 # An unavailable database must not destroy the connected UI at boot.
                 context = browser('unavailable-profile')
-                context.add_init_script("const originalOpen=IDBFactory.prototype.open; window.noemaStorageUnavailable=true; IDBFactory.prototype.open = function(){if(window.noemaStorageUnavailable)throw new DOMException('Injected unavailable storage','SecurityError');return originalOpen.apply(this,arguments);};")
+                context.add_init_script("const originalOpen=IDBFactory.prototype.open; window.dharaStorageUnavailable=true; IDBFactory.prototype.open = function(){if(window.dharaStorageUnavailable)throw new DOMException('Injected unavailable storage','SecurityError');return originalOpen.apply(this,arguments);};")
                 page = context.new_page()
                 page.goto(server.url+'/#capture')
                 expect(page.locator('#brain-dump')).to_be_visible()
@@ -285,7 +285,7 @@ def run(capture_screenshots=True):
                 page.locator('#save-capture').click()
                 expect(page.locator('#brain-dump')).to_have_value('Still editable with storage unavailable.')
                 check('Unavailable storage at boot leaves editable UI and failed Save retains text')
-                page.evaluate('window.noemaStorageUnavailable=false')
+                page.evaluate('window.dharaStorageUnavailable=false')
                 page.locator('[data-action=retry-local-save]').click()
                 expect(page.locator('#local-save-error')).to_be_hidden()
                 check('Failed database open can retry in the same page without reloading', read(page, 'kv', 'draft')['raw'] == 'Still editable with storage unavailable.')

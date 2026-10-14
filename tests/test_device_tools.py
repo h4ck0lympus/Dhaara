@@ -156,11 +156,26 @@ def test_sampler_actual_cli_report_is_private_and_content_free(process_tree, tmp
     assert all('cmdline' not in p and 'environ' not in p for p in report['observed_processes'])
 
 
-def test_sampler_actual_root_exit_marks_incomplete():
-    process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(.08)'])
+def test_sampler_actual_root_exit_marks_incomplete(monkeypatch):
+    # Exit at the first measurement, after root discovery and warm-up, rather
+    # than racing process startup against an 80 ms wall-clock deadline.
+    from qa import process_sample
+    process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+    original = process_sample.memory_private
+
+    def exit_during_measurement(pid):
+        value = original(pid)
+        if pid == process.pid and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=5)
+        return value
+
+    monkeypatch.setattr(process_sample, 'memory_private', exit_during_measurement)
     try:
         report = measure({'service': process.pid}, warmup=0, duration=.2,
                          interval=.03, phase='tooling-test')
         assert report['status'] == 'incomplete' and report['missing_roots'] == ['service']
     finally:
+        if process.poll() is None:
+            process.terminate()
         process.wait(timeout=5)

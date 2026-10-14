@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     results = []
-    with workspace() as (origin, client, store), tempfile.TemporaryDirectory(prefix='noema-task-profile-') as profile, sync_playwright() as p:
+    with workspace() as (origin, client, store), tempfile.TemporaryDirectory(prefix='dhara-task-profile-') as profile, sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
             profile, executable_path=os.getenv('CHROMIUM_PATH', '/usr/bin/chromium'),
             headless=True, args=['--no-sandbox'], viewport={'width': 1200, 'height': 900})

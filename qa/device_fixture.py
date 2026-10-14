@@ -32,7 +32,7 @@ def prepare(port=18765):
     # Free now is only a preflight, never identity/readiness proof.
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', port))
-    directory = Path(tempfile.mkdtemp(prefix='noema-device-'))
+    directory = Path(tempfile.mkdtemp(prefix='dhara-device-'))
     (directory / 'reports').mkdir(mode=0o700)
     (directory / 'synthetic-note.txt').write_text(NOTE)
     (directory / 'synthetic-image.png').write_bytes(png())

@@ -17,15 +17,15 @@ from sway_context import sway_json
 
 
 def main():
-    runtime = Path(os.environ['NOEMA_QA_PRIVATE_RUNTIME']).resolve()
+    runtime = Path(os.environ['DHARA_QA_PRIVATE_RUNTIME']).resolve()
     sock = Path(os.environ['SWAYSOCK']).resolve()
-    compositor_pid = os.environ['NOEMA_QA_COMPOSITOR_PID']
-    if (not runtime.parent.name.startswith('noema-sway-qa-') or sock.parent != runtime
+    compositor_pid = os.environ['DHARA_QA_COMPOSITOR_PID']
+    if (not runtime.parent.name.startswith('dhara-sway-qa-') or sock.parent != runtime
             or not sock.name.endswith('.' + compositor_pid + '.sock')
             or Path(os.environ['XDG_RUNTIME_DIR']).resolve() != runtime):
         raise SystemExit('Refusing pointer input outside a private fixture compositor')
-    output = Path(os.environ['NOEMA_QA_OUTPUT'])
-    app = Companion(Client(os.environ['NOEMA_QA_URL']), observe_window_context=True)
+    output = Path(os.environ['DHARA_QA_OUTPUT'])
+    app = Companion(Client(os.environ['DHARA_QA_URL']), observe_window_context=True)
     checks, coordinates, opened = [], [], []
     import sway_companion
     sway_companion.webbrowser.open = lambda url: opened.append(url)
@@ -66,7 +66,6 @@ def main():
     def screenshot(name):
         subprocess.run(['grim', '-o', 'HEADLESS-1', str(output / (name + '.png'))], check=True, timeout=5)
     pump(2)
-    command('[pid=' + os.environ['NOEMA_QA_DESKTOP_PID'] + '] move scratchpad')
     command('workspace 1; move workspace to output HEADLESS-1')
     work = Gtk.Window(title='Synthetic input sentinel')
     work_button = Gtk.Button(label='Synthetic work area · clicks must remain available')
@@ -111,7 +110,7 @@ def main():
         check(not app.popup_open, 'Compositor pointer closes panel at ' + str(scale))
         check(focused() == previous, 'All pointer interactions preserve work-window focus at ' + str(scale))
     click(app.button, 'Task action popup')
-    click(button('Open task in Noema'), 'Open saved task')
+    click(button('Open task in Dhara'), 'Open saved task')
     check(opened == [app.client.url + '/#task/' + summary['next'][0]['id']]
           and not app.popup_open, 'Pointer activates actual task URL and dismisses panel (browser dispatch intercepted)')
     click(app.button, 'Appearance popup')

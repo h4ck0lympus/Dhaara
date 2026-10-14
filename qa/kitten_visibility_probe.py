@@ -37,21 +37,21 @@ def pump(seconds=.35):
 
 
 def main():
-    runtime = Path(os.environ['NOEMA_QA_PRIVATE_RUNTIME']).resolve()
+    runtime = Path(os.environ['DHARA_QA_PRIVATE_RUNTIME']).resolve()
     sock = Path(os.environ['SWAYSOCK']).resolve()
-    pid = os.environ['NOEMA_QA_COMPOSITOR_PID']
-    if (not runtime.parent.name.startswith('noema-sway-qa-') or sock.parent != runtime
+    pid = os.environ['DHARA_QA_COMPOSITOR_PID']
+    if (not runtime.parent.name.startswith('dhara-sway-qa-') or sock.parent != runtime
             or not sock.name.endswith('.' + pid + '.sock')
             or Path(os.environ['XDG_RUNTIME_DIR']).resolve() != runtime):
         raise SystemExit('Refusing to probe a non-fixture compositor')
-    output = Path(os.environ['NOEMA_QA_OUTPUT'])
-    before = os.environ['NOEMA_QA_PHASE'] == 'before'
-    source = Path(os.environ.get('NOEMA_QA_SOURCE', ROOT / 'tools/sway_companion.py'))
+    output = Path(os.environ['DHARA_QA_OUTPUT'])
+    before = os.environ['DHARA_QA_PHASE'] == 'before'
+    source = Path(os.environ.get('DHARA_QA_SOURCE', ROOT / 'tools/sway_companion.py'))
     spec = importlib.util.spec_from_file_location('visibility_companion', source)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.__file__ = str(ROOT / 'tools/sway_companion.py')
-    app = module.Companion(Client(os.environ['NOEMA_QA_URL']), observe_window_context=True)
+    app = module.Companion(Client(os.environ['DHARA_QA_URL']), observe_window_context=True)
     checks, measurements, opened = [], [], []
     module.webbrowser.open = lambda url: opened.append(url)  # Do not launch a real browser.
     def check(ok, label):
@@ -75,9 +75,7 @@ def main():
             yield from nodes(child)
     def focused():
         return next((n.get('id') for n in nodes(sway_json('get_tree')) if n.get('focused')), None)
-    # Hide only the fixture webview to examine actual desktop backgrounds.
     pump(2)
-    command('[pid=' + os.environ['NOEMA_QA_DESKTOP_PID'] + '] move scratchpad')
     summary = app.client.request('/companion')
     target = next(w for w in sway_json('get_workspaces') if w['output'] == 'HEADLESS-1')
     app.apply(summary, {'visible': True, 'rect': target['rect']})
@@ -148,7 +146,7 @@ def main():
         check('Synthetic allocator notes' not in labels(), 'Panel does not replace pinned focus or list extra tasks')
         check(not any(w.get_label() == 'Hide companion' for w in descendants(app.popover)
                       if isinstance(w, Gtk.Button)), 'Secondary controls are absent from default task panel')
-        button('Open task in Noema').clicked()
+        button('Open task in Dhara').clicked()
         check(opened == [app.client.url + '/#task/' + summary['next'][0]['id']],
               'Task button requests the real task-detail route (browser launch intercepted)')
         app.show_popover()

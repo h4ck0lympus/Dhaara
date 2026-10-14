@@ -38,16 +38,16 @@ class Companion:
         self.status_label = self.helper_label = None
         self.controls_open = False
         self.popup_open = False
-        self.window = Gtk.Window(title='Noema companion')
+        self.window = Gtk.Window(title='Dhara companion')
         self.window.set_decorated(False)
         self.window.set_resizable(False)
         self.window.set_app_paintable(True)
-        self.window.get_style_context().add_class('noema-companion')
+        self.window.get_style_context().add_class('dhara-companion')
         visual = self.window.get_screen().get_rgba_visual()
         if visual:
             self.window.set_visual(visual)
         GtkLayerShell.init_for_window(self.window)
-        GtkLayerShell.set_namespace(self.window, 'noema-companion')
+        GtkLayerShell.set_namespace(self.window, 'dhara-companion')
         GtkLayerShell.set_layer(self.window, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_keyboard_mode(self.window, GtkLayerShell.KeyboardMode.NONE)
         for edge in (GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.RIGHT):
@@ -56,20 +56,20 @@ class Companion:
         GtkLayerShell.set_exclusive_zone(self.window, 0)
         css = Gtk.CssProvider()
         css.load_from_data(b'''
-            window.noema-companion {background:transparent;}
-            .kitten-bubble {background:#eef0df; border:1px solid #657058;
-                border-radius:15px; box-shadow:0 2px 3px rgba(0,0,0,0.24);
+            window.dhara-companion {background:transparent;}
+            .kitten-bubble {background:transparent; border:0;
+                border-radius:15px; box-shadow:none;
                 padding:0; min-width:0; min-height:0;}
-            .kitten-bubble:hover {background:#f7f6e9;}
-            .kitten-bubble.dot-mode {border-radius:10px;}
+            .kitten-bubble:hover {background:rgba(140,160,190,0.08);}
+            .kitten-bubble.dot-mode {background:#d2dae8; border:1px solid #657080; border-radius:10px;}
             .kitten-bubble label {color:#35412d; font-size:12px;}
-            popover.kitten-panel {background:#191c16; color:#e2e7d7;
-                border:1px solid #66705c; border-radius:10px;}
-            .kitten-panel label {color:#e2e7d7; font-size:13px;}
-            .kitten-panel button {background:#282e22; color:#e2e7d7;
-                border:1px solid #46513a; border-radius:5px;
+            popover.kitten-panel {background:#111316; color:#e2e5eb;
+                border:1px solid #3a414f; border-radius:10px;}
+            .kitten-panel label {color:#e2e5eb; font-size:13px;}
+            .kitten-panel button {background:#20252d; color:#e2e5eb;
+                border:1px solid #3a414f; border-radius:5px;
                 box-shadow:none; padding:5px 8px; min-width:0; min-height:0;}
-            .kitten-panel button:hover {background:#37402e;}
+            .kitten-panel button:hover {background:#2d3440;}
         ''')
         Gtk.StyleContext.add_provider_for_screen(self.window.get_screen(), css,
                                                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -78,7 +78,7 @@ class Companion:
         for edge in ('top', 'bottom', 'start', 'end'):
             getattr(self.button, 'set_margin_' + edge)(4)  # Space for the shadow, not an input overlay.
         self.button.set_can_focus(False)
-        self.button.get_accessible().set_name('Noema companion controls')
+        self.button.get_accessible().set_name('Dhara companion controls')
         self.window.add(self.button)
         self.button.connect('clicked', self.toggle_popover)
         self.window.connect('notify::scale-factor', self.scale_changed)
@@ -105,6 +105,7 @@ class Companion:
     def close_popover(self, *_):
         if self.popover:
             self.popover.popdown()
+            self.popover.hide()
         self.dismiss_popover()
 
     def scale_changed(self, *_):
@@ -119,7 +120,7 @@ class Companion:
     def show_menu(self, *_):
         self.show_popover(controls=True)
 
-    def open_noema(self, suffix):
+    def open_dhara(self, suffix):
         self.close_popover()
         webbrowser.open(self.client.url + suffix)
 
@@ -162,16 +163,17 @@ class Companion:
             box.pack_start(button, False, False, 0)
             return button
         if not controls:
-            items = self.summary.get('next', []) if self.connected else []
+            attention = self.summary.get('attention', []) if self.connected else []
+            items = (attention or self.summary.get('next', [])) if self.connected else []
             if items:
                 item = items[0]
-                text('Next available')
+                text('Needs you' if attention else 'Next available')
                 text(item['title'])
                 text(item.get('next_action') or 'No next action saved. Open the task to choose one.')
-                action('Open task in Noema', lambda *_: self.open_noema('/#task/' + item['id']))
+                action('Open task in Dhara', lambda *_: self.open_dhara('/#task/' + item['id']))
             elif self.connected:
                 text('No other available task in the current summary.')
-                action('Open Plan', lambda *_: self.open_noema('/#plan'))
+                action('Open Plan', lambda *_: self.open_dhara('/#plan'))
             self.status_label = text(observation_status(self.summary, self.connected))
             self.helper_label = text(self.helper_status() + ' · no screenshots')
             action('Companion menu', self.show_menu)
@@ -200,7 +202,7 @@ class Companion:
             modes.pack_start(button, False, False, 0)
         box.pack_start(modes, False, False, 0)
         sizes = Gtk.Box(spacing=6)
-        for value in (24, 32, 40):
+        for value in (24, 40, 56, 72):
             button = Gtk.Button(label=str(value) + ' px')
             button.connect('clicked', lambda _, v=value: self.set_size(v))
             sizes.pack_start(button, False, False, 0)
@@ -209,20 +211,18 @@ class Companion:
         if self.observe_window_context:
             label = 'Resume this observer' if self.observation_paused.is_set() else 'Pause this observer'
             action(label, self.toggle_observation)
-        for label, suffix in (('Observation settings', '/#settings'), ('Open Noema', '/')):
-            action(label, lambda _, path=suffix: self.open_noema(path))
+        for label, suffix in (('Observation settings', '/#settings'), ('Open Dhara', '/')):
+            action(label, lambda _, path=suffix: self.open_dhara(path))
         action('Quit companion', lambda *_: self.window.destroy())
 
     def set_mode(self, mode):
         self.local_mode = mode
-        self.popover.popdown()
-        self.dismiss_popover()
+        self.close_popover()
         self.apply(self.summary, self.placement, self.connected)
 
     def set_size(self, size):
         self.local_size = size
-        self.popover.popdown()
-        self.dismiss_popover()
+        self.close_popover()
         self.apply(self.summary, self.placement, self.connected)
 
     def toggle_observation(self, *_):
@@ -230,14 +230,13 @@ class Companion:
             self.observation_paused.clear()
         else:
             self.observation_paused.set()
-        self.popover.popdown()
-        self.dismiss_popover()
+        self.close_popover()
         self.apply(self.summary, self.placement, self.connected)
 
     def apply(self, summary, placement, connected=True):
         if self.stop.is_set():
             return False
-        next_changed = self.summary.get('next') != summary.get('next')
+        next_changed = (self.summary.get('next'), self.summary.get('attention')) != (summary.get('next'), summary.get('attention'))
         placement_changed = self.placement != placement
         self.summary, self.placement, self.connected = summary, placement, connected
         mode, size = visual_settings(summary.get('settings', {}), self.local_mode, self.local_size)
@@ -268,11 +267,11 @@ class Companion:
             else:
                 self.button.get_style_context().remove_class('dot-mode')
                 self.button.set_size_request(size + 16, size + 16)
-                sprite = Path(__file__).resolve().parents[1] / 'public/cat.png'
+                sprite = Path(__file__).resolve().parents[1] / 'tools/assets/kitten-illustrated.png'
                 pixbuf = self.GdkPixbuf.Pixbuf.new_from_file(str(sprite))
                 height = max(1, round(size * pixbuf.get_height() / pixbuf.get_width()))
                 pixbuf = pixbuf.scale_simple(size * scale, height * scale,
-                                            self.GdkPixbuf.InterpType.NEAREST)
+                                            self.GdkPixbuf.InterpType.BILINEAR)
                 surface = self.Gdk.cairo_surface_create_from_pixbuf(pixbuf, scale, None)
                 image = self.Gtk.Image.new_from_surface(surface)
             self.button.add(image)
@@ -283,7 +282,10 @@ class Companion:
         if self.status_label:
             self.status_label.set_text(status)
             self.helper_label.set_text(self.helper_status() + ' · no screenshots')
-        self.window.show_all()
+        # show_all on the toplevel also resurrects a dismissed popover.
+        self.button.get_child().show()
+        self.button.show()
+        self.window.show()
         if self.popup_open and self.popover and self.popover.get_visible() and (
                 visual_changed or placement_changed or (next_changed and not self.controls_open)):
             # Refresh stale actions and reconstrain open controls on output/scale changes.
@@ -324,7 +326,7 @@ class Companion:
             self.Gtk.main_quit()
 
     def run(self):
-        threading.Thread(target=self.poll, name='noema-companion-poll', daemon=True).start()
+        threading.Thread(target=self.poll, name='dhara-companion-poll', daemon=True).start()
         self.Gtk.main()
 
 

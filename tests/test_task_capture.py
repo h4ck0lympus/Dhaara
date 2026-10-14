@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from noema.models import TaskCapture
-from noema.store import Store, SCHEMA
+from dhara.models import TaskCapture
+from dhara.store import Store, SCHEMA
 from test_core import env, edit_task, capture
 
 
@@ -76,9 +76,9 @@ def test_ambiguous_or_different_schedule_is_preserved_not_invented(env, raw):
 def test_explicit_labels_and_details_are_not_window_inference(env):
     c, s, _ = env
     s.set_meta('context', {'app': 'unrelated-editor', 'title': 'Private project'})
-    raw = 'Maybe review the cleanup path\nWorkflow: Noema\nNext action: Read the release order\nContext: Hypothesis not confirmed'
+    raw = 'Maybe review the cleanup path\nWorkflow: Dhara\nNext action: Read the release order\nContext: Hypothesis not confirmed'
     t = add(c, raw).json()
-    assert t['title'].startswith('Maybe') and t['project'] == 'Noema'
+    assert t['title'].startswith('Maybe') and t['project'] == 'Dhara'
     assert t['next_action'] == 'Read the release order'
     assert t['detail'] == 'Hypothesis not confirmed' and t['original_input'] == raw
     t = add(c, 'Review tomorrow', details={'project': 'Explicit workspace', 'priority': 'low', 'planned_on': None}).json()
@@ -144,7 +144,7 @@ def test_original_is_immutable_exported_and_survives_reopen(env):
 
 
 def test_old_schema_data_survives_additive_migration(tmp_path):
-    path = tmp_path / 'noema.sqlite3'
+    path = tmp_path / 'dhara.sqlite3'
     with sqlite3.connect(path) as db:
         db.executescript(SCHEMA)
         db.execute("INSERT INTO tasks VALUES('old','Original task','Existing workflow','Existing context','Next step','todo','low',NULL,NULL,20,'[]','https://example.test','2026-10-09T00:00:00+00:00','2026-10-09T00:00:00+00:00',1)")

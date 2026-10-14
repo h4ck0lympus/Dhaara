@@ -14,6 +14,7 @@ sys.path.insert(0,str(ROOT/'tools'))
 from sway_context import focused_context,Observer
 from agent import Outbox
 from client import Client
+from dhara.env import strip
 
 def tree(floating=False):
     window={'type':'con','app_id':'firefox','name':'LeetCode','focused':True,'pid':100}
@@ -53,7 +54,7 @@ def test_helper_rejects_plaintext_remote_token():
 
 def test_real_agent_wrapper_success_failure_and_token_isolation(tmp_path):
  sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
- secret=secrets.token_urlsafe(32);env=os.environ.copy();env['NOEMA_ACCESS_TOKEN']=secret;env.pop('NOEMA_MODEL',None);env.pop('NOEMA_SPEECH_MODEL',None)
+ secret=secrets.token_urlsafe(32);env=strip(os.environ.copy(),('MODEL','SPEECH_MODEL'));env['DHARA_ACCESS_TOKEN']=secret
  proc=subprocess.Popen([sys.executable,str(ROOT/'run.py'),'--port',str(port),'--data-dir',str(tmp_path/'server')],cwd=ROOT,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   url=f'http://127.0.0.1:{port}';c=httpx.Client(base_url=url,headers={'Authorization':'Bearer '+secret},timeout=5)
@@ -64,8 +65,8 @@ def test_real_agent_wrapper_success_failure_and_token_isolation(tmp_path):
   else:raise AssertionError('Server failed to start')
   for exit_code,expected in [(0,'review'),(7,'failed')]:
    t=c.post('/api/tasks',json={'title':'Test command'}).json();tok=c.post('/api/tokens',json={'name':'wrapper','scope':'agent','task_ids':[t['id']]}).json()['token']
-   child_env=env|{'NOEMA_TOKEN':tok}
-   command=[sys.executable,str(ROOT/'tools/agent.py'),'--url',url,'--task',t['id'],'--outbox',str(tmp_path/f'outbox-{exit_code}.sqlite3'),'--',sys.executable,'-c',f'import os,sys; assert "NOEMA_TOKEN" not in os.environ; assert "NOEMA_ACCESS_TOKEN" not in os.environ; print("real process"); sys.exit({exit_code})']
+   child_env=env|{'DHARA_TOKEN':tok,'NOEMA_TOKEN':tok}   # rename-shim: both names must be stripped from the wrapped command
+   command=[sys.executable,str(ROOT/'tools/agent.py'),'--url',url,'--task',t['id'],'--outbox',str(tmp_path/f'outbox-{exit_code}.sqlite3'),'--',sys.executable,'-c',f'import os,sys; assert not {{"DHARA_TOKEN","DHARA_ACCESS_TOKEN","NOEMA_TOKEN","NOEMA_ACCESS_TOKEN"}} & set(os.environ); print("real process"); sys.exit({exit_code})']   # rename-shim: legacy names stripped too
    r=subprocess.run(command,env=child_env,capture_output=True,text=True,timeout=15,cwd=ROOT)
    assert r.returncode==exit_code,r.stderr
    run=next(r for r in c.get('/api/state').json()['runs'] if r['task_id']==t['id']);assert run['status']==expected

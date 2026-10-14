@@ -12,7 +12,7 @@ from sway_companion import Companion
 
 
 def test_approved_kitten_asset_is_unmodified():
-    sprite = Path(__file__).resolve().parents[1] / 'public/cat.png'
+    sprite = Path(__file__).resolve().parents[1] / 'tools/assets/cat.png'
     assert hashlib.sha256(sprite.read_bytes()).hexdigest() == (
         'bc81d2ce788db7c6cd6cf5971b61450a9949c571cbaebe64b65d49d481ab3d0f')
 
@@ -36,7 +36,7 @@ def test_truthful_observation(summary, connected, expected):
 @pytest.mark.parametrize('settings,mode,size,expected', [
     ({}, None, None, ('cat', 40)),
     ({'companion': 'dot', 'companion_size': 24}, None, None, ('dot', 24)),
-    ({'companion': 'cat', 'companion_size': 72}, None, None, ('cat', 40)),
+    ({'companion': 'cat', 'companion_size': 72}, None, None, ('cat', 72)),
     ({'companion': 'hidden'}, 'dot', None, ('hidden', 40)),
     ({'companion': 'cat'}, 'hidden', None, ('hidden', 40)),
     ({'companion': 'dot'}, 'cat', 32, ('cat', 32)),

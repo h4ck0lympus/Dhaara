@@ -1,0 +1,106 @@
+/* Capture, Notes, Note view and Settings (Phase 2b). Ported from experiments/ui-ab/frontend/src/style.css:151-201, 298-313. */
+.capture-screen, .notes-screen, .note-screen { max-width: 960px; }
+.subtle-line, .tray-hint, .record-status, .draft-meta { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 8px 0 0; }
+.field-error { color: var(--text); font-size: 13px; margin: 8px 0 0; }
+.field-error::before { content: '⚠ '; }
+.inline-actions, .form-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.form-actions { justify-content: flex-end; margin-top: 16px; }
+
+.capture-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.writing-canvas { margin-top: 32px; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 20px; }
+.writing-canvas.dragging { border-style: dashed; border-color: var(--sage); }
+.writing-canvas > textarea { display: block; width: 100%; min-height: 260px; background: transparent; border: 0; color: var(--text); resize: vertical; font-size: 18px; line-height: 1.8; padding: 6px 9px; }
+.canvas-tools { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 16px; }
+.tool-group { display: flex; flex-wrap: wrap; gap: 14px; }
+.visual-tray { margin-top: 12px; }
+.attachment-list { display: flex; flex-wrap: wrap; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.attachment { display: flex; flex-direction: column; gap: 6px; max-width: 200px; font-size: 12px; color: var(--muted); }
+.attachment.audio { max-width: 280px; }
+.attachment img { max-width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; }
+.attachment-name { overflow-wrap: anywhere; }
+.capture-link { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.capture-link select { max-width: 100%; min-width: 0; }
+
+.recording-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 14px; border: 2px solid var(--sage); border-radius: 10px; }
+.recording-controls[data-phase=paused] { border-style: dashed; border-color: var(--muted); }
+.recording-controls[data-phase=recording] .recording-indicator { color: var(--sage); }
+.recording-phase { font-weight: 600; }
+.recording-elapsed { font-variant-numeric: tabular-nums; }
+
+.saved-notice { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
+.saved-notice[data-storage=server] { border-color: var(--sage); }
+.saved-notice p { margin: 0 0 6px; }
+.storage-label { font-weight: 600; }
+.folder-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 8px; }
+.folder-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+
+.sketch-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.sketch-tools [aria-pressed=true] { color: var(--sage); text-decoration: underline; text-underline-offset: 4px; }
+.sketch-text { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.sketch-canvas { display: block; width: min(640px, 100%); height: 320px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); touch-action: none; }
+.sketch-canvas[data-tool=text] { cursor: text; }
+
+.search-field { display: flex; align-items: center; gap: 10px; margin-top: 28px; border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; }
+.search-field input { flex: 1; min-width: 0; min-height: 44px; background: transparent; border: 0; color: var(--text); }
+.folder-select { display: none; }
+.notes-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 28px; margin-top: 24px; }
+.note-navigation { display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--border); padding-right: 16px; }
+.note-navigation button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font-size: 14px; color: var(--muted); padding: 10px; border: 0; border-radius: 8px; background: none; }
+.note-navigation button[aria-pressed=true] { color: var(--text); background: var(--surface); font-weight: 600; }
+.note-navigation .count { margin-left: auto; font-size: 12px; }
+.list-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.notes-layout .pane-toggle { display: none; }   /* beats .quiet-button in ui.css */
+.note-row { display: flex; flex-direction: column; gap: 4px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.note-row-title { font-size: 16px; }
+.note-row-meta { font-size: 13px; color: var(--muted); }
+.empty-state { padding: 32px 12px; color: var(--muted); }
+
+.note-page { margin-top: 16px; padding: 24px 28px; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; }
+.note-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+.note-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.note-title-row h1 { font: 32px/1.15 Display, serif; margin: 0 0 12px; overflow-wrap: anywhere; }
+.status-line { font-size: 13px; color: var(--muted); }
+.note-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 16px 0; }
+.segmented { display: inline-flex; gap: 2px; padding: 4px; border: 1px solid var(--border); border-radius: 9px; }
+.segmented button { padding: 7px 12px; border: 0; border-radius: 5px; background: none; color: var(--muted); }
+.segmented button[aria-pressed=true] { background: var(--bg); color: var(--text); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.note-body { line-height: 1.8; overflow-wrap: anywhere; }
+.original-block { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; border: 1px solid var(--border); border-radius: 9px; font-size: 14px; line-height: 1.7; }
+.note-form { display: flex; flex-direction: column; gap: 12px; }
+.note-form label { font-size: 13px; color: var(--muted); margin-bottom: -6px; }
+.note-editor { width: 100%; min-height: 300px; padding: 12px; font-size: 16px; }
+.latest-version { border: 1px dashed var(--border); border-radius: 9px; padding: 10px; }
+.suggestion { margin-top: 16px; }
+.note-visuals { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+.embedded-image { margin: 0; max-width: 100%; }
+.embedded-image img { max-width: 100%; max-height: 400px; object-fit: contain; }
+.embedded-image figcaption { margin-top: 6px; font-size: 11px; color: var(--muted); }
+.note-actions { margin-top: 28px; }
+
+.history-list, .outbox-list { display: flex; flex-direction: column; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.settings-row p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.settings-section { margin-top: 16px; }
+.settings-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.settings-form .full { grid-column: 1 / -1; }
+.token-value { display: block; margin-top: 8px; padding: 8px; overflow-wrap: anywhere; user-select: all; }
+
+/* Breakpoints match the Phase 2a shell (02-screens-core.md shell.css): 649.98 px and 999.98 px. */
+@media (min-width: 650px) and (max-width: 999.98px) and (orientation: landscape) {
+  .notes-layout { grid-template-columns: 155px minmax(0, 1fr); gap: 20px; }
+  .notes-layout .pane-toggle { display: inline-flex; }
+  .notes-layout.pane-closed { grid-template-columns: minmax(0, 1fr); }
+  .notes-layout.pane-closed .note-navigation { display: none; }
+}
+
+@media (max-width: 649.98px), (max-width: 999.98px) and (orientation: portrait) {
+  .notes-layout { display: block; }
+  .note-navigation { display: none; }
+  .folder-select { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .writing-canvas { margin-top: 16px; padding: 12px; }
+  .writing-canvas > textarea { min-height: min(calc(100dvh - 340px), 200px); font-size: 16px; }
+  .canvas-tools { align-items: flex-end; }
+  .note-page { padding: 16px; }
+  .settings-form { grid-template-columns: 1fr; }
+}

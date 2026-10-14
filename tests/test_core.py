@@ -8,19 +8,20 @@ from pathlib import Path
 from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
-from noema.server import create_app
-from noema.store import Problem,now
-from noema.models import TokenInput,ContextInput,RuleInput,RunEvent
-from noema.worker import validate_organized,basic_filing
+from dhara.server import create_app
+from dhara.env import PREFIXES
+from dhara.store import Problem,now
+from dhara.models import TokenInput,ContextInput,RuleInput,RunEvent
+from dhara.worker import validate_organized,basic_filing
 
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=')
 ADMIN='a'*40
 @pytest.fixture
 def env(tmp_path,monkeypatch):
-    monkeypatch.delenv('NOEMA_MODEL',raising=False);monkeypatch.delenv('NOEMA_SPEECH_MODEL',raising=False)
+    for key in (prefix+name for prefix in PREFIXES for name in ('MODEL','SPEECH_MODEL')): monkeypatch.delenv(key,raising=False)
     app=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
     with TestClient(app) as c:
-        c.headers.update({'Authorization':'Bearer '+ADMIN,'X-Noema-Request':'1'})
+        c.headers.update({'Authorization':'Bearer '+ADMIN,'X-Dhara-Request':'1'})
         yield c,app.state.store,app.state.worker
 
 def task(c,**kw):
@@ -37,8 +38,78 @@ def run(c,t,**kw):
 def event(c,r,seq,kind,**kw):
     return c.post('/api/runs/'+r['id']+'/events',json={'event_id':uuid4().hex,'seq':seq,'kind':kind,**kw})
 
-def test_health_and_static(env):
- c,s,w=env;assert c.get('/api/health').json()['ok'];assert 'Noema' in c.get('/').text;assert c.get('/static/app.js').status_code==200
+SHELL_ASSET='index-AbCd1234.js'
+
+def make_dist(root):
+    (root/'assets').mkdir(parents=True)
+    (root/'index.html').write_text('<!doctype html><title>Dhara</title><div id="root"></div>')
+    (root/'assets'/SHELL_ASSET).write_text('export {};')
+    (root/'sw.js').write_text('const CACHE="dhara-shell-000000000000";const PRECACHE=["/"];\n')
+    (root/'manifest.webmanifest').write_text('{"id":"/","start_url":"/","scope":"/"}')
+    (root/'icon.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>')
+    return root
+
+def test_frontend_not_built_returns_503(tmp_path):
+    app=create_app(tmp_path/'data',start_worker=False,admin_token=ADMIN,dist_dir=tmp_path/'missing')
+    with TestClient(app) as c:
+        r=c.get('/')
+        assert r.status_code==503
+        assert r.text=='Frontend not built: run `npm --prefix web run build`'
+        assert r.headers['content-type'].startswith('text/plain')
+        assert r.headers['cache-control']=='no-cache'
+        assert "default-src 'self'" in r.headers['content-security-policy']
+        assert c.get('/api/health').json()['ok']
+        for path in ('/assets/'+SHELL_ASSET,'/sw.js','/manifest.webmanifest','/icon.svg'):
+            assert c.get(path).status_code==404,path
+
+def test_frontend_routes_and_headers(tmp_path):
+    dist=make_dist(tmp_path/'dist')
+    app=create_app(tmp_path/'data',start_worker=False,admin_token=ADMIN,dist_dir=dist)
+    with TestClient(app) as c:
+        index=c.get('/')
+        assert index.status_code==200 and '<div id="root">' in index.text
+        assert index.headers['content-type'].startswith('text/html')
+        assert index.headers['cache-control']=='no-cache'
+        assert index.headers['x-frame-options']=='DENY'
+        asset=c.get('/assets/'+SHELL_ASSET)
+        assert asset.status_code==200 and asset.text=='export {};'
+        assert asset.headers['cache-control']=='public, max-age=31536000, immutable'
+        assert c.get('/assets/missing-AbCd1234.js').status_code==404
+        sw=c.get('/sw.js')
+        assert sw.status_code==200 and sw.text.startswith('const CACHE=')
+        assert sw.headers['content-type'].startswith('application/javascript')
+        assert sw.headers['service-worker-allowed']=='/'
+        assert sw.headers['cache-control']=='no-cache'
+        manifest=c.get('/manifest.webmanifest')
+        assert manifest.json()=={'id':'/','start_url':'/','scope':'/'}
+        assert manifest.headers['content-type'].startswith('application/manifest+json')
+        assert manifest.headers['cache-control']=='no-cache'
+        icon=c.get('/icon.svg')
+        assert icon.headers['content-type'].startswith('image/svg+xml') and icon.headers['cache-control']=='no-cache'
+        for path in ('/static/app.js','/static/sw.js','/companion','/index.html'):
+            assert c.get(path).status_code==404,path
+        assert c.get('/api/state').status_code==401
+        (dist/'manifest.webmanifest').unlink()
+        assert c.get('/manifest.webmanifest').status_code==404
+
+def test_display_name_setting(env):
+    c,s,w=env
+    assert c.get('/api/state').json()['settings']['display_name']==''
+    r=c.patch('/api/settings',json={'display_name':'  Vishal  '})
+    assert r.status_code==200,r.text
+    assert r.json()['display_name']=='Vishal'
+    assert c.get('/api/state').json()['settings']['display_name']=='Vishal'
+    assert c.patch('/api/settings',json={'display_name':'x'*61}).status_code==422
+    padded=c.patch('/api/settings',json={'display_name':' '*10+'y'*60})
+    assert padded.status_code==200,padded.text
+    assert padded.json()['display_name']=='y'*60
+    assert c.patch('/api/settings',json={'display_name':5}).status_code==422
+    assert c.patch('/api/settings',json={'motion':True}).json()['display_name']=='y'*60
+    assert c.patch('/api/settings',json={'display_name':''}).json()['display_name']==''
+    s.set_meta('settings',{'observation_enabled':False,'motion':False,'companion':'cat','companion_size':40})
+    old=c.get('/api/state').json()['settings']
+    assert old['display_name']==''
+    assert old['observation_enabled'] is False and old['motion'] is False
 
 def test_companion_saved_actions_preserve_available_order_and_pin(env):
  c,s,w=env
@@ -96,7 +167,7 @@ def test_dns_rebinding_host_rejected(env):
  c,s,w=env;assert c.get('/api/state',headers={'Host':'attacker.test'}).status_code==400
 
 def test_cookie_write_needs_marker(env):
- c,s,w=env;c.headers.pop('Authorization');c.post('/api/session',json={});c.headers.pop('X-Noema-Request');assert c.post('/api/tasks',json={'title':'Injected'}).status_code==403
+ c,s,w=env;c.headers.pop('Authorization');c.post('/api/session',json={});c.headers.pop('X-Dhara-Request');assert c.post('/api/tasks',json={'title':'Injected'}).status_code==403
 
 def test_basic_task_persistence(env):
  c,s,w=env;t=task(c);assert s.task(t['id'])['title']==t['title'];assert len(s.snapshot()['available'])==1
@@ -243,7 +314,7 @@ def test_export_includes_originals_not_tokens(env):
  import zipfile
  c,s,w=env;n=capture(c);r=c.get('/api/export');assert r.status_code==200
  with zipfile.ZipFile(io.BytesIO(r.content)) as z:
-  payload=json.loads(z.read('noema.json'));assert payload['notes'][0]['raw']==n['raw'];assert 'tokens' not in payload;assert ADMIN.encode() not in z.read('noema.json');assert 'notes/'+n['id']+'.md' in z.namelist()
+  payload=json.loads(z.read('dhara.json'));assert payload['notes'][0]['raw']==n['raw'];assert 'tokens' not in payload;assert ADMIN.encode() not in z.read('dhara.json');assert 'notes/'+n['id']+'.md' in z.namelist()
 
 def test_restart_persistence(tmp_path):
  app=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
@@ -251,3 +322,31 @@ def test_restart_persistence(tmp_path):
   c.headers['Authorization']='Bearer '+ADMIN;t=task(c);n=capture(c)
  restarted=create_app(tmp_path,start_worker=False,admin_token=ADMIN)
  assert restarted.state.store.task(t['id']);assert restarted.state.store.note(n['id'])['raw']==n['raw']
+
+def test_old_session_cookie_signs_in_until_login_rewrites_it(env):
+ c,s,w=env;c.headers.pop('Authorization')
+ assert c.get('/api/state').status_code==401
+ old={'Cookie':'noema_session='+ADMIN}   # rename-shim: a cookie written before the rename, sent as the browser still sends it
+ assert c.get('/api/state',headers=old).status_code==200
+ r=c.post('/api/session',json={},headers=old);assert r.status_code==200
+ cookies=r.headers.get_list('set-cookie')
+ assert any(h.startswith('dhara_session='+ADMIN) and 'HttpOnly' in h for h in cookies)
+ assert any(h.startswith('noema_session=') and 'Max-Age=0' in h for h in cookies)   # rename-shim: login clears the old cookie
+ assert c.cookies.get('dhara_session')==ADMIN
+ assert c.get('/api/state').status_code==200
+ r=c.delete('/api/session');cleared=r.headers.get_list('set-cookie')
+ assert all(any(h.startswith(name+'=') and 'Max-Age=0' in h for h in cleared) for name in ('dhara_session','noema_session'))   # rename-shim: logout clears both cookie names
+ assert c.get('/api/state').status_code==401
+
+def test_request_marker_dual_read(env):
+ c,s,w=env;c.headers.pop('Authorization');c.headers.pop('X-Dhara-Request')
+ assert c.post('/api/session',json={}).status_code==403
+ assert c.post('/api/session',json={},headers={'X-Dhara-Request':'1'}).status_code==200
+ assert c.post('/api/tasks',json={'title':'No marker'}).status_code==403
+ assert c.post('/api/tasks',json={'title':'Old marker'},headers={'X-Noema-Request':'1'}).status_code==201   # rename-shim: old header accepted for one release
+ assert c.post('/api/tasks',json={'title':'New marker'},headers={'X-Dhara-Request':'1'}).status_code==201
+
+def test_transcribe_off_names_the_setup_commands(env):
+    c,s,w=env;n=capture(c);r=c.post(f"/api/notes/{n['id']}/transcribe");assert r.status_code==409
+    detail=r.json()['detail']
+    for needle in ('pip install -e ".[speech]"','tools/download_speech_model.py base.en','DHARA_SPEECH_MODEL','CPU','the packaged build does not include speech','Your recording is saved'):assert needle in detail,detail

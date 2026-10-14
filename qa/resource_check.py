@@ -18,14 +18,16 @@ import urllib.request
 import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from dhara.env import PREFIXES
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='noema-resource-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='dhara-resource-') as temporary:
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
-        env = {k: v for k, v in os.environ.items() if not k.startswith('NOEMA_')}
-        env['NOEMA_ACCESS_TOKEN'] = secrets.token_urlsafe(32)
+        env = {k: v for k, v in os.environ.items() if not k.startswith(PREFIXES)}
+        env['DHARA_ACCESS_TOKEN'] = secrets.token_urlsafe(32)
         process = subprocess.Popen(
             [sys.executable, str(ROOT / 'run.py'), '--port', str(port), '--data-dir', temporary],
             cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
