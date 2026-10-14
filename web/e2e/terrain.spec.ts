@@ -134,7 +134,8 @@ test.describe('terrain state machine', () => {
     await expectState(page, 'animated');
     // Freeze the fake clock first: it otherwise keeps ticking in real time, and under load the latency between the
     // move, the jump and the read ate the one-second margin before the 60 s pause. Then restart the window from the move.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+    // pauseAt refuses a time already behind the ticking clock, so pause two seconds ahead of the page's own now.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 2_000);
     await page.mouse.move(10, 10);
     await page.clock.fastForward(59_000);
     await expectState(page, 'animated');
