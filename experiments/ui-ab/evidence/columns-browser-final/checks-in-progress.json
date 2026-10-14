@@ -1,0 +1,16 @@
+[
+  "Task draft survives close and reload; initially focused; Enter inserts newline",
+  "Fixture preserves raw input, coarse Tonight, provenance; returns to Plan with Edit",
+  "Mouse submission from Now reveals the new task without jumping the viewport",
+  "Saved task is visible and reopenable from Now after reload; pin is preserved",
+  "Manual priority persists after reload",
+  "Unsupported input saved with honest unavailable interpretation",
+  "Repeated submit does not duplicate task",
+  "Separate focus, next actions and Tasks; colored priorities and manual completion persist without changing pin",
+  "Image attachment preview, capture save, note edit/save/reopen, immutable original",
+  "Voice controls are explicitly simulated; no recording permission opened",
+  "Companion modes persist; browser reports no native connection and contains no kitten overlay",
+  "Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes",
+  "Failed submission reports an inline error, retains wording and refuses unsafe close",
+  "Empty, waiting, review and offline/unknown fixture states rendered"
+]

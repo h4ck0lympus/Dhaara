@@ -1,0 +1,34 @@
+[
+  {
+    "host": "a",
+    "image": "a-now-open.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1440,
+      900
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "screenshots": [
+      "a-now-open.png"
+    ],
+    "normal_close_exit": 0
+  },
+  {
+    "host": "b",
+    "image": "b-now-open.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1440,
+      900
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "screenshots": [
+      "b-now-open.png"
+    ],
+    "normal_close_exit": 0
+  }
+]

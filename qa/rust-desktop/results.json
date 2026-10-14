@@ -1,0 +1,33 @@
+{
+  "real_http_integration": "passed",
+  "data": "temporary; removed after run",
+  "models": "disabled",
+  "qt_ui": [
+    "Real service connected",
+    "navCapture enabled",
+    "saveCapture enabled",
+    "Capture saved through Rust HTTP",
+    "Capture cleared only after success",
+    "Editor marks unsaved changes",
+    "saveNote enabled",
+    "Edited note saved and version updated",
+    "Original retained after edit",
+    "Capture cannot replace dirty note editor",
+    "saveNote enabled",
+    "409 preserves dirty editor",
+    "Explicit reload retrieves saved version",
+    "showOriginal enabled",
+    "Original viewer is read-only",
+    "navPlan enabled",
+    "addTask enabled",
+    "Manual priority saved",
+    "Focus is pinned by user",
+    "Identical response still resets explicitly discarded draft",
+    "navNow enabled",
+    "Qt minimize state",
+    "Qt restore state",
+    "Focus retained across minimize/restore",
+    "Unsaved close is refused"
+  ],
+  "ui_boundary": "real Rust/Qt/QML offscreen software rendering; programmatic signals; no physical compositor/input validation"
+}

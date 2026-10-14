@@ -1,0 +1,2 @@
+
+(sway_probe.py:524908): Gtk-WARNING **: 16:48:55.883: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name

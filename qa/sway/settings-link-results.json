@@ -1,0 +1,14 @@
+{
+  "passed": 8,
+  "checks": [
+    "Native settings URL opens actual existing dialog at startup",
+    "Settings link adds no navigation screen",
+    "Linked settings edits actual existing server permission",
+    "Settings link preserves current Capture route and editor text",
+    "Settings navigation never ingests an unsaved draft",
+    "Settings link preserves note-edit route and unsaved editor text",
+    "Opening settings never replaces the saved note original",
+    "No uncaught JavaScript errors"
+  ],
+  "boundary": "Real headless Chrome/HTTP/SQLite with disposable data. Not OS browser-launch routing or hardware permission validation."
+}

@@ -1,0 +1,11 @@
+{
+  "screenshots": [
+    "now-empty.png",
+    "now-populated.png"
+  ],
+  "build": "Normal development executable; no QA scenario/IPC activation",
+  "display": "Private Xvfb/X11 1280x900 at scale 1; software rendering requested",
+  "fixture": "Disposable data/profile/attachments/tokens; original synthetic learning note, two explicit tasks, dependency, manual Low and pinned focus",
+  "close": "Programmatic private X11 WM_DELETE_WINDOW: shell exit 0, owned backend PID absent",
+  "boundary": "Screenshot evidence only, no acceptance suite or physical input/Wayland/microphone/monitor/performance validation; native companion not launched"
+}

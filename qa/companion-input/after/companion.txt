@@ -1,0 +1,2 @@
+
+(companion_input_probe.py:571646): Gtk-WARNING **: 18:20:12.048: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name

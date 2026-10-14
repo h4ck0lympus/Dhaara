@@ -1,0 +1,23 @@
+{
+  "engine": "154.0.8037.92",
+  "sandbox": true,
+  "scale": 1,
+  "checks": [
+    "Task draft survives close and reload; initially focused; Enter inserts newline",
+    "Fixture preserves raw input, coarse Tonight, provenance; returns to Plan with Edit",
+    "Mouse submission from Now reveals the new task without jumping the viewport",
+    "Saved task is visible and reopenable from Now after reload; pin is preserved",
+    "Manual priority persists after reload",
+    "Unsupported input saved with honest unavailable interpretation",
+    "Repeated submit does not duplicate task",
+    "Pin unchanged; waiting and agent sections expand",
+    "Image attachment preview, capture save, note edit/save/reopen, immutable original",
+    "Voice controls are explicitly simulated; no recording permission opened",
+    "Cat/Dot/Hidden and settings restore work",
+    "Open desktop panel becomes a modal on resize; narrow dialog traps Tab and Escape closes",
+    "Failed submission reports an inline error, retains wording and refuses unsafe close",
+    "Empty, waiting, review and offline/unknown fixture states rendered"
+  ],
+  "runtime_errors": [],
+  "evidence": "Browser responsive, not desktop host/device evidence"
+}

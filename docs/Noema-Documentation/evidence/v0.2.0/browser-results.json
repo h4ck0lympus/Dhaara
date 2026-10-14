@@ -1,0 +1,27 @@
+{
+  "passed": 20,
+  "checks": [
+    "Real API-backed overview renders",
+    "Create task form persists to real SQLite",
+    "Manual priority control persists",
+    "Text and uploaded image commit together",
+    "Note edits create revision and retain raw text",
+    "Original tab shows untouched capture",
+    "History restore adds another revision",
+    "Offline capture remains queued in storage adapter",
+    "Reconnect flushes queued capture to real server",
+    "Note renderer does not execute untrusted HTML",
+    "Phone layout has no horizontal overflow",
+    "Phone capture has no horizontal overflow",
+    "Tablet layout has no horizontal overflow",
+    "Screen permission form rejects empty allowlists",
+    "Screen permissions persist without starting observation",
+    "Pause action disables observation",
+    "Observed title is omitted from offline cache",
+    "Screen interpretation renders as untrusted text",
+    "Companion deep link opens the exact task",
+    "No uncaught UI JavaScript errors"
+  ],
+  "errors": [],
+  "boundary": "Real assets + real API. Browser navigation prohibited by environment; transport and browser persistence use explicit test doubles. Native IndexedDB, PWA installation, notification delivery and microphone permissions are not end-to-end tested."
+}

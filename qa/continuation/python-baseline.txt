@@ -1,0 +1,11 @@
+Command: .venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=/tmp/noema-baseline-sYo3m7/unrestricted
+Executed before application edits, with local socket permission.
+
+..............................................................           [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/starlette/testclient.py:45
+  /home/p4nic/code/noema/.venv/lib/python3.12/site-packages/starlette/testclient.py:45: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+62 passed, 1 warning in 5.21s

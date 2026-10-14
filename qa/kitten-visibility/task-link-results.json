@@ -1,0 +1,15 @@
+{
+  "passed": 9,
+  "checks": [
+    "Startup task link opens existing dialog over Plan",
+    "Task link adds no main navigation/layout",
+    "Task link preserves unsaved Capture and route",
+    "Opening task never ingests a learning-note draft",
+    "Task link preserves note-edit text and route",
+    "Saved note original is unchanged",
+    "Task-link navigation never changes pin or manual priority",
+    "Missing task has truthful error, no fake action",
+    "No uncaught JavaScript errors"
+  ],
+  "boundary": "Real headless Chrome/HTTP/SQLite, disposable data. No physical input or OS browser dispatch."
+}

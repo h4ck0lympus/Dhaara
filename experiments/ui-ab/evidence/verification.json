@@ -1,0 +1,6 @@
+{
+  "production_code": "All common source paths in before/after match; no notebook data or tokens inspected. Four pre-existing images paths disappeared externally; preserved in before manifest.",
+  "build": "React 19.3.0; Vite 6.4.4; TypeScript 5.9.3; npm audit reported 0 vulnerabilities on final install",
+  "checks": "3 bridge/schema/interpretation tests; 12 browser interaction groups; Rust format/build; Python harness compile; actual A/B native normal-close exit 0",
+  "resources": "Pending comparable release measurements. Procedure in comparison.md."
+}

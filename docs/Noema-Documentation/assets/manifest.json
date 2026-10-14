@@ -1,0 +1,50 @@
+[
+  {
+    "asset": "assets/desktop-approved.png",
+    "source_file": "noema_productivity_dashboard_with_cat_companion.png",
+    "sha256": "023799a773b33b886f68f635e27e896d3dfea7601fa7a8e126399ef1d6481e72",
+    "role": "agreed-concept"
+  },
+  {
+    "asset": "assets/mobile-approved.png",
+    "source_file": "noema_dark_mode_dashboard_mockup.png",
+    "sha256": "270666c7db4af892902aac18907fbe03f54e2dfb7d19dfcba57efd687abc5c77",
+    "role": "agreed-concept"
+  },
+  {
+    "asset": "assets/tablet-approved.png",
+    "source_file": "noema_dashboard_on_tablet.png",
+    "sha256": "97818967541139cb56a97a3f39dac04bf2bdda2655f6b20dd95c6d5ea01341e5",
+    "role": "agreed-concept"
+  },
+  {
+    "asset": "assets/cat-reference.png",
+    "source_file": "image.png",
+    "sha256": "56742148c01c05979726a3317e2141b6b24a375dd9ec5d12669e65a5a7da659b",
+    "role": "user-reference"
+  },
+  {
+    "asset": "assets/implemented-desktop.png",
+    "source_file": "desktop.png",
+    "sha256": "a9f9c6b0fd21dea69adcbf4a9edb8ce48e47059d1dc5f84cfe3f3db4f0f7b012",
+    "role": "implemented-UI-synthetic-test-data"
+  },
+  {
+    "asset": "assets/implemented-mobile.png",
+    "source_file": "mobile.png",
+    "sha256": "a9f203703a3414815860aa2545ada395f5213399212110ef8fcdb3a36df2f0ca",
+    "role": "implemented-UI-synthetic-test-data"
+  },
+  {
+    "asset": "assets/implemented-capture.png",
+    "source_file": "capture-desktop.png",
+    "sha256": "065ef4d698a66d68d1cd8fd8c83b04325e0bc552311679bc4878db67fc2c1218",
+    "role": "implemented-UI-synthetic-test-data"
+  },
+  {
+    "asset": "assets/implemented-screen-settings.png",
+    "source_file": "screen-settings.png",
+    "sha256": "38a97998636f6d0e66f876c1e669ae2f90447ae3799dab68af13f9298edcb022",
+    "role": "implemented-UI-synthetic-test-data"
+  }
+]

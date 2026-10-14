@@ -1,0 +1,4 @@
+
+(noema-desktop:571745): Gtk-WARNING **: 18:20:13.103: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+
+(noema-desktop:571745): Gtk-WARNING **: 18:20:13.151: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name

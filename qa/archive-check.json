@@ -1,0 +1,8 @@
+{
+  "archive_integrity": "passed",
+  "source_checksums": "passed",
+  "path_with_spaces": "passed",
+  "relocated_tests": "..............................................................           [100%]\n62 passed in 6.09s",
+  "environment": "Existing build-environment dependencies reused; not a fresh internet dependency installation.",
+  "secrets_excluded": true
+}

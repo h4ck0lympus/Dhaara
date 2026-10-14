@@ -1,0 +1,6 @@
+{
+  "environment": "Headless Chromium, synthetic data",
+  "passed": [
+    "Baseline detailed form saves to disposable SQLite"
+  ]
+}

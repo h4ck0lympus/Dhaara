@@ -1,0 +1,19 @@
+{
+  "handbook_revision": "1.0",
+  "pdf_pages": 32,
+  "visual_review": "All 32 rendered pages inspected; no observed clipping, table overflow or missing figures.",
+  "approved_images": "All three original PNGs included unchanged in assets and DOCX; hashes verified.",
+  "markdown_image_links": "All local references resolve within the bundle.",
+  "docx_bookmarks": 31,
+  "pdf_outline_entries": 117,
+  "pdf_and_docx": "PDF exported from the same final DOCX; source content also preserved as Markdown.",
+  "limitations": "Documentation QA is not validation of the app on any target device. Existing source, model and browser boundaries are retained.",
+  "prompt_addendum": {
+    "standalone_build_prompt": "prompts/Noema-Build-Prompt.md",
+    "existing_source_continuation": "prompts/Noema-Continue-Prompt.md",
+    "plain_text_copies": "Verified byte-identical to Markdown versions.",
+    "usage_guide": "prompts/README.md",
+    "scope": "Product requirements, approved UI, baseline/version checks, low compute, privacy, milestones, tests and handoff; these are instructions, not new app features."
+  },
+  "final_recheck": "32 nonempty PDF pages; all three approved image bytes found in DOCX; PDF matches final render; relative image paths resolve."
+}

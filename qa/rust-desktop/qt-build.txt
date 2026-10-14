@@ -1,0 +1,2 @@
+   Compiling noema-desktop v0.1.0 (/home/p4nic/code/noema/desktop)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.37s

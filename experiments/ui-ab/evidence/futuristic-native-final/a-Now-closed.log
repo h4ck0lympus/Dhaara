@@ -1,0 +1,42 @@
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.a11y.Bus' requested by ':1.0' (uid=1000 pid=1454436 comm="/home/p4nic/code/noema/experiments/ui-ab/hosts/wry" label="unconfined")
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.a11y.Bus'
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.portal.Desktop' requested by ':1.2' (uid=1000 pid=1454436 comm="/home/p4nic/code/noema/experiments/ui-ab/hosts/wry" label="unconfined")
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.portal.Documents' requested by ':1.3' (uid=1000 pid=1454466 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.impl.portal.PermissionStore' requested by ':1.4' (uid=1000 pid=1454472 comm="/usr/libexec/xdg-document-portal" label="unconfined")
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.freedesktop.impl.portal.PermissionStore'
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.freedesktop.portal.Documents'
+fusermount3: failed to access mountpoint /run/user/1000/doc: Permission denied
+error: fuse init failed: Can't mount path /run/user/1000/doc
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.3' (uid=1000 pid=1454466 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+dbus-daemon[1454461]: Activating service name='org.a11y.atspi.Registry' requested by ':1.1' (uid=1000 pid=1454487 comm="/usr/libexec/xdg-desktop-portal-gtk" label="unconfined")
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.gtk.vfs.Daemon' requested by ':1.7' (uid=1000 pid=1454426 comm="/home/p4nic/code/noema/experiments/ui-ab/node_modu" label="unconfined")
+dbus-daemon[1454461]: Successfully activated service 'org.a11y.atspi.Registry'
+SpiRegistry daemon is running with well-known name - org.a11y.atspi.Registry
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.gtk.vfs.Daemon'
+
+(electron:1454426): Gtk-WARNING **: 00:00:06.171: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.freedesktop.impl.portal.desktop.gtk'
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.impl.portal.desktop.wlr' requested by ':1.3' (uid=1000 pid=1454466 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+2026/10/10 00:00:06 [ERROR] - wayland: failed to connect to display
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activated service 'org.freedesktop.impl.portal.desktop.wlr' failed: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:1454466): xdg-desktop-portal-WARNING **: 00:00:06.275: Failed to create screenshot proxy: Error calling StartServiceByName for org.freedesktop.impl.portal.desktop.wlr: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:1454466): xdg-desktop-portal-WARNING **: 00:00:06.275: No skeleton to export
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activating service name='org.freedesktop.impl.portal.desktop.wlr' requested by ':1.3' (uid=1000 pid=1454466 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+2026/10/10 00:00:06 [ERROR] - wayland: failed to connect to display
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Activated service 'org.freedesktop.impl.portal.desktop.wlr' failed: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:1454466): xdg-desktop-portal-WARNING **: 00:00:06.294: Failed to create screen cast proxy: Error calling StartServiceByName for org.freedesktop.impl.portal.desktop.wlr: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:1454466): xdg-desktop-portal-WARNING **: 00:00:06.294: No skeleton to export
+dbus-daemon[1454424]: [session uid=1000 pid=1454424] Successfully activated service 'org.freedesktop.portal.Desktop'
+
+(noema-ui-ab-wry:1454436): Gtk-WARNING **: 00:00:06.309: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+
+(noema-ui-ab-wry:1454436): Gtk-WARNING **: 00:00:06.419: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+
+(electron:1454426): Gtk-WARNING **: 00:00:06.470: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+{"companion":"ready","host":"a","port":8794,"provider":"linux-x11","separateWindow":true,"observing":false}
+demo:ready:{"ua":"Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15","width":1158,"height":816,"scale":1}
+Failed to launch bus: Bus exited with code 0

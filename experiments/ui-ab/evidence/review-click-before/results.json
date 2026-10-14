@@ -1,0 +1,59 @@
+[
+  {
+    "host": "a",
+    "image": "a-now-open.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1546,
+      835
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "interactions": "Synthetic private-X11 clicks/key events: close/reopen draft, navigate Capture, type note, navigate Notes. Inspect corresponding captures; no physical-device claims.",
+    "screenshots": [
+      "a-now-open.png",
+      "a-now-closed.png",
+      "a-draft-reopened.png",
+      "a-task-added.png",
+      "a-plan.png",
+      "a-capture.png",
+      "a-capture-typed.png",
+      "a-note.png",
+      "a-note-example.png",
+      "a-note-diagram.png"
+    ],
+    "normal_close_exit": 0
+  },
+  {
+    "host": "b",
+    "image": "b-now-open.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1546,
+      835
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "interactions": "Synthetic private-X11 clicks/key events: close/reopen draft, navigate Capture, type note, navigate Notes. Inspect corresponding captures; no physical-device claims.",
+    "storage_check": {
+      "task_fixture_saved": true,
+      "pin_preserved": true,
+      "note_saved": true
+    },
+    "screenshots": [
+      "b-now-open.png",
+      "b-now-closed.png",
+      "b-draft-reopened.png",
+      "b-task-added.png",
+      "b-plan.png",
+      "b-capture.png",
+      "b-capture-typed.png",
+      "b-note.png",
+      "b-note-example.png",
+      "b-note-diagram.png"
+    ],
+    "normal_close_exit": 0
+  }
+]

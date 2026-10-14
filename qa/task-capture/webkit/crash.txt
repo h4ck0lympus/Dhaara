@@ -1,0 +1,38 @@
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.a11y.Bus' requested by ':1.0' (uid=1000 pid=722047 comm="/home/p4nic/code/noema/desktop/target/debug/noema-" label="unconfined")
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.a11y.Bus'
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.portal.Desktop' requested by ':1.2' (uid=1000 pid=722047 comm="/home/p4nic/code/noema/desktop/target/debug/noema-" label="unconfined")
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.portal.Documents' requested by ':1.3' (uid=1000 pid=722060 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.impl.portal.PermissionStore' requested by ':1.4' (uid=1000 pid=722066 comm="/usr/libexec/xdg-document-portal" label="unconfined")
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.freedesktop.impl.portal.PermissionStore'
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.freedesktop.portal.Documents'
+fusermount3: failed to access mountpoint /run/user/1000/doc: Permission denied
+error: fuse init failed: Can't mount path /run/user/1000/doc
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.impl.portal.desktop.gtk' requested by ':1.3' (uid=1000 pid=722060 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+dbus-daemon[722055]: Activating service name='org.a11y.atspi.Registry' requested by ':1.1' (uid=1000 pid=722081 comm="/usr/libexec/xdg-desktop-portal-gtk" label="unconfined")
+dbus-daemon[722055]: Successfully activated service 'org.a11y.atspi.Registry'
+SpiRegistry daemon is running with well-known name - org.a11y.atspi.Registry
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.gtk.vfs.Daemon' requested by ':1.6' (uid=1000 pid=722081 comm="/usr/libexec/xdg-desktop-portal-gtk" label="unconfined")
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.gtk.vfs.Daemon'
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.freedesktop.impl.portal.desktop.gtk'
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.impl.portal.desktop.wlr' requested by ':1.3' (uid=1000 pid=722060 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+2026/10/09 00:35:32 [ERROR] - wayland: failed to connect to display
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activated service 'org.freedesktop.impl.portal.desktop.wlr' failed: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:722060): xdg-desktop-portal-WARNING **: 00:35:32.194: Failed to create screenshot proxy: Error calling StartServiceByName for org.freedesktop.impl.portal.desktop.wlr: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:722060): xdg-desktop-portal-WARNING **: 00:35:32.194: No skeleton to export
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activating service name='org.freedesktop.impl.portal.desktop.wlr' requested by ':1.3' (uid=1000 pid=722060 comm="/usr/libexec/xdg-desktop-portal" label="unconfined")
+2026/10/09 00:35:32 [ERROR] - wayland: failed to connect to display
+dbus-daemon[722046]: [session uid=1000 pid=722046] Activated service 'org.freedesktop.impl.portal.desktop.wlr' failed: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:722060): xdg-desktop-portal-WARNING **: 00:35:32.198: Failed to create screen cast proxy: Error calling StartServiceByName for org.freedesktop.impl.portal.desktop.wlr: Process org.freedesktop.impl.portal.desktop.wlr exited with status 1
+
+(/usr/libexec/xdg-desktop-portal:722060): xdg-desktop-portal-WARNING **: 00:35:32.198: No skeleton to export
+dbus-daemon[722046]: [session uid=1000 pid=722046] Successfully activated service 'org.freedesktop.portal.Desktop'
+
+(noema-desktop:722047): Gtk-WARNING **: 00:35:32.205: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+
+(noema-desktop:722047): Gtk-WARNING **: 00:35:32.232: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
+NOEMA_WEBVIEW_QA {"stage":"crash","checks":["Original web UI loaded","Original stylesheet used"],"hold":true}
+NOEMA_WEBVIEW_QA {"stage":"crash","checks":["Original web UI loaded","Original stylesheet used","Explicit offline Save queues a capture while backend is stopped","Editor remains usable while backend is stopped","Explicit native Retry reconnects without navigating or losing draft","Retry uploads queued capture once without ingesting unsaved draft"]}
+A connection to the bus can't be made

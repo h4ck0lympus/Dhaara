@@ -1,0 +1,42 @@
+{
+  "passed": 31,
+  "checks": [
+    "Actual GTK companion uses layer shell",
+    "Companion reserves no desktop layout space",
+    "Idle companion does not request keyboard focus",
+    "Permission without report is not active observation",
+    "Explicitly launched helper states its own polling status separately",
+    "Task panel keeps secondary controls behind menu",
+    "Connected native panel shows actual available work and saved action",
+    "Real companion menu exposes hide and local observation pause",
+    "Native size controls remain tiny",
+    "Opened controls stay non-modal and never request keyboard focus",
+    "40-pixel native sprite uses a scale-aware surface in a 56-pixel container",
+    "Dot mode changes the real GTK child",
+    "Appearance controls dismiss instead of becoming a permanent overlay",
+    "Closed controls release keyboard interaction",
+    "Pause control gates this helper polling",
+    "Local pause is not confused with global permission or another observer",
+    "Resume is explicit and retains server permission gate",
+    "Hidden mode actually unmaps the native surface",
+    "Actual layer surface follows the second synthetic output",
+    "Local mode does not resurrect a hidden workspace companion",
+    "Server Hidden wins over a local Dot override",
+    "Disconnected controls do not claim current observation",
+    "Disconnected controls suppress cached actionable work",
+    "Rust webview maps as a real native Wayland window",
+    "Sway scratchpad hide contains only the fixture desktop",
+    "Rust webview restores from compositor hide without relaunch",
+    "Observer reads actual private-compositor fixture window metadata",
+    "Real scoped observer report matches a competing synthetic task rule",
+    "Actual metadata inference never overrides pinned focus",
+    "Only an actual fresh report earns the recent-metadata label",
+    "Independent service read: pin/manual priority/no implicit notes unchanged"
+  ],
+  "source_sha256": "ef3c6acb1d3629f062466330f896b44bcc3f39e2556d3fe6e10239a1ecf9f136",
+  "frontend_sha256": {
+    "public/app.js": "f4e974160b8534480e121a24ad80e6bd64bff3408d9487fc1baac65e790022f4",
+    "public/styles.css": "a4c616b4e2025f81373a53bde30f9cd55c53afaeea80c0f868d95eb967ff7346"
+  },
+  "boundary": "Real private headless Sway 1.9, two synthetic outputs, GTK3/layer-shell and Rust/Wry/WebKit, real HTTP and SQLite. Programmatic GTK/compositor input; not physical keyboard/clipboard/microphone, target GPU, device performance or installation."
+}

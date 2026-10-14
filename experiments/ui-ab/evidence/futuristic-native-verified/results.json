@@ -1,0 +1,508 @@
+[
+  {
+    "host": "a",
+    "image": "a-now-closed.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1158,
+      816
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "companion_checks": {
+      "dragged": true,
+      "size_persisted": 128,
+      "app_corner": {
+        "x": 1047,
+        "y": 705,
+        "width": 96,
+        "height": 96
+      },
+      "smooth_transition_samples": [
+        {
+          "x": 1015,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1015,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1016,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1038,
+          "y": 674,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1108,
+          "y": 678,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1255,
+          "y": 709,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1410,
+          "y": 780,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1444,
+          "y": 799,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        }
+      ],
+      "own_window": true,
+      "main_minimized": true,
+      "pet_still_viewable": true,
+      "active_window_observed": "Controlled Xmessage on private X11",
+      "activity_recorded": true,
+      "compositing": "Private xcompmgr; inspect transparent silhouette against plain desktop"
+    },
+    "screenshots": [
+      "a-now-closed.png",
+      "a-task-added.png",
+      "a-plan.png",
+      "a-capture.png",
+      "a-capture-typed.png",
+      "a-note.png",
+      "a-observed-task.png"
+    ],
+    "normal_close_exit": 0
+  },
+  {
+    "host": "b",
+    "image": "b-now-closed.png",
+    "display": "Private Xvfb / X11, software rendering requested",
+    "css_viewport": [
+      1158,
+      816
+    ],
+    "scale": 1,
+    "fixture": "populated",
+    "security": "Engine sandbox retained; no permission requests or production data",
+    "storage_check": {
+      "task_saved": true,
+      "pin_preserved": true,
+      "matched_activity_synced": true,
+      "completion_not_inferred": true
+    },
+    "companion_checks": {
+      "dragged": true,
+      "size_persisted": 128,
+      "app_corner": {
+        "x": 1047,
+        "y": 705,
+        "width": 96,
+        "height": 96
+      },
+      "smooth_transition_samples": [
+        {
+          "x": 1015,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1015,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1027,
+          "y": 673,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1077,
+          "y": 676,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1196,
+          "y": 692,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1349,
+          "y": 748,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1428,
+          "y": 790,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1453,
+          "y": 805,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        },
+        {
+          "x": 1456,
+          "y": 806,
+          "width": 128,
+          "height": 128
+        }
+      ],
+      "own_window": true,
+      "main_minimized": true,
+      "pet_still_viewable": true,
+      "active_window_observed": "Controlled Xmessage on private X11",
+      "activity_recorded": true,
+      "compositing": "Private xcompmgr; inspect transparent silhouette against plain desktop"
+    },
+    "screenshots": [
+      "b-now-closed.png",
+      "b-task-added.png",
+      "b-plan.png",
+      "b-capture.png",
+      "b-capture-typed.png",
+      "b-note.png",
+      "b-observed-task.png"
+    ],
+    "normal_close_exit": 0
+  }
+]
