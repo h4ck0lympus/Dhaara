@@ -23,9 +23,10 @@ Dhara is untracked in `/home/p4nic/code`; the parent's HEAD is not its revision.
 identifies the historical preparation handoff (64 files), verified unchanged
 before lifecycle edits. The [managed-mode implementation manifest](../qa/managed-service/source-after.sha256)
 is also preserved, along with the later screenshot and task-capture handoffs.
-Record `git rev-parse HEAD` and `git status --short` with device results to
-identify the revision and any local changes. Source checksum manifests are no
-longer generated or verified; earlier manifests are historical evidence only.
+Record `git rev-parse HEAD` and `git status --short` from the repository root
+with device results to identify the revision and any local changes. Source
+checksum manifests are no longer generated or verified; earlier manifests are
+historical evidence only.
 
 ## Isolated manual launch
 

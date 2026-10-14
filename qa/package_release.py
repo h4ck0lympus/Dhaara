@@ -13,7 +13,7 @@ def included(path):
         path.is_file()
         and not any(part in EXCLUDED for part in relative.parts)
         and not path.name.endswith(('.pyc', '.token', '.sqlite', '.sqlite3', '.sqlite3-wal', '.sqlite3-shm'))
-        and path.name != '.env'
+        and path.name not in ('.env', 'SHA256SUMS')
         and path.suffix not in ('.zip', '.whl')
     )
 

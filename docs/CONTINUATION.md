@@ -77,6 +77,8 @@ installed development/QA packages in that venv, not on the target laptop:
 .venv/bin/pip list
 .venv/bin/pip install -e '.[test]'
 .venv/bin/pip install playwright
+sha256sum -c SHA256SUMS
+sha256sum SHA256SUMS
 mktemp -d /tmp/noema-baseline-XXXXXX
 ```
 
