@@ -2,7 +2,7 @@
 
 Dhara (formerly Noema) — धारा, "stream". Existing installs keep their data, cookies, tokens and settings; settings stored under the old names are still read for one release.
 
-Current status: **React + Electron cutover; physical Sway acceptance (handbook §24 Stage A) is still pending**
+Current status: **React + Electron cutover; physical Sway acceptance testing is still pending**
 and is the next validation gate. The interface is a typed React bundle (`web/`)
 served by the Python service. The desktop shell is Electron (`electron/`), which
 loads that same bundle from the service origin. The previous `public/` interface,
@@ -16,7 +16,7 @@ Task capture, the capture outbox and the browser database `dhara-local-v1`
 old browser UI upload once after the upgrade. Kitten settings stay in Settings
 for the separate Python Sway helper. Priority shows where it came from:
 "Auto · rules" or "Set by you". AI-assigned automatic priority ("Auto · AI") is
-the next milestone and is not built yet. The October 13 UI brief removes decorative slogans.
+the next milestone and is not built yet.
 
 A quiet place for what you are learning, what your agents are doing, and what you can do next.
 
@@ -26,22 +26,26 @@ This is a **runnable local development release**, not just a UI mockup. The serv
 
 ## Start here
 
-Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. Python 3.12.3 was exercised in this build environment; other operating systems and optional speech wheels still need device testing.
+Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. `uv sync` uses Python 3.12 (pinned in `.python-version`); 3.11 is the minimum. Other operating systems and the optional speech wheels have not been tested.
 
 ### Install (Linux x86_64 AppImage)
 
 Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`), make it executable and
 run it. It starts the bundled service on `~/.local/share/dhara/workspace`
-(`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. Only
-when user namespaces are unavailable and no root-owned setuid sandbox helper is
-found does it print a one-time `sudo chown`/`chmod` line for a copy of
-Chromium's sandbox helper under `~/.local/share/dhara/`; after that it runs
-sandboxed; it never runs without the sandbox. Contributors: the development flow below (a browser, or
+(`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. If user
+namespaces are unavailable and no root-owned setuid sandbox helper is found, it
+copies Chromium's helper to `~/.local/share/dhara/chrome-sandbox`, prints the
+`sudo chown root:root … && sudo chmod 4755 …` command and exits; run it once and
+start again. If your home is mounted nosuid, install the helper as
+`/opt/google/chrome/chrome-sandbox` instead. It never runs without the sandbox.
+The AppImage runs only for the user that built it; another user runs
+`--appimage-extract` and starts `squashfs-root/AppRun`. `--server URL` connects
+it to an external service instead of the bundled one. Contributors: the development flow below (a browser, or
 `npm --prefix electron start`) is unchanged and needs no AppImage.
 
 ### Linux / macOS
 
-From the extracted `dhara` directory:
+From the repository root:
 
 ```bash
 uv sync                      # creates .venv from uv.lock (install uv: https://docs.astral.sh/uv/)
@@ -51,7 +55,9 @@ uv run run.py --open
 
 The interface is at `http://127.0.0.1:8765`. Stop the server with Ctrl-C. Starting it again opens the same saved workspace.
 
-`web/dist` is not committed. If you skip the build, the API still works and the page at `/` says "Frontend not built: run `npm --prefix web run build`". To use the desktop shell instead of a browser (Node 22; Linux), install it once, link the Chromium sandbox helper, and start it against the running service:
+`web/dist` is not committed. If you skip the build, the API still works and the page at `/` says "Frontend not built: run `npm --prefix web run build`". Only one service can use a data directory at a time; a second start on the same workspace is refused.
+
+To use the desktop shell instead of a browser (Node 22; Linux), install it once, link the Chromium sandbox helper, and start it against the running service (`npm --prefix electron start` builds the TypeScript first):
 
 ```bash
 npm --prefix electron ci
@@ -59,7 +65,7 @@ node electron/scripts/link-sandbox.mjs
 npm --prefix electron start -- --server http://127.0.0.1:8765
 ```
 
-`link-sandbox.mjs` symlinks a root-owned `/opt/google/chrome/chrome-sandbox` when present; otherwise it prints the exact `sudo chown`/`chmod` commands. The sandbox is never disabled. To let Electron own the service instead (opt-in, Linux only; both flags are required):
+`link-sandbox.mjs` symlinks a root-owned `/opt/google/chrome/chrome-sandbox` when present; otherwise it prints the exact `sudo chown`/`chmod` commands. The sandbox is never disabled. After `npm --prefix electron run build`, `uv run run.py --desktop` starts the service and the shell together; closing either stops both. To let Electron own the service instead (opt-in, Linux only; `--manage-service` and `--data-dir` each require the other; it runs `.venv/bin/python run.py` on port 8765):
 
 ```bash
 npm --prefix electron start -- --manage-service --data-dir /absolute/workspace
@@ -76,24 +82,24 @@ npm --prefix web run build
 uv run run.py --open
 ```
 
-This distribution contains portable source, not a Windows installer, macOS application bundle, or Android APK. Native packaging has not been tested.
+Linux x86_64 has an AppImage (`release/build.sh`). There is no Windows installer, macOS app bundle or Android APK; run those platforms from source.
 
 ### A stable data location
 
-The default data directory is `.data` beside `run.py`. To keep data independent of code upgrades:
+The default data directory is `$DHARA_DATA_DIR`, else `.data` beside `run.py`. To keep data independent of code upgrades:
 
 ```bash
-uv run run.py --data-dir "$HOME/.local/share/dhara" --open
+uv run run.py --data-dir "$HOME/.local/share/dhara/workspace" --open
 ```
 
-Use the same path on subsequent starts. Files include `dhara.sqlite3`, an `attachments/` directory, and `admin.token`. Keep the directory private. An OS account with access to these files can read the data; this build does not encrypt it at rest.
+This is the AppImage's workspace, so both share one notebook; pick another path to keep them apart. Use the same path on subsequent starts. Files include `dhara.sqlite3`, an `attachments/` directory, and `admin.token` (not written when `DHARA_ACCESS_TOKEN` is set). A pre-rename notebook file is renamed to `dhara.sqlite3` on first start. Keep the directory private. An OS account with access to these files can read the data; this build does not encrypt it at rest.
 
 ## First five minutes
 
-1. Open **Tasks** and click Task. Type a sentence and Add task. Details and next actions are optional; priority remains Automatic unless you choose an override. A planned day is separate from a deadline, reminder or availability constraint.
-2. Open **Overview**. Choose a focus. “Available now” excludes work with unresolved dependencies, tasks intentionally parked, and tasks waiting on an active agent. It explains the priority/ranking decision rather than invoking a model for every refresh.
-3. Open **Capture** and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
-4. Read the saved note in **Notes**. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
+1. Open **Tasks** and click **Add task** (or **+ Task** on Overview). Type a sentence and save. Details and next actions are optional; priority remains Automatic unless you choose an override. A planned day is separate from a deadline, reminder or availability constraint.
+2. Open **Overview** to see Current focus and **Available next** (the Tasks screen also has an **Available now** filter). Tasks are excluded if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called.
+3. On **Overview**, click **Capture a thought…** (or **+ Note**) and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
+4. Open the saved note from **Search notes…** or Recent notes on Overview. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
 5. To track a command or agent, create a task-scoped token in Settings and use the wrapper described below.
 
 You do not have to create tasks from learning notes. Linking a note to a task is optional. Tentative ideas in notes are not automatically turned into obligations.
@@ -102,17 +108,18 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 
 | Area | This release |
 |---|---|
-| Interface | Responsive Overview, Capture, Notes and Tasks in a typed React bundle; compact graphite layout with a focus/work column, visible agent reports, upcoming deadlines and capture shortcuts; optional WebGL2 flowing dot ribbons inside the app (motion off by default, static without WebGL2, paused when hidden, blurred or idle, never under reading or editing surfaces). |
+| Interface | Responsive Overview (with embedded Capture and Notes panes) and Tasks in a typed React bundle; compact graphite layout with a focus/work column, visible agent reports, upcoming deadlines and capture shortcuts; notes search; WebGL2 flowing dot ribbons (on by default and can be turned off in Settings; follows prefers-reduced-motion; static without WebGL2; paused when hidden, blurred or idle). |
+| Desktop | Electron shell (`electron/`, `run.py --desktop`), opt-in managed service on Linux, and a Linux x86_64 AppImage (`release/`). |
 | Knowledge capture | Text, image uploads/paste/drop, simple sketch canvas, microphone recording after permission. Text and attachments are saved as one idempotent capture. |
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |
 | Voice | Records and saves audio. Optional faster-whisper CPU worker transcribes after saving. **No live transcript in this release.** |
 | Recovery | Local browser draft/outbox, retry on reconnect, explicit failed-upload queue, original capture, note revisions, optimistic edit-conflict detection. |
-| Tasks | Dependencies, future start, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
+| Tasks | Dependencies, future start, planned day, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus; Needs you, Running, Parked, Completed and All views. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
 | Next action | Deterministic “What can I do now?” selection from existing actionable tasks; unknown estimates are not fabricated. |
-| Agent lifecycle | Scoped event API and real subprocess wrapper; ordered/deduplicated events, stale-run status, durable wrapper outbox. An exited agent produces a review item, not a completed task. |
+| Agent lifecycle | One-click Claude Code / Codex hook connection (or a local plugin package); scoped event API and real subprocess wrapper; ordered/deduplicated events, stale-run status, durable wrapper outbox. An exited agent produces a review item, not a completed task. |
 | Reminders | Persisted schedule, in-app due queue, snooze/dismiss, due processing after server restart. Optional browser notification while the app is running. |
 | Window context | Experimental opt-in Sway metadata observer with application/title-to-task rules. Pinned focus wins. **No screenshot capture or vision inference.** |
-| Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/cat.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
+| Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/kitten-illustrated.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
 | Portability | Markdown/JSON/attachment export. One local SQLite server, no managed cloud account or automatic synchronization of independent installations. |
 
 ## Optional local note cleanup
@@ -162,7 +169,7 @@ is a follow-on.
 
 Transcription runs in a separate CPU process using INT8 and four threads, with local model files only. The process exits when done. Audio and original typed content survive a transcription failure. You can retry through the note's **Transcribe recording** button.
 
-**Not tested here:** real speech recognition, your accent, hesitant explanations, technical vocabulary, live microphone permission flows, or speed on your i7-1270P. The adapter and failure/recovery paths are present, but the optional dependency/model was not downloaded in this build. Benchmark it on short actual CTF/LeetCode recordings before relying on the transcript.
+**Not tested here:** real speech recognition, your accent, hesitant explanations, technical vocabulary, live microphone permission flows, or CPU speed on your machine. The adapter and failure/recovery paths are present, but the optional dependency/model was not downloaded in this build. Benchmark it on short recordings of your own material before relying on the transcript.
 
 Recording currently becomes a saved attachment when you stop it and save the capture. Closing or crashing the browser during an unfinished recording can lose that recording; continuous recording checkpoints are not implemented. Text drafts are separate and have local persistence.
 
@@ -178,7 +185,7 @@ hooks once. That review is required by Codex; dhaara does not bypass it.
 
 Subsequent sessions register automatically: **no task IDs, tokens or wrapper
 commands**. A task is created for each session when its first activity arrives,
-labelled with the agent and project folder name. Rename it if useful. Prompt
+labelled with the agent, project folder name and a short session code (for example `Codex · myrepo · 3fa9c1`). Rename it if useful. Prompt
 submission/tool activity reports work, permission requests report a need for
 input, and Stop reports a result ready for review. A finished turn never marks
 a task Done. Child-agent events do not complete their parent session. Sessions
@@ -197,7 +204,7 @@ oldest event if full. An unavailable/unwritable queue must not block an agent.
 future ingestion for that provider. Existing tasks and reports remain.
 Advanced task-scoped tokens remain available for custom integrations.
 
-The connection also prepares a **local plugin package** for each provider,
+Connecting a provider also prepares a **local plugin package** for it,
 including its manifest, lifecycle hooks and a troubleshooting skill. Download
 it from the connection's Plugin package disclosure after choosing **Use plugin instead**.
 That switch removes direct hooks while keeping ingestion enabled. Packages target this
@@ -206,10 +213,10 @@ Generated sources live in `<data-dir>/agent-hooks/plugins/{claude,codex}`.
 The plugin requires its corresponding connection to remain enabled for ingestion.
 The direct installer is the normal one-click path; downloading a plugin is optional.
 
-Hook execution uses the current Python runtime in a source install. A frozen
-build currently needs a discoverable Python runtime for the standalone receiver;
-the AppImage packaging work must bundle or expose one before claiming a
-self-contained hook installation. This change does not modify that packaging work.
+Hook execution uses the current Python runtime in a source install. The AppImage
+does not yet support agent connections: hooks need a `python3` on PATH, and the
+frozen service does not bundle the `agent_hook.py` receiver that Connect copies.
+Use a source install for agent connections until both are bundled.
 Native agent hook trust/reload behavior still needs a live session check; local
 receiver execution, queues, configuration preservation and HTTP authorization
 are covered by automated tests.
@@ -222,7 +229,7 @@ Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
 
 This does not inspect arbitrary existing conversations. You deliberately wrap a command that belongs to a task.
 
-In **Settings → Agent & observer tokens**, create an **Agent** token and select the allowed task(s). Copy the token when shown. In a task's detail view, expand **Connect an agent** to copy its ID.
+In **Settings**, expand **Advanced: agent & observer tokens**, set **Access** to **Task-scoped agent** and select the allowed task(s). Copy the token when shown. In a task's detail view, expand **Connect an agent** to copy its ID.
 
 ```bash
 export DHARA_TOKEN='paste-the-task-scoped-token-here'
@@ -235,7 +242,7 @@ For a harmless first check:
 python tools/agent.py --task TASK_ID --name 'Test command' -- python -c "print('Ready for review')"
 ```
 
-The wrapper leaves output in the terminal, creates a run, reports liveness every 30 seconds, and reports the exit status. It removes `DHARA_TOKEN` and `DHARA_ACCESS_TOKEN` from the child environment. A zero exit code means ready for human review, not verified success. Terminal output/prompt text is not automatically copied into notes.
+The wrapper leaves output in the terminal, creates a run, reports liveness every 30 seconds, and reports the exit status. It removes `DHARA_TOKEN` and `DHARA_ACCESS_TOKEN` (and their pre-rename equivalents) from the child environment. A zero exit code means ready for human review, not verified success. Terminal output/prompt text is not automatically copied into notes.
 
 Events are written to an SQLite outbox before delivery. If the server goes away, they can be replayed after reconnect:
 
@@ -299,17 +306,10 @@ polling switch and recent metadata reports are labeled separately. The observer
 does not read pixels, clipboard contents, keypresses or browser history. Window
 titles may still contain sensitive information.
 
-Private headless Sway/GTK/layer-shell validation tests the
-GTK3/layer-shell companion mapping with two synthetic outputs and disposable
-service/profile data, including actual metadata mapping with pinned focus
-preserved. Before the cutover it passed 31 checks, three of which covered the
-Rust webview hide/restore; those were removed with the Rust shell at the
-cutover, and the kitten suite has not been rerun since. Stage A of
-the physical Sway acceptance validates it. Another 41
-visibility checks cover dark/light backgrounds, modes, non-modal controls,
-unchanged permissions and 100%/150%/200% compositor scaling. This is not
-physical keyboard/clipboard, microphone, physical-monitor scaling or laptop
-CPU/battery validation. Automatic conversion of a minimized
+There is no automated companion test against a real compositor:
+`tests/test_companion.py` covers the pure state and placement logic only. The
+companion has not been validated on physical monitors, with scaling, or for
+laptop CPU/battery use. Automatic conversion of a minimized
 main window into the companion is not implemented; start/stop the helper
 explicitly. Windows/macOS/Android overlays are not included.
 Event-triggered companion messages are not implemented.
@@ -339,7 +339,7 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
 ## Verification
 
 The cutover gate, run in this order from the repository root after
-`uv sync --extra test`:
+`uv sync --extra test` (add `--extra speech` if you use it):
 
 ```bash
 npm --prefix web ci
@@ -349,13 +349,14 @@ npm --prefix web run e2e
 npm --prefix electron ci
 node electron/scripts/link-sandbox.mjs
 npm --prefix electron test
-.venv/bin/python -m pytest
+uv run pytest
 ```
 
 The E2E suite starts `run.py` on a temporary data directory and a free port; it
 never touches your workspace. Install Playwright's Chromium once with
 `npm --prefix web exec -- playwright install chromium`. The Electron suite runs
-in a private headless Sway and needs `sway` on PATH.
+in a private headless Sway and needs `sway` on PATH; `npm --prefix electron test`
+runs the build, the unit tests and the Playwright suite.
 These are real-browser and real-process tests with injected faults. They are not
 Android, microphone, PWA-installation, physical power-loss, cloud-sync or
 physical Sway tests.
@@ -363,20 +364,31 @@ physical Sway tests.
 ## Source layout
 
 ```text
-run.py                   Local launcher
-dhara/server.py          HTTP API, local safeguards, serves web/dist, export
-dhara/store.py           SQLite records, priority/availability policy, state transitions
-dhara/models.py          Bounded API input validation
-dhara/worker.py          Single optional AI/transcription worker
-dhara/desktop_service.py Linux managed-mode lease (protocol 2)
-web/                     React + TypeScript interface (npm --prefix web run build)
-electron/                Electron desktop shell and managed lifecycle
-tools/agent.py           Command tracking + durable event outbox
-tools/sway_context.py    Opt-in metadata observer
-tools/sway_companion.py  Tiny experimental native Sway overlay (sprite: tools/assets/cat.png)
-tools/transcribe.py      Isolated CPU transcription worker
-tools/doctor.py          Read-only setup diagnostics
-tests/                   Backend, helper and cutover regression tests
+run.py                          Local launcher (non-loopback binding needs a token and host allowlist)
+dhara/server.py                 HTTP API, local safeguards, serves web/dist, export
+dhara/store.py                  SQLite records, priority/availability policy, state transitions
+dhara/models.py                 Bounded API input validation
+dhara/worker.py                 Single optional AI/transcription worker
+dhara/task_capture.py           Rule-based task capture parsing (no model)
+dhara/agent_connections.py      Claude Code / Codex hook install and removal
+dhara/agent_hook.py             Standalone hook receiver and local event queue
+dhara/agent_plugin.py           Local plugin package builder
+dhara/desktop_service.py        Linux managed-mode lease (protocol 2)
+dhara/env.py                    Environment helpers (with a fallback to pre-rename variable names)
+noema/                          rename-shim: legacy import shim, kept for one release
+web/                            React + TypeScript interface (npm --prefix web run build)
+web/e2e/                        Playwright tests against run.py on a temporary data directory
+electron/                       Electron desktop shell and managed lifecycle
+electron/e2e/                   Playwright tests in a private headless Sway
+release/                        Linux AppImage build (build.sh, PyInstaller spec, launcher)
+tools/agent.py                  Command tracking + durable event outbox
+tools/client.py                 Shared HTTP client for the helpers
+tools/sway_context.py           Opt-in metadata observer
+tools/sway_companion.py         Tiny experimental native Sway overlay (sprite: tools/assets/kitten-illustrated.png)
+tools/companion_state.py        Companion state and placement logic
+tools/transcribe.py             Isolated CPU transcription worker
+tools/download_speech_model.py  Explicit speech model download
+tools/doctor.py                 Read-only setup diagnostics
+tests/                          Backend, helper and cutover regression tests
+reference-images/               UI design references
 ```
-
-No code has been installed on your device by creating this package. The downloaded source is the handoff point for running and continuing the project.
