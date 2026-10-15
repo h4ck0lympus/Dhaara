@@ -1,2 +1,0 @@
-2026-10-08 18:20:13 - [main.c:293] Found config * for output HEADLESS-1 ((null))
-2026-10-08 18:20:13 - [main.c:293] Found config * for output HEADLESS-2 ((null))

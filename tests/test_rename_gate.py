@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # Paths that keep the old name: archives and evidence, this migration's specs and plans, the shims and the migration code
 # with their tests and the historical v1 service-worker fixture.
 ALLOWED_PATHS = (
-    'docs/Noema-Documentation/', 'docs/Noema-Handbook.md', 'docs/superpowers/', 'experiments/',
+    'experiments/',
     'noema/', 'dhara/env.py', 'electron/src/env.ts', 'electron/test/env.test.ts',
     'web/src/local/migrate.ts', 'web/src/local/migrate.test.ts', 'web/e2e/v1/sw.js',
     'tests/test_shims.py', 'tests/test_rename_gate.py',
@@ -80,7 +80,7 @@ def test_marker_lines_are_listed_for_the_follow_up():
         assert expected in listing
 
 
-PROSE_DOCS = ['README.md'] + sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / 'docs').glob('*.md') if not p.name.startswith('Noema-'))
+PROSE_DOCS = ['README.md']
 CAPS_IN_PROSE = re.compile(r'(?<![`A-Z_])DHARA(?![_A-Z`])')
 LOWER_AT_SENTENCE_START = re.compile(r'(^|[.!?]\s+)dhara(?=[\s,;:)])', re.MULTILINE)
 

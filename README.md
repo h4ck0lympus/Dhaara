@@ -1,18 +1,15 @@
 # dhaara · 0.1.0
 
-Dhara (formerly Noema; the product handbook still uses the old name) — धारा, "stream". Existing installs keep their data, cookies, tokens and settings; the compatibility sections at the end of [docs/DESKTOP.md](docs/DESKTOP.md) and [docs/SECURITY.md](docs/SECURITY.md) list what is still read under the old names for one release.
-
-See [the maintained progress record](docs/PROGRESS.md) for what is built,
-what has been tested, remaining milestones and the next concrete step.
+Dhara (formerly Noema) — धारा, "stream". Existing installs keep their data, cookies, tokens and settings; settings stored under the old names are still read for one release.
 
 Current status: **React + Electron cutover; physical Sway acceptance (handbook §24 Stage A) is still pending**
 and is the next validation gate. The interface is a typed React bundle (`web/`)
 served by the Python service. The desktop shell is Electron (`electron/`), which
 loads that same bundle from the service origin. The previous `public/` interface,
 the Rust Wry/Tao shell (`desktop/`) and the in-app browser kitten preview were
-removed at the cutover; rollback steps are in [PROGRESS.md](docs/PROGRESS.md).
+removed at the cutover.
 External service startup remains the default; Linux managed mode
-(`--manage-service`) is opt-in. See [desktop instructions](docs/DESKTOP.md).
+(`--manage-service`) is opt-in.
 
 Task capture, the capture outbox and the browser database `dhara-local-v1`
 (version 1) keep their behaviour and record shapes, so captures queued by the
@@ -33,8 +30,7 @@ Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to bui
 
 ### Install (Linux x86_64 AppImage)
 
-Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`;
-see [docs/DESKTOP.md](docs/DESKTOP.md), "Packaged build"), make it executable and
+Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`), make it executable and
 run it. It starts the bundled service on `~/.local/share/dhara/workspace`
 (`$XDG_DATA_HOME` is respected); `--data-dir PATH` opens another workspace. Only
 when user namespaces are unavailable and no root-owned setuid sandbox helper is
@@ -119,8 +115,6 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 | Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/cat.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
 | Portability | Markdown/JSON/attachment export. One local SQLite server, no managed cloud account or automatic synchronization of independent installations. |
 
-More precise boundaries and remaining milestones are in [BUILD_STATUS.md](docs/BUILD_STATUS.md).
-
 ## Optional local note cleanup
 
 The app works without this. This adapter sends saved note text to a separately running local Ollama service. It does not send screenshots, run tools, or give the model access to your entire notebook.
@@ -164,7 +158,7 @@ good enough for technical speech. Model downloads can be substantial. On PowerSh
 `$env:DHARA_SPEECH_MODEL` to the full model-directory path. Managed mode (the Electron shell
 starting the service, and the packaged build) strips `DHARA_SPEECH_MODEL` from the service's
 environment, so speech is configured this way in external mode only; a workspace setting for it
-is a follow-on (`docs/PROGRESS.md`).
+is a follow-on.
 
 Transcription runs in a separate CPU process using INT8 and four threads, with local model files only. The process exits when done. Audio and original typed content survive a transcription failure. You can retry through the note's **Transcribe recording** button.
 
@@ -256,7 +250,7 @@ python tools/agent.py --task TASK_ID --outbox .data/coding-events.sqlite3 -- you
 python tools/agent.py --outbox .data/coding-events.sqlite3 --flush
 ```
 
-The initial run registration requires a reachable server. For interactive agents with native lifecycle/approval hooks, use the event API rather than treating terminal-process liveness as semantic progress. See [API.md](docs/API.md).
+The initial run registration requires a reachable server. For interactive agents with native lifecycle/approval hooks, use the event API rather than treating terminal-process liveness as semantic progress.
 
 ## Tiny Sway companion (experimental)
 
@@ -305,18 +299,17 @@ polling switch and recent metadata reports are labeled separately. The observer
 does not read pixels, clipboard contents, keypresses or browser history. Window
 titles may still contain sensitive information.
 
-Private headless Sway/GTK/layer-shell validation (`qa/sway_check.py`) tests the
+Private headless Sway/GTK/layer-shell validation tests the
 GTK3/layer-shell companion mapping with two synthetic outputs and disposable
 service/profile data, including actual metadata mapping with pinned focus
 preserved. Before the cutover it passed 31 checks, three of which covered the
 Rust webview hide/restore; those were removed with the Rust shell at the
 cutover, and the kitten suite has not been rerun since. Stage A of
-[the physical Sway acceptance](docs/PHYSICAL_SWAY_ACCEPTANCE.md) validates it. Another 41
+the physical Sway acceptance validates it. Another 41
 visibility checks cover dark/light backgrounds, modes, non-modal controls,
 unchanged permissions and 100%/150%/200% compositor scaling. This is not
 physical keyboard/clipboard, microphone, physical-monitor scaling or laptop
-CPU/battery validation. Current screenshots and historical test commands are in
-[the test report](docs/TEST_REPORT.md). Automatic conversion of a minimized
+CPU/battery validation. Automatic conversion of a minimized
 main window into the companion is not implemented; start/stop the helper
 explicitly. Windows/macOS/Android overlays are not included.
 Event-triggered companion messages are not implemented.
@@ -341,7 +334,7 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
   Save requires a successful local queue commit before uploading. Keep the page
   open while local saving is unavailable; no server-only fallback is implemented.
 - For a full installation backup, stop the server and copy the entire selected data directory, including the database and attachments. Treat `admin.token` and backups as secrets. Do not copy only the SQLite main file while it is writing WAL data.
-- The single user is the OS user/installation owner, not an independently isolated enterprise tenant. Other local processes may access loopback service capabilities. See [SECURITY.md](docs/SECURITY.md).
+- The single user is the OS user/installation owner, not an independently isolated enterprise tenant. Other local processes may access loopback service capabilities.
 
 ## Verification
 
@@ -362,14 +355,10 @@ npm --prefix electron test
 The E2E suite starts `run.py` on a temporary data directory and a free port; it
 never touches your workspace. Install Playwright's Chromium once with
 `npm --prefix web exec -- playwright install chromium`. The Electron suite runs
-in a private headless Sway and needs `sway` on PATH. Results, the terrain
-budget and the main-app memory check are in [TEST_REPORT.md](docs/TEST_REPORT.md).
+in a private headless Sway and needs `sway` on PATH.
 These are real-browser and real-process tests with injected faults. They are not
 Android, microphone, PWA-installation, physical power-loss, cloud-sync or
-physical Sway tests. The older `qa/` browser and webview harnesses
-(`qa/browser_check.py`, `qa/webview_check.py`, `qa/managed_screenshots.py`)
-drove the removed UI and shell and were deleted at the cutover (they remain in
-git history); only their recorded results under `qa/` stay.
+physical Sway tests.
 
 ## Source layout
 
@@ -388,8 +377,6 @@ tools/sway_companion.py  Tiny experimental native Sway overlay (sprite: tools/as
 tools/transcribe.py      Isolated CPU transcription worker
 tools/doctor.py          Read-only setup diagnostics
 tests/                   Backend, helper and cutover regression tests
-qa/                      Device-check helpers and recorded results of deleted harnesses
-docs/                    Status, architecture, API and security boundaries
 experiments/ui-ab/       Variant A/B experiment evidence (history)
 ```
 

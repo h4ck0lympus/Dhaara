@@ -1,4 +1,0 @@
-
-(kitten_visibility_probe.py:555167): Gtk-WARNING **: 17:44:08.885: Theme parsing error: gtk-dark.css:1048:16: 'border-spacing' is not a valid property name
-
-(kitten_visibility_probe.py:555167): Gtk-CRITICAL **: 17:44:21.757: gtk_main_quit: assertion 'main_loops != NULL' failed
