@@ -118,6 +118,7 @@ export const SettingsSchema = z.object({
   companion: z.enum(['cat', 'dot', 'hidden']),
   companion_size: int().min(24).max(72),
   display_name: z.string().max(60).default(''),
+  theme: z.enum(['dark', 'light', 'system']).default('dark'),
 });
 export const CapabilitiesSchema = z.object({
   organizer: z.boolean(),
@@ -167,4 +168,4 @@ export type TaskUpdateBody = TaskEditable & { expected_version: number };
 export type TaskCaptureBody = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };
 export type CapturePayload = { capture_id: string; raw: string; project: ''; task_id: string | null; organize: true };
 export type NoteUpdateBody = { title: string; folder: string; body: string; expected_version: number };
-export type SettingsPatch = Partial<Pick<Settings, 'observation_enabled' | 'motion' | 'companion' | 'companion_size' | 'display_name'>>;
+export type SettingsPatch = Partial<Pick<Settings, 'observation_enabled' | 'motion' | 'companion' | 'companion_size' | 'display_name' | 'theme'>>;

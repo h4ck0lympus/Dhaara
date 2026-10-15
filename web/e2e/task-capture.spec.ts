@@ -18,7 +18,7 @@ const addTaskDialog = (page: Page) => page.getByRole('dialog', { name: 'Add task
 const rawInput = (page: Page) => addTaskDialog(page).getByLabel('What do you need to do?');
 const detailsSummary = (page: Page) => addTaskDialog(page).locator('#task-details summary');
 async function openAddTask(page: Page) {
-  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  await page.getByRole('button', { name: /New task/ }).click();
   await expect(addTaskDialog(page)).toBeVisible();
   return addTaskDialog(page);
 }
@@ -270,10 +270,11 @@ test('Create task form persists to real SQLite', async ({ page, dhara }) => {
 
 test('Add a task opens an implemented form and persists explicit intent', async ({ page, dhara }) => {
   await gotoApp(page, dhara);
-  await page.getByRole('button', { name: '+ Task', exact: true }).click();
+  await page.keyboard.press('n');
   await page.getByLabel('What do you need to do?').fill('Explicitly chosen task');
   await page.getByLabel('What do you need to do?').press('Control+Enter');
-  await expect(page.locator('.inline-task')).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Add task' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Tasks' })).toContainText('Explicitly chosen task');
   expect((await state(dhara)).tasks.map(t => t.title)).toEqual(['Explicitly chosen task']);
 });
 
@@ -444,7 +445,7 @@ async function fullyPopulated(dhara: DharaServer) {
   return { saved, changed };
 }
 async function openEditor(page: Page, title: string) {
-  await page.locator('.plan-list').getByRole('button', { name: new RegExp('^' + title) }).click();
+  await page.getByRole('region', { name: 'To do' }).getByRole('button', { name: title, exact: true }).click();
   await page.getByRole('dialog', { name: title }).getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit task' });
   await expect(editor).toBeVisible();

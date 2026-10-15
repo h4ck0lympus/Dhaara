@@ -1,59 +1,134 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { makeSnapshot, makeTask } from '../test/fixtures';
-const h = vi.hoisted(() => ({ navigate: vi.fn(), setFocus: vi.fn().mockResolvedValue({}) }));
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => h.navigate }));
-vi.mock('../state/queries', () => ({ useSnapshot: vi.fn(), useSetFocus: () => ({ mutateAsync: h.setFocus }) }));
-vi.mock('../domain/connection', () => ({ useConnected: () => true }));
-vi.mock('../shell/dialogs', () => ({ openDialog: vi.fn() }));
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeRun, makeSnapshot, makeTask } from '../test/fixtures';
+const h = vi.hoisted(() => ({ setFocus: vi.fn().mockResolvedValue({}), connected: true }));
+vi.mock('@tanstack/react-router', () => ({ Link: ({ to, children, ...rest }: { to: string; children: ReactNode }) => <a href={to} {...rest}>{children}</a> }));
+vi.mock('../state/queries', () => ({ useSnapshot: vi.fn(), useSetFocus: () => ({ mutateAsync: h.setFocus }), usePatchTask: () => ({ mutateAsync: vi.fn(), isPending: false }) }));
+vi.mock('../domain/connection', () => ({ useConnected: () => h.connected }));
+vi.mock('../shell/dialogs', () => ({ openDialog: vi.fn(), isDialogOpen: () => false }));
 vi.mock('../shell/OfflineNotice', () => ({ OfflineNotice: () => null }));
 vi.mock('../routes/guards', () => ({ allowNavigation: vi.fn(() => true) }));
-vi.mock('./Capture', () => ({ CaptureScreen: () => <textarea aria-label="Inline note" /> }));
-vi.mock('./Notes', () => ({ NotesScreen: () => <p>Inline library</p> }));
-vi.mock('./NoteView', () => ({ EmbeddedNote: () => <p>Inline note reader</p> }));
-vi.mock('../dialogs/TaskCapture', () => ({ TaskCaptureDialog: () => <textarea aria-label="Inline task" /> }));
-import { useSnapshot } from '../state/queries';
+vi.mock('./Capture', () => ({ CaptureScreen: () => <textarea id="capture-input" aria-label="Inline note" /> }));
 import { allowNavigation } from '../routes/guards';
+import { openDialog } from '../shell/dialogs';
+import { CAPTURE_EVENT } from '../shell/keyboard';
+import { useSnapshot } from '../state/queries';
 import { NowScreen } from './Now';
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+beforeEach(() => { h.connected = true; vi.spyOn(window, 'confirm').mockReturnValue(true); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); });
 function given(snapshot = makeSnapshot()) {
   vi.mocked(useSnapshot).mockReturnValue({ data: snapshot } as ReturnType<typeof useSnapshot>);
   return render(<NowScreen />);
 }
-describe('Overview workspace', () => {
-  it('caps a large available list and opens the complete filtered workspace', () => {
-    const tasks = Array.from({ length: 80 }, (_, i) => makeTask(`t${i}`, { title: `Task ${i}` }));
+const focusAt = (task_id: string, pinned = false) => ({ task_id, pinned, source: 'user', updated_at: new Date().toISOString() });
+
+describe('Home', () => {
+  it('greets by name', () => {
+    given(makeSnapshot({ settings: { ...makeSnapshot().settings, display_name: 'Vishal' } }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Good (morning|afternoon|evening), Vishal\.$/);
+  });
+
+  it('summarises agents that need you and are working, linking to Tasks', () => {
+    const waiting = makeTask('a', { title: 'Answer agent' });
+    const runs = [makeRun({ id: 'r1', effective_status: 'working' }), makeRun({ id: 'r2', effective_status: 'working' }), makeRun({ id: 'r3', effective_status: 'review' })];
+    given(makeSnapshot({ tasks: [waiting], attention: [waiting], runs }));
+    const strip = screen.getByRole('link', { name: 'Agents: 1 need you, 2 working' });
+    expect(strip.getAttribute('href')).toBe('/plan');
+  });
+
+  it('hides the agent strip when nothing is happening, and while offline', () => {
+    given();
+    expect(screen.queryByRole('link', { name: /^Agents:/ })).toBeNull();
+    cleanup();
+    h.connected = false;
+    const t = makeTask('a');
+    given(makeSnapshot({ tasks: [t], attention: [t], runs: [makeRun({ effective_status: 'working' })] }));
+    expect(screen.queryByRole('link', { name: /^Agents:/ })).toBeNull();
+  });
+
+  it('shows the focus with its source, opens it and clears a pinned focus after confirming', () => {
+    const t = makeTask('f', { title: 'Garmin analysis', next_action: 'Compare parsers' });
+    given(makeSnapshot({ tasks: [t], focus: focusAt('f', true) }));
+    const card = screen.getByRole('region', { name: 'Current focus' });
+    expect(card.textContent).toContain('Pinned by you');
+    expect(card.textContent).toContain('Compare parsers');
+    fireEvent.click(within(card).getByRole('button', { name: 'Garmin analysis' }));
+    expect(openDialog).toHaveBeenCalledWith({ kind: 'task', id: 'f' });
+    fireEvent.click(within(card).getByRole('button', { name: 'Unpin & clear' }));
+    expect(window.confirm).toHaveBeenCalled();
+    expect(h.setFocus).toHaveBeenCalledWith({ taskId: null });
+  });
+
+  it('labels a focus shown offline as last known', () => {
+    h.connected = false;
+    given(makeSnapshot({ tasks: [makeTask('f')], focus: focusAt('f') }));
+    expect(screen.getByRole('region', { name: 'Current focus' }).textContent).toContain('Last known · Selected by you');
+  });
+
+  it('invites choosing a focus when there is none', () => {
+    given();
+    expect(screen.getByRole('region', { name: 'Current focus' }).textContent).toContain('Choose a task when you’re ready.');
+    expect(screen.queryByRole('button', { name: /clear/i })).toBeNull();
+  });
+
+  it('caps "a few minutes" at three, skipping attention, focus and tasks already listed, and hides it offline', () => {
+    const tasks = Array.from({ length: 12 }, (_, i) => makeTask(`t${i}`, { title: `Task ${i}` }));
+    given(makeSnapshot({ tasks, available: tasks, attention: [tasks[0]], focus: focusAt('t1') }));
+    const few = screen.getByRole('region', { name: 'If you have a few minutes' });
+    expect(within(few).getAllByRole('button').map(b => b.textContent)).toEqual(['Task 5', 'Task 6', 'Task 7']);
+    cleanup();
+    h.connected = false;
     given(makeSnapshot({ tasks, available: tasks }));
-    const available = screen.getByRole('region', { name: 'Available next' });
-    expect(available.querySelectorAll('.preview-row')).toHaveLength(3);
-    fireEvent.click(within(available).getByRole('button', { name: 'View available tasks' }));
-    expect(h.navigate).toHaveBeenCalledWith({ to: '/plan', search: { view: 'available' } });
+    expect(screen.queryByRole('region', { name: 'If you have a few minutes' })).toBeNull();
   });
-  it('opens capture, tasks and notes inside Overview', () => {
-    given();
-    fireEvent.click(screen.getByRole('button', { name: 'Capture a thought…' }));
-    expect(screen.getByLabelText('Inline note')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '+ Task' }));
-    expect(screen.getByLabelText('Inline task')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Browse notes' }));
-    expect(screen.getByText('Inline library')).toBeTruthy();
-    expect(h.navigate).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: 'Plan' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Ask' })).toBeNull();
+
+  it('lists four open tasks, soonest due first, without the focus, done or parked work', () => {
+    const due = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+    const tasks = [
+      makeTask('late', { title: 'Late', due_at: due(9) }), makeTask('soon', { title: 'Soon', due_at: due(1) }),
+      makeTask('none', { title: 'Undated' }), makeTask('mid', { title: 'Mid', due_at: due(3) }), makeTask('extra', { title: 'Extra' }),
+      makeTask('done', { title: 'Done', status: 'done' }), makeTask('park', { title: 'Parked', status: 'parked' }), makeTask('f', { title: 'Focus' }),
+    ];
+    given(makeSnapshot({ tasks, focus: focusAt('f') }));
+    const list = screen.getByRole('region', { name: 'Tasks' });
+    expect([...list.querySelectorAll('.task-title')].map(b => b.textContent)).toEqual(['Soon', 'Mid', 'Late', 'Undated']);
+    expect(within(list).getByRole('link', { name: 'See all →' }).getAttribute('href')).toBe('/plan');
   });
-  it('honors inline navigation guards before replacing an editor', () => {
-    given();
-    fireEvent.click(screen.getByRole('button', { name: 'Capture a thought…' }));
-    vi.mocked(allowNavigation).mockReturnValueOnce(false);
-    fireEvent.click(screen.getByRole('button', { name: '+ Task' }));
-    expect(screen.getByLabelText('Inline note')).toBeTruthy();
-    expect(screen.queryByLabelText('Inline task')).toBeNull();
-  });
-  it('does not repeat attention tasks in Available next or expose session hashes', () => {
+
+  it('readable titles hide session hashes', () => {
     const task = makeTask('t', { title: 'Codex · g-p-6ac822bb03588191b51d07108e212526 · 7fab3c' });
-    given(makeSnapshot({ tasks: [task], attention: [task], available: [task] }));
-    expect(screen.getByText('Codex session')).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Available next' }).querySelectorAll('.preview-row')).toHaveLength(0);
+    given(makeSnapshot({ tasks: [task] }));
+    expect(screen.getByRole('button', { name: 'Codex session' })).toBeTruthy();
+  });
+});
+
+describe('Home capture bar', () => {
+  it('opens in place, focuses the editor and closes with Escape or the scrim', () => {
+    given();
+    fireEvent.click(screen.getByRole('button', { name: /Capture a thought/ }));
+    const editor = screen.getByLabelText('Inline note');
+    expect(document.activeElement).toBe(editor);
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    expect(screen.queryByLabelText('Inline note')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Capture a thought/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Close capture' })[0]);
+    expect(screen.queryByLabelText('Inline note')).toBeNull();
+  });
+
+  it('stays open when a navigation guard refuses', () => {
+    given();
+    fireEvent.click(screen.getByRole('button', { name: /Capture a thought/ }));
+    vi.mocked(allowNavigation).mockReturnValueOnce(false);
+    fireEvent.keyDown(screen.getByLabelText('Inline note'), { key: 'Escape' });
+    expect(screen.getByLabelText('Inline note')).toBeTruthy();
+  });
+
+  it('opens from the keyboard shortcut event', () => {
+    given();
+    act(() => { window.dispatchEvent(new CustomEvent(CAPTURE_EVENT)); });
+    expect(screen.getByLabelText('Inline note')).toBeTruthy();
   });
 });

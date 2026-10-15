@@ -37,7 +37,7 @@ export function Dialog({ title, onRequestClose, children, closeLabel = 'Close di
   }
 
   return (
-    <dialog ref={ref} className={`dialog ${className}`.trim()} aria-labelledby={titleId} data-quiet="" onClick={onClick}>
+    <dialog ref={ref} className={`dialog ${className}`.trim()} aria-labelledby={titleId} onClick={onClick}>
       <div className="dialog-heading">
         <h2 id={titleId}>{title}</h2>
         <button type="button" className="icon-button" aria-label={closeLabel} onClick={() => request.current()}>

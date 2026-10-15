@@ -168,7 +168,7 @@ function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
         {linkedNotes.length
           ? linkedNotes.map(n => (
             <div key={n.id}>
-              <button type="button" className="text-button" onClick={() => { onClose(); void navigate({ to: '/note/$id', params: { id: n.id } }); }}>{n.title} ↗</button>
+              <button type="button" className="text-button" onClick={() => { onClose(); void navigate({ to: '/notes', search: { note: n.id } }); }}>{n.title} ↗</button>
             </div>
           ))
           : <p className="small muted">No notes linked yet.</p>}

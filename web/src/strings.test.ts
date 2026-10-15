@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { S } from './strings';
 
-const snapshot = (tasks: number, notes: number, attention: number, runs: string[]) => ({
-  tasks: Array.from({ length: tasks }, () => ({})),
-  notes: Array.from({ length: notes }, () => ({})),
-  attention: Array.from({ length: attention }, () => ({})),
-  runs: runs.map((effective_status) => ({ effective_status })),
-});
-
 describe('S', () => {
   it('keeps every fixed string exactly', () => {
     const fixed = Object.fromEntries(Object.entries(S).filter(([, value]) => typeof value === 'string'));
@@ -88,15 +81,6 @@ describe('S', () => {
     });
   });
 
-  it('summarises status exactly like app.js:107', () => {
-    expect(S.statusSummary(null, false)).toBe('Status unavailable');
-    expect(S.statusSummary(snapshot(1, 0, 0, []), false)).toBe('Status unavailable');
-    expect(S.statusSummary(null, true)).toBe('Nothing tracked yet');
-    expect(S.statusSummary(snapshot(0, 0, 0, []), true)).toBe('Nothing tracked yet');
-    expect(S.statusSummary(snapshot(0, 1, 0, []), true)).toBe('1 learning note');
-    expect(S.statusSummary(snapshot(0, 3, 0, []), true)).toBe('3 learning notes');
-    expect(S.statusSummary(snapshot(2, 5, 1, ['working', 'needs_input', 'working']), true)).toBe('1 need you · 2 reported running');
-  });
 
   it('formats counts, file names and server acknowledgements like app.js', () => {
     expect(S.outboxCount(0)).toBe('0 captures on this device');

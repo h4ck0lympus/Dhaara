@@ -1,8 +1,7 @@
 export const COPY = {
-  tagline: 'Your work, at a glance.',
+  tagline: 'Same chaos. A calmer you.',
   capture: { title: 'Capture', subtitle: 'Write, record, or sketch. Organize later.' },
-  notes: { title: 'Notes', subtitle: 'Your knowledge, with its original thinking intact.' },
-  plan: { title: 'Tasks', subtitle: 'Keep the next step in view.' },
+  plan: { title: 'Tasks' },
 } as const;
 
 export function greeting(now: Date, displayName: string): string {
@@ -12,7 +11,3 @@ export function greeting(now: Date, displayName: string): string {
   return name ? `${part}, ${name}.` : `${part}.`;
 }
 
-export function avatarLetter(displayName: string): string | null {
-  const name = displayName.trim();
-  return name ? [...name][0].toUpperCase() : null;
-}

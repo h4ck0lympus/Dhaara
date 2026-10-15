@@ -72,7 +72,7 @@ test.describe('Capture', () => {
     expect(full.version).toBe(2);
     expect(full.raw).toBe('heap... maybe wrong\nfree_slot(0x1234);');
     await notice(page).getByRole('button', { name: 'Open note' }).click();
-    await expect(page).toHaveURL(new RegExp(`#/note/${note.id}$`));
+    await expect(page).toHaveURL(new RegExp(`#/notes\\?note=${note.id}$`));
   });
 
   test('While queued, Capture says the capture is on this device', async ({ page, dhara, context }) => {
@@ -182,12 +182,11 @@ test.describe('Capture', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 
-  test('Phone width uses bottom navigation and full-screen Capture', async ({ page, dhara }) => {
+  test('Phone width keeps the top navigation and full-width Capture', async ({ page, dhara }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoApp(page, dhara, '#/capture');
     const nav = (await page.getByRole('navigation', { name: 'Main navigation' }).boundingBox())!;
-    expect(nav.y + nav.height).toBeGreaterThan(844 - 100);
-    expect(nav.width).toBeGreaterThan(300);
+    expect(nav.y).toBeLessThan(80);
     expect((await editor(page).boundingBox())!.width).toBeGreaterThan(330);
     await expectPhoneFriendly(page, '.capture-screen');
   });

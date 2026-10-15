@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeNote } from '../test/fixtures';
-import { age, dateLabel, fromLocal, localDateInput, localDay, noteMarkdownExport } from './format';
+import { age, dateLabel, dueLabel, fromLocal, localDateInput, localDay, noteMarkdownExport } from './format';
 
 describe('format', () => {
   it('age counts minutes and hours, then falls back to a date', () => {
@@ -10,6 +10,24 @@ describe('format', () => {
     expect(age('2026-10-10T11:15:00Z', now)).toBe('45m ago');
     expect(age('2026-10-10T07:00:00Z', now)).toBe('5h ago');
     expect(age('2026-10-01T12:00:00Z', now)).toBe(new Date('2026-10-01T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+  });
+
+  it('dueLabel names the local calendar day and flags today, tomorrow and overdue as soon', () => {
+    const now = new Date(2026, 9, 15, 23, 30);
+    const at = (d: number, h = 9) => new Date(2026, 9, d, h).toISOString();
+    expect(dueLabel(null, now)).toBeNull();
+    expect(dueLabel('not a date', now)).toBeNull();
+    expect(dueLabel(at(14, 23), now)).toEqual({ text: 'Overdue', soon: true });
+    expect(dueLabel(at(15, 0), now)).toEqual({ text: 'Today', soon: true });
+    expect(dueLabel(at(16, 0), now)).toEqual({ text: 'Tomorrow', soon: true });
+    expect(dueLabel(at(17), now)).toEqual({ text: new Date(2026, 9, 17).toLocaleDateString(undefined, { weekday: 'short' }), soon: false });
+    expect(dueLabel(at(21), now)?.soon).toBe(false);
+    expect(dueLabel(at(22), now)).toEqual({ text: new Date(2026, 9, 22).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), soon: false });
+  });
+
+  it('dueLabel counts days across a DST change by calendar day', () => {
+    expect(dueLabel(new Date(2026, 10, 2, 9).toISOString(), new Date(2026, 10, 1, 9))?.text).toBe('Tomorrow');
+    expect(dueLabel(new Date(2026, 2, 9, 9).toISOString(), new Date(2026, 2, 8, 1))?.text).toBe('Tomorrow');
   });
 
   it('dateLabel is empty for a missing stamp', () => {

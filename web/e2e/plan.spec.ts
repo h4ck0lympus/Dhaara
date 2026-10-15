@@ -6,9 +6,13 @@ import type { DharaServer } from './server';
 
 type Task = { id: string; title: string; status: string; priority: string; version: number };
 const getTask = (dhara: DharaServer, id: string) => dhara.api<Task>('GET', `/api/tasks/${id}`);
-const rows = (page: Page) => page.locator('.plan-list .task-row');
-const view = (page: Page, label: string) => page.getByRole('group', { name: 'Task views' }).getByRole('button', { name: label, exact: true });
+const todo = (page: Page) => page.getByRole('region', { name: 'To do' });
+const rows = (page: Page) => todo(page).locator('.task-row');
 const priority = (page: Page, title: string) => page.getByRole('combobox', { name: `Priority for ${title}` });
+async function openTask(page: Page, title: string) {
+  await page.getByRole('button', { name: title, exact: true }).first().click();
+  await expect(page.getByRole('dialog', { name: title })).toBeVisible();
+}
 async function setPriority(page: Page, title: string, value: 'auto' | 'high' | 'medium' | 'low') {
   await priority(page, title).selectOption(value);
   await expect(page.locator('.toast-layer')).toContainText('Priority updated.');
@@ -16,47 +20,36 @@ async function setPriority(page: Page, title: string, value: 'auto' | 'high' | '
 
 test.use({ viewport: { width: 1440, height: 960 } });
 
-test('Needs you, Running, Available now and All filter the task list', async ({ page, dhara }) => {
+test('Tasks groups Needs you, agents working, To do, Later and Done today', async ({ page, dhara }) => {
   await task(dhara, 'Available todo');
   await task(dhara, 'Parked idea', { status: 'parked' });
   await task(dhara, 'Finished', { status: 'done' });
   await task(dhara, 'Review the fix', { status: 'review' });
   await agentRun(dhara, await task(dhara, 'Agent task'));
   await gotoApp(page, dhara, '#/plan');
-  await expect(view(page, 'Open')).toHaveAttribute('aria-pressed', 'true');
-  await expect(rows(page)).toHaveCount(3);
-  await expect(page.locator('.plan-list')).not.toContainText('Parked idea');
-  await view(page, 'Needs you').click();
-  await expect(rows(page)).toHaveText([/Review the fix/]);
-  await view(page, 'Running').click();
-  await expect(rows(page)).toHaveText([/Agent task/]);
-  await view(page, 'Available now').click();
+  await expect(page.getByRole('region', { name: 'Needs you' }).locator('.attention-title > span')).toHaveText(['Review the fix']);
   await expect(rows(page)).toHaveCount(2);
-  await view(page, 'Parked').click();
-  await expect(rows(page)).toHaveText([/Parked idea/]);
-  await view(page, 'Completed').click();
-  await expect(rows(page)).toHaveText([/Finished/]);
-  await view(page, 'All').click();
-  await expect(rows(page)).toHaveCount(5);
+  for (const title of ['Available todo', 'Agent task']) await expect(todo(page)).toContainText(title);
+  await expect(page.getByRole('region', { name: 'Later' })).toHaveText(/Parked idea/);
+  await expect(todo(page)).not.toContainText('Parked idea');
+  await page.getByRole('button', { name: '1 agent working' }).click();
+  await expect(page.getByRole('list', { name: 'Agents working' })).toContainText('Agent task');
+  await page.getByRole('button', { name: 'Done today · 1' }).click();
+  await expect(page.getByRole('region', { name: 'Done today' })).toContainText('Finished');
 });
 
-test('Plan rows show task, project, state and priority; due date and estimate only when known', async ({ page, dhara }) => {
+test('Task rows show the title, and a due label only when known', async ({ page, dhara }) => {
   await task(dhara, 'Bare task', { project: 'Learning' });
   await task(dhara, 'Dated task', { project: 'Work', due_at: '2030-01-02T09:30:00+00:00', estimate_minutes: 25 });
   await gotoApp(page, dhara, '#/plan');
-  const bare = rows(page).filter({ hasText: 'Bare task' });
-  await expect(bare.locator('.task-title small')).toHaveText('Learning · To do');
-  await expect(bare.getByRole('combobox', { name: 'Priority for Bare task' })).toBeVisible();
-  const dated = rows(page).filter({ hasText: 'Dated task' });
-  await expect(dated.locator('.task-title small')).toContainText('Work · To do');
-  await expect(dated.locator('.task-title small')).toContainText('Due ');
-  await expect(dated.locator('.task-title small')).toContainText('25 min · your estimate');
-  await expect(bare.locator('.task-title small')).not.toContainText(/Due |min/);
+  await expect(rows(page).filter({ hasText: 'Bare task' }).locator('.task-due')).toHaveCount(0);
+  await expect(rows(page).filter({ hasText: 'Dated task' }).locator('.task-due')).toHaveText(new Date('2030-01-02T09:30:00+00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
 });
 
-test('Priority is editable in place and shows its source and reason', async ({ page, dhara }) => {
+test('Priority is editable in the task detail and shows its source and reason', async ({ page, dhara }) => {
   await task(dhara, 'Read the chapter');
   await gotoApp(page, dhara, '#/plan');
+  await openTask(page, 'Read the chapter');
   const select = priority(page, 'Read the chapter');
   await expect(select.locator('option:checked')).toHaveText('medium · Auto · rules');
   await select.focus();
@@ -68,16 +61,21 @@ test('Priority is editable in place and shows its source and reason', async ({ p
 test('Manual priority control persists', async ({ page, dhara }) => {
   const t = await task(dhara, 'Read the chapter');
   await gotoApp(page, dhara, '#/plan');
+  await openTask(page, 'Read the chapter');
   await setPriority(page, 'Read the chapter', 'low');
   await expect.poll(async () => (await getTask(dhara, t.id)).priority).toBe('low');
   expect((await serverState(dhara)).tasks[0]).toMatchObject({ priority: 'low' });
 });
 
-test('Manual priority persists after reload', async ({ page, dhara }) => {
+test('Manual priority persists after reload and orders To do', async ({ page, dhara }) => {
+  await task(dhara, 'Read the chapter');
   await task(dhara, 'Practice LeetCode');
   await gotoApp(page, dhara, '#/plan');
+  await openTask(page, 'Practice LeetCode');
   await setPriority(page, 'Practice LeetCode', 'high');
   await page.reload();
+  await expect(rows(page).locator('.task-title')).toHaveText(['Practice LeetCode', 'Read the chapter']);
+  await openTask(page, 'Practice LeetCode');
   await expect(priority(page, 'Practice LeetCode').locator('option:checked')).toHaveText('high · Set by you');
 });
 
@@ -88,19 +86,19 @@ test('complete and reopen confirm with a toast; parked is not done', async ({ pa
   await expect(page.locator('.toast-layer')).toContainText('Task completed.');
   await expect.poll(async () => (await getTask(dhara, t.id)).status).toBe('done');
   await expect(rows(page)).toHaveCount(0);
-  await view(page, 'Completed').click();
+  await page.getByRole('button', { name: 'Done today · 1' }).click();
   await page.getByRole('button', { name: 'Reopen Check duplicate handling' }).click();
   await expect(page.locator('.toast-layer')).toContainText('Task reopened.');
   await expect.poll(async () => (await getTask(dhara, t.id)).status).toBe('todo');
-  await view(page, 'Parked').click();
-  await expect(rows(page)).toHaveCount(0);
+  await expect(rows(page)).toHaveCount(1);
+  await expect(page.getByRole('region', { name: 'Later' })).toHaveCount(0);
 });
 
 test('Review result opens the result or session link', async ({ page, dhara }) => {
   const t = await task(dhara, 'Review the cleanup result');
   await agentRun(dhara, t, 'completed', 'https://agent.example/result');
   await gotoApp(page, dhara, '#/plan');
-  const link = page.getByRole('link', { name: 'Review result ↗' });
+  const link = page.getByRole('region', { name: 'Needs you' }).getByRole('link', { name: 'Review ↗' });
   await expect(link).toHaveAttribute('href', 'https://agent.example/result');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -185,12 +183,10 @@ test('Parked is distinct from done and can be unparked', async ({ page, dhara })
   await expect(page.locator('.toast-layer')).toContainText('Task parked.');
   await expect(detail.getByRole('button', { name: 'Unpark' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await view(page, 'Parked').click();
-  await expect(rows(page)).toHaveText([/Someday idea/]);
-  await view(page, 'Completed').click();
+  await expect(page.getByRole('region', { name: 'Later' })).toHaveText(/Someday idea/);
   await expect(rows(page)).toHaveCount(0);
-  await view(page, 'Parked').click();
-  await page.getByRole('button', { name: /^Someday idea/ }).click();
+  await expect(page.getByRole('button', { name: /Done today/ })).toHaveCount(0);
+  await page.getByRole('region', { name: 'Later' }).getByRole('button', { name: 'Someday idea' }).click();
   await page.getByRole('dialog', { name: 'Someday idea' }).getByRole('button', { name: 'Unpark' }).click();
   await expect(page.locator('.toast-layer')).toContainText('Task unparked.');
   await expect.poll(async () => (await getTask(dhara, t.id)).status).toBe('todo');
@@ -234,8 +230,8 @@ test('Task link adds no main navigation/layout', async ({ page, dhara }) => {
   const t = await task(dhara, 'Synthetic linked task');
   await page.goto(`${dhara.origin}/#/task/${t.id}`);
   await expect(page.getByRole('dialog', { name: 'Synthetic linked task' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveCount(2);
-  await expect(page.locator('.sidebar')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link')).toHaveCount(3);
+  await expect(page.locator('.topbar')).toHaveCount(1);
   await expect(page.locator('main.content')).toHaveCount(1);
 });
 
@@ -330,7 +326,7 @@ test('Opening task never ingests a learning-note draft', async ({ page, dhara })
 test('Task link preserves note-edit text and route', async ({ page, dhara }) => {
   const note = await taskLinkOverNoteEdit(page, dhara);
   await expect(page.getByLabel('Note', { exact: true })).toHaveValue('Synthetic unsaved note edit.');
-  expect(await page.evaluate(() => location.hash)).toBe(`#/note/${note.id}`);
+  expect(await page.evaluate(() => location.hash)).toBe(`#/notes?note=${note.id}`);
 });
 
 test('Saved note original is unchanged', async ({ page, dhara }) => {

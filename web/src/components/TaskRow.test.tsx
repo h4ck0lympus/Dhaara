@@ -56,9 +56,19 @@ describe('PriorityControl', () => {
 });
 
 describe('TaskRow', () => {
-  it('shows title, project and state in one compact row', () => {
-    render(<TaskRow task={makeTask('t', { title: 'Read the chapter', project: 'Learning', status: 'todo' })} />);
-    expect(screen.getByRole('button', { name: /^Read the chapter/ }).textContent).toContain('Learning · To do');
+  it('shows the title and a due label, flagging soon dates', () => {
+    const today = new Date(); today.setHours(18, 0, 0, 0);
+    const later = new Date(); later.setDate(later.getDate() + 30);
+    const { container, rerender } = render(<TaskRow task={makeTask('t', { title: 'Read the chapter', due_at: today.toISOString() })} />);
+    expect(screen.getByRole('button', { name: 'Read the chapter' })).toBeTruthy();
+    expect(container.querySelector('.task-due.soon')?.textContent).toBe('Today');
+    rerender(<TaskRow task={makeTask('t', { title: 'Read the chapter', due_at: later.toISOString() })} />);
+    expect(container.querySelector('.task-due')?.className).toBe('task-due');
+    rerender(<TaskRow task={makeTask('t', { title: 'Read the chapter', due_at: today.toISOString(), status: 'done' })} />);
+    expect(container.querySelector('.task-due')).toBeNull();
+    rerender(<TaskRow task={makeTask('t', { title: 'Read the chapter' })} meta={<span>ws 4</span>} lead={<i data-testid="lead" />} />);
+    expect(screen.getByText('ws 4')).toBeTruthy();
+    expect(screen.getByTestId('lead')).toBeTruthy();
   });
 
   it('opens task detail from the title', () => {

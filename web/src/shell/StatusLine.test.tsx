@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { makeSnapshot, makeTask } from '../test/fixtures';
+import { makeSnapshot } from '../test/fixtures';
 
 vi.mock('../state/queries', () => ({ useSnapshot: vi.fn() }));
 vi.mock('../domain/connection', () => ({ useConnected: vi.fn() }));
@@ -40,12 +40,6 @@ describe('StatusLine', () => {
     expect(document.querySelector('#connection-label')!.textContent).toBe(S.offline);
   });
 
-  it('shows the integration summary from the snapshot', () => {
-    const snapshot = makeSnapshot({ tasks: [makeTask('t')] });
-    given({ connected: true, snapshot });
-    render(<StatusLine />);
-    expect(screen.getByText(S.statusSummary(snapshot, true))).toBeTruthy();
-  });
 
   it('shows the queued-capture indicator only when the outbox has items and opens Outbox', () => {
     given({ connected: true, snapshot: makeSnapshot(), outbox: 0 });

@@ -61,7 +61,7 @@ export async function seed(dhara: DharaServer, kind: Kind): Promise<void> {
   }
 }
 
-export const nowPage = (page: Page) => page.locator('.now-page');
+export const nowPage = (page: Page) => page.locator('.home');
 export const ready = (page: Page, mode: string) => expect(nowPage(page)).toHaveAttribute('data-now-state', mode);
 
 export async function openKind(page: Page, context: BrowserContext, dhara: DharaServer, kind: Kind): Promise<void> {

@@ -16,11 +16,11 @@ test('an edit in progress survives a snapshot refetch', async ({ page, dhara }) 
 
 test('Add task input survives a snapshot refetch', async ({ page, dhara }) => {
   await gotoApp(page, dhara, '#/plan');
-  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  await page.getByRole('button', { name: /New task/ }).click();
   const add = page.getByRole('dialog', { name: 'Add task' });
   await add.getByLabel('What do you need to do?').fill('Half-typed task');
   await task(dhara, 'Created elsewhere');
   await refetch(page);
-  await expect(page.locator('.plan-list')).toContainText('Created elsewhere');
+  await expect(page.getByRole('region', { name: 'To do' })).toContainText('Created elsewhere');
   await expect(add.getByLabel('What do you need to do?')).toHaveValue('Half-typed task');
 });

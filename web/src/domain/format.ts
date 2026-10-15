@@ -12,6 +12,16 @@ export function dateLabel(stamp: string | null): string {
   return stamp ? new Date(stamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
 }
 
+export function dueLabel(stamp: string | null, now: Date = new Date()): { text: string; soon: boolean } | null {
+  if (!stamp) return null;
+  const due = new Date(stamp);
+  if (Number.isNaN(due.getTime())) return null;
+  const days = Math.round((new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000);
+  const text = days < 0 ? 'Overdue' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days < 7
+    ? due.toLocaleDateString(undefined, { weekday: 'short' }) : due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return { text, soon: days <= 1 };
+}
+
 export function localDateInput(stamp: string | null): string {
   if (!stamp) return '';
   const date = new Date(stamp);

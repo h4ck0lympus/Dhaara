@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { chromium, type Locator, type Page } from '@playwright/test';
 import { COPY } from '../src/copy';
 import { expect, gotoApp, test } from './fixtures';
 import { E2E_TOKEN, startDhara } from './server';
@@ -16,16 +16,19 @@ test('loopback boot logs in automatically and never shows Unlock', async ({ page
   await expect(page.getByRole('region', { name: 'Current focus' })).toBeVisible();
 });
 
-const LEGACY: [string, string, string][] = [
-  ['#plan', '#/plan', COPY.plan.title], ['#capture', '#/capture', COPY.capture.title],
-  ['#notes', '#/notes', COPY.notes.title], ['#note/abc', '#/note/abc', 'Note unavailable'],
+const LEGACY: [string, string, (page: Page) => Locator][] = [
+  ['#plan', '#/plan', page => page.getByRole('heading', { level: 1, name: COPY.plan.title })],
+  ['#capture', '#/capture', page => page.getByRole('heading', { level: 1, name: COPY.capture.title })],
+  ['#notes', '#/notes', page => page.getByRole('complementary', { name: 'Folders' })],
+  ['#note/abc', '#/notes?note=abc', page => page.getByRole('heading', { level: 1, name: 'Note unavailable' })],
+  ['#settings', '#/settings', page => page.getByRole('heading', { level: 1, name: 'Settings' })],
 ];
 
-for (const [legacy, modern, heading] of LEGACY) {
+for (const [legacy, modern, landmark] of LEGACY) {
   test(`legacy ${legacy} is rewritten on boot`, async ({ page, dhara }) => {
     await page.goto(dhara.origin + '/' + legacy);
     await expect.poll(() => page.evaluate(() => location.hash)).toBe(modern);
-    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+    await expect(landmark(page)).toBeVisible();
   });
 }
 

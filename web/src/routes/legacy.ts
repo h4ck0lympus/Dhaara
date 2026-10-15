@@ -34,7 +34,6 @@ function decode(value: string): string {
 
 export function modalRequestForHash(hash: string): DialogRequest | null {
   const path = hash.startsWith('#/') ? hash.slice(2) : hash.startsWith('#') ? hash.slice(1) : '';
-  if (path === 'settings') return { kind: 'settings' };
   const match = /^task\/(.+)$/.exec(path);
   return match ? { kind: 'task', id: decode(match[1]) } : null;
 }

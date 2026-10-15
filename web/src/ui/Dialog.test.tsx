@@ -17,7 +17,6 @@ describe('Dialog', () => {
   it('opens modally, is labelled by its title and marks a quiet surface', () => {
     const { dialog } = renderDialog();
     expect(dialog.hasAttribute('open')).toBe(true);
-    expect(dialog.hasAttribute('data-quiet')).toBe(true);
   });
 
   it('focuses the data-autofocus control on open', () => {

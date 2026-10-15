@@ -55,10 +55,9 @@ describe('modalRequestForHash', () => {
   it.each([
     ['#/task/abc', { kind: 'task', id: 'abc' }], ['#task/abc', { kind: 'task', id: 'abc' }],
     ['#/task/a%20b', { kind: 'task', id: 'a b' }], ['#/task/%E0%A4%A', { kind: 'task', id: '%E0%A4%A' }],
-    ['#/settings', { kind: 'settings' }], ['#settings', { kind: 'settings' }],
   ])('%s → %j', (hash, request) => expect(modalRequestForHash(hash)).toEqual(request));
 
-  it.each(['#/plan', '#/task/', '#/note/abc', ''])('%j is not a modal link', hash => expect(modalRequestForHash(hash)).toBeNull());
+  it.each(['#/plan', '#/task/', '#/note/abc', '#/settings', '#settings', ''])('%j is not a modal link', hash => expect(modalRequestForHash(hash)).toBeNull());
 });
 
 describe('installModalLinks', () => {
@@ -72,18 +71,6 @@ describe('installModalLinks', () => {
     expect(open).toHaveBeenCalledWith({ kind: 'task', id: 'abc' });
     expect(location.hash).toBe('#/notes');
     expect(history.state).toEqual({ key: 'k', __TSR_index: 3 });
-    expect(router).not.toHaveBeenCalled();
-  });
-
-  it('opens #settings as a dialog without changing the underlying route', () => {
-    const open = vi.fn(), router = vi.fn();
-    cleanups.push(installModalLinks(() => ({ href: '/capture', state: null }), open));
-    window.addEventListener('popstate', router);
-    cleanups.push(() => window.removeEventListener('popstate', router));
-    history.pushState(null, '', '#settings');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-    expect(open).toHaveBeenCalledWith({ kind: 'settings' });
-    expect(location.hash).toBe('#/capture');
     expect(router).not.toHaveBeenCalled();
   });
 

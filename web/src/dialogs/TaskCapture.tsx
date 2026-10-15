@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useRef, useState, type FormEvent, type JSX, type KeyboardEvent } from 'react';
-import { useNavigationGuard } from '../routes/guards';
+import { useRef, useState, type FormEvent, type JSX, type KeyboardEvent } from 'react';
 import { TaskFields } from '../components/TaskFields';
 import { taskDraftStore, useTaskDraft } from '../local/taskDraft';
 import { openDialog } from '../shell/dialogs';
@@ -9,7 +8,7 @@ import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { toast } from '../ui/Toast';
 
-export function TaskCaptureDialog({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }): JSX.Element {
+export function TaskCaptureDialog({ onClose }: { onClose: () => void }): JSX.Element {
   const { draft, submitting } = useTaskDraft();
   const tasks = useSnapshot().data?.tasks ?? [];
   const qc = useQueryClient();
@@ -18,7 +17,6 @@ export function TaskCaptureDialog({ onClose, embedded = false }: { onClose: () =
   const [notice, setNotice] = useState(() => (draft.pending ? S.previousUnconfirmed : ''));
   const [error, setError] = useState('');
   const frozen = draft.pending !== null || submitting;
-  useNavigationGuard(useMemo(() => embedded && submitting ? { id: 'inline-task-saving', check: () => ({ kind: 'block' as const, toast: 'Finishing task save…' }), beforeUnload: true } : null, [embedded, submitting]));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,5 +79,5 @@ export function TaskCaptureDialog({ onClose, embedded = false }: { onClose: () =
         </div>
       </form>
   );
-  return embedded ? <section className="inline-task" aria-label="Add task">{content}</section> : <Dialog title={S.addTask} onRequestClose={() => void requestClose()} className="task-panel">{content}</Dialog>;
+  return <Dialog title={S.addTask} onRequestClose={() => void requestClose()} className="task-panel">{content}</Dialog>;
 }

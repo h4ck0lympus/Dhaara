@@ -63,7 +63,7 @@ export async function expectPhoneFriendly(page: Page, scope: string): Promise<vo
   expect(small, 'touch targets ≥ 44×44 px at phone width').toEqual([]);
 }
 
-export function navLink(page: Page, label: 'Overview' | 'Capture' | 'Notes' | 'Tasks'): Locator {
+export function navLink(page: Page, label: 'Home' | 'Notes' | 'Tasks'): Locator {
   return page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: label, exact: true });
 }
 

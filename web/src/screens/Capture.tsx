@@ -33,7 +33,7 @@ async function ackState(id: string): Promise<SavedCapture['state']> {
   return isOutboxItem(item) && item.error ? 'rejected' : 'queued';
 }
 
-export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boolean; onOpenNote?: (id: string) => void } = {}) {
+export function CaptureScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const { draft, saveState, saving } = useCaptureDraft();
   const snapshot = useSnapshot().data ?? null;
   const queryClient = useQueryClient();
@@ -123,14 +123,14 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
   const linkedElsewhere = draft.task_id !== '' && !tasks.some(task => task.id === draft.task_id);
 
   return (
-    <div className="screen capture-screen" data-quiet onKeyDown={onKeyDown}>
+    <div className="screen capture-screen" onKeyDown={onKeyDown}>
       <OfflineNotice />
       {!embedded && <PageHeading title={COPY.capture.title} subtitle={COPY.capture.subtitle} />}
       <fieldset className="capture-fieldset" disabled={saving}>
         <legend className="sr-only">Capture</legend>
         <div
           className={dragging ? 'writing-canvas dragging' : 'writing-canvas'}
-          data-quiet
+         
           onDragOver={event => { event.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
@@ -205,7 +205,7 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
       {saved && (
         <SavedNotice
           saved={saved}
-          onOpenNote={id => onOpenNote ? onOpenNote(id) : void navigate({ to: '/note/$id', params: { id } })}
+          onOpenNote={id => void navigate({ to: '/notes', search: { note: id } })}
           onOpenQueue={() => openDialog({ kind: 'outbox' })}
           onDismiss={() => setSaved(null)}
         />

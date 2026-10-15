@@ -13,7 +13,7 @@ test('serves the built shell with no inline script and no CSP violation', async 
   const response = await page.goto(dhara.origin + '/');
   expect(response?.status()).toBe(200);
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
   expect(await page.locator('script:not([src])').count()).toBe(0);
 });
 
@@ -76,7 +76,7 @@ test('a non-loopback Host with only a valid cookie reaches the shell and the API
       if (path === '/api/state') stateStatuses.push(response.status());
     });
     await page.goto(origin + '/');
-    await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+    await expect(page.locator('#root .topbar').first()).toBeVisible();
     expect(await page.evaluate(() => ({ secure: window.isSecureContext, worker: 'serviceWorker' in navigator }))).toEqual({ secure: false, worker: false });
     await expect.poll(() => stateStatuses[0]).toBe(200);
     expect(stateStatuses).not.toContain(401);

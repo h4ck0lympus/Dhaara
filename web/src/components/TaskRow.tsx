@@ -1,19 +1,19 @@
-import { readableTaskTitle } from '../domain/tasks';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import type { SnapshotTask } from '../api/schemas';
-import { needsReview, reviewLink, taskMeta } from '../domain/tasks';
+import { dueLabel } from '../domain/format';
+import { needsReview, readableTaskTitle, reviewLink } from '../domain/tasks';
 import { openDialog } from '../shell/dialogs';
 import { usePatchTask } from '../state/queries';
 import { S } from '../strings';
 import { Icon } from '../ui/Icon';
 import { toast, toastError } from '../ui/Toast';
-import { PriorityControl } from './PriorityControl';
 
-export function TaskRow({ task }: { task: SnapshotTask }): JSX.Element {
+export function TaskRow({ task, lead, meta }: { task: SnapshotTask; lead?: ReactNode; meta?: ReactNode }): JSX.Element {
   const patch = usePatchTask();
   const done = task.status === 'done';
   const review = needsReview(task);
   const link = review ? reviewLink(task) : null;
+  const due = done ? null : dueLabel(task.due_at);
   const open = () => openDialog({ kind: 'task', id: task.id });
 
   async function toggle() {
@@ -25,22 +25,20 @@ export function TaskRow({ task }: { task: SnapshotTask }): JSX.Element {
     }
   }
 
-  let lead: JSX.Element;
-  if (review && link) lead = <a className="review-link text-button" href={link} target="_blank" rel="noopener noreferrer">Review result ↗</a>;
-  else if (review) lead = <button type="button" className="review-link text-button" onClick={open}>Review result</button>;
-  else lead = (
+  let check: JSX.Element;
+  if (review && link) check = <a className="review-link" href={link} target="_blank" rel="noopener noreferrer">Review result ↗</a>;
+  else if (review) check = <button type="button" className="review-link" onClick={open}>Review result</button>;
+  else check = (
     <button type="button" className={done ? 'task-check done' : 'task-check'} aria-label={`${done ? 'Reopen' : 'Complete'} ${readableTaskTitle(task)}`}
-      disabled={patch.isPending} onClick={() => void toggle()}>{done && <Icon name="check" size={13} />}</button>
+      disabled={patch.isPending} onClick={() => void toggle()}>{done && <Icon name="check" size={12} />}</button>
   );
 
   return (
     <div className="task-row" data-task={task.id}>
       {lead}
-      <button type="button" className="task-title" onClick={open}>
-        <span>{readableTaskTitle(task)}</span>
-        <small>{taskMeta(task)}</small>
-      </button>
-      <PriorityControl task={task} />
+      {check}
+      <button type="button" className="task-title" onClick={open}>{readableTaskTitle(task)}</button>
+      {meta ?? (due && <span className={due.soon ? 'task-due soon' : 'task-due'}>{due.text}</span>)}
     </div>
   );
 }

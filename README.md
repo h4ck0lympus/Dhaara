@@ -96,11 +96,11 @@ This is the AppImage's workspace, so both share one notebook; pick another path 
 
 ## First five minutes
 
-1. Open **Tasks** and click **Add task** (or **+ Task** on Overview). Type a sentence and save. Details and next actions are optional; priority remains Automatic unless you choose an override. A planned day is separate from a deadline, reminder or availability constraint.
-2. Open **Overview** to see Current focus and **Available next** (the Tasks screen also has an **Available now** filter). Tasks are excluded if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called.
-3. On **Overview**, click **Capture a thought…** (or **+ Note**) and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
-4. Open the saved note from **Search notes…** or Recent notes on Overview. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
-5. To track a command or agent, create a task-scoped token in Settings and use the wrapper described below.
+1. Press **N** anywhere (or open **Tasks** and click **New task**). Type a sentence and save. Details and next actions are optional; priority remains Automatic unless you choose an override in the task's detail. A planned day is separate from a deadline, reminder or availability constraint.
+2. Open **Home** to see your current focus, agents that need you, **If you have a few minutes** (available work) and your next tasks by due date. **Tasks** groups everything into Needs you, agents working, To do (by priority), Later (parked) and Done today. Tasks are excluded from available work if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called.
+3. On **Home**, click **Capture a thought…** (or press **Ctrl K**) and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
+4. Open **Notes** (or press **/** to search). Folders, the note list and the open note sit side by side; resize them by dragging or with the arrow keys, and hide each with **Ctrl 1/2/3**. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
+5. To track a command or agent, create a task-scoped token in **Settings** (the gear, bottom left) and use the wrapper described below.
 
 You do not have to create tasks from learning notes. Linking a note to a task is optional. Tentative ideas in notes are not automatically turned into obligations.
 
@@ -108,7 +108,7 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 
 | Area | This release |
 |---|---|
-| Interface | Responsive Overview (with embedded Capture and Notes panes) and Tasks in a typed React bundle; compact graphite layout with a focus/work column, visible agent reports, upcoming deadlines and capture shortcuts; notes search; WebGL2 flowing dot ribbons (on by default and can be turned off in Settings; follows prefers-reduced-motion; static without WebGL2; paused when hidden, blurred or idle). |
+| Interface | Home, Notes (three resizable panes), Tasks and Settings pages in a typed React bundle; dark, light or system theme (a workspace setting); IBM Plex Sans/Mono bundled locally; notes search; quiet dot-wave and swirl backgrounds (on by default, can be turned off in Settings, follow prefers-reduced-motion). |
 | Desktop | Electron shell (`electron/`, `run.py --desktop`), opt-in managed service on Linux, and a Linux x86_64 AppImage (`release/`). |
 | Knowledge capture | Text, image uploads/paste/drop, simple sketch canvas, microphone recording after permission. Text and attachments are saved as one idempotent capture. |
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |

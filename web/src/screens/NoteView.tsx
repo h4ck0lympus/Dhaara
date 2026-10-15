@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { isConflict } from '../api/client';
 import type { Note } from '../api/schemas';
 import { age, noteMarkdownExport } from '../domain/format';
@@ -44,19 +44,14 @@ export function downloadText(filename: string, text: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function NoteViewScreen() {
-  const { id } = useParams({ from: '/note/$id' });
-  return <EmbeddedNote id={id} />;
-}
-
 export function EmbeddedNote({ id, onBack }: { id: string; onBack?: () => void }) {
   const note = useNote(id);
   if (note.data) return <NotePage key={id} onBack={onBack} note={note.data} refetch={async () => (await note.refetch()).data} />;
   if (note.isError) {
     return (
-      <div className="screen note-screen" data-quiet>
+      <div className="screen note-screen">
         <OfflineNotice />
-        <header className="page-heading" data-quiet>
+        <header className="page-heading">
           <h1>{NOTE_TEXT.unavailable}</h1>
           <p>{note.error.message}</p>
         </header>
@@ -65,7 +60,7 @@ export function EmbeddedNote({ id, onBack }: { id: string; onBack?: () => void }
     );
   }
   return (
-    <div className="screen note-screen" data-quiet>
+    <div className="screen note-screen">
       <OfflineNotice />
       <p className="subtle-line" role="status">Opening note…</p>
     </div>
@@ -161,10 +156,10 @@ function NotePage({ note, refetch, onBack }: { note: Note; refetch: () => Promis
   const hasAudio = note.attachments.some(attachment => attachment.mime.startsWith('audio/'));
 
   return (
-    <div className="screen note-screen" data-quiet>
+    <div className="screen note-screen">
       <OfflineNotice />
       <Link to="/notes" className="text-button" onClick={e => { if (onBack) { e.preventDefault(); onBack(); } }}>← All notes</Link>
-      <article className="note-page" data-quiet>
+      <article className="note-page">
         <div className="note-meta">
           <span>{note.folder} · {age(note.updated_at)}</span>
           {taskId && <button type="button" className="text-button" onClick={() => openDialog({ kind: 'task', id: taskId })}>Linked task ↗</button>}

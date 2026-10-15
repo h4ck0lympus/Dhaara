@@ -1,57 +1,111 @@
 import { useState, type JSX } from 'react';
-import { useSearch, useNavigate } from '@tanstack/react-router';
 import { TaskRow } from '../components/TaskRow';
 import { COPY } from '../copy';
 import { useConnected } from '../domain/connection';
-import { age } from '../domain/format';
-import { TASK_FILTERS, filterTasks, type TaskFilter } from '../domain/tasks';
+import { age, localDay } from '../domain/format';
+import { openTasks, readableTaskTitle, reviewLink } from '../domain/tasks';
 import { openDialog } from '../shell/dialogs';
 import { OfflineNotice } from '../shell/OfflineNotice';
 import { useSnapshot } from '../state/queries';
 import { S } from '../strings';
-import { Icon } from '../ui/Icon';
-import { PageHeading } from '../ui/PageHeading';
+import { Swirl } from '../ui/Ambient';
+
+const PAGE = 50;
+
+function Disclosure({ label, children, className = '' }: { label: JSX.Element | string; children: JSX.Element; className?: string }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button type="button" className={`disclosure ${className}`.trim()} aria-expanded={open} onClick={() => setOpen(v => !v)}>
+      {label}<span aria-hidden="true">{open ? ' ▾' : ' ▸'}</span>
+    </button>
+    {open && children}
+  </>;
+}
 
 export function PlanScreen(): JSX.Element {
   const snapshot = useSnapshot().data;
   const connected = useConnected();
-  const { view } = useSearch({ strict: false });
-  const navigate = useNavigate();
-  const filter = (TASK_FILTERS.some(f => f.id === view) || view === 'upcoming' ? view : 'open') as TaskFilter | 'upcoming';
-  const setFilter = (value: string) => void navigate({ to: '/plan', search: { view: value }, replace: true });
-  const [search, setSearch] = useState('');
-  const [project, setProject] = useState('');
-  const [sort, setSort] = useState('priority');
-  const [limit, setLimit] = useState(50);
-  const source = snapshot ? filterTasks(snapshot, filter === 'upcoming' ? 'open' : filter) : [];
-  const list = source.filter(t => (filter !== 'upcoming' || t.due_at) && (!project || t.project === project) && `${t.title} ${t.project} ${t.next_action}`.toLowerCase().includes(search.toLowerCase()));
-  if (sort === 'due' || filter === 'upcoming') list.sort((a, b) => (a.due_at ? Date.parse(a.due_at) : Infinity) - (b.due_at ? Date.parse(b.due_at) : Infinity));
-  if (sort === 'title') list.sort((a, b) => a.title.localeCompare(b.title));
+  const [limit, setLimit] = useState(PAGE);
+  const tasks = snapshot?.tasks ?? [];
+  const attention = connected ? snapshot?.attention ?? [] : [];
+  const attentionIds = new Set(attention.map(t => t.id));
+  const working = connected ? (snapshot?.runs ?? []).filter(r => r.effective_status === 'working') : [];
+  const todo = snapshot ? openTasks(snapshot).filter(t => !attentionIds.has(t.id)) : [];
+  const later = tasks.filter(t => t.status === 'parked');
+  const today = localDay(new Date());
+  // shortcut: no completed_at field, so a done task edited today also counts; add completed_at if this misleads
+  const doneToday = tasks.filter(t => t.status === 'done' && localDay(new Date(t.updated_at)) === today);
   const addTask = () => openDialog({ kind: 'task-capture' });
+
   return (
-    <section className="plan-page">
-      <PageHeading title={COPY.plan.title} subtitle={COPY.plan.subtitle}
-        action={<button type="button" className="primary" onClick={addTask}><Icon name="plus" size={18} />{S.addTask}</button>} />
+    <div className="tasks-page">
+      <Swirl motion={snapshot?.settings.motion ?? true} />
       <OfflineNotice />
-      <div className="filter-bar" role="group" aria-label="Task views">
-        {TASK_FILTERS.map(f => (
-          <button type="button" key={f.id} className="filter-chip" aria-label={f.label} aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label} <span className="count">{snapshot ? filterTasks(snapshot, f.id).length : 0}</span></button>
-        ))}
+      <div className="tasks-heading">
+        <h1>{COPY.plan.title}</h1>
+        <span>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+        {!connected && snapshot && <span className="eyebrow">{S.lastKnown + age(snapshot.server_time)}</span>}
       </div>
-      <div className="task-search-tools">
-        <input type="search" aria-label="Search tasks" placeholder="Search tasks…" value={search} onChange={e => { setSearch(e.target.value); setLimit(50); }} />
-        <select aria-label="Project" value={project} onChange={e => { setProject(e.target.value); setLimit(50); }}><option value="">All projects</option>{[...new Set(snapshot?.tasks.map(t => t.project).filter(Boolean))].sort().map(p => <option key={p}>{p}</option>)}</select>
-        <select aria-label="Sort tasks" value={sort} onChange={e => setSort(e.target.value)}><option value="priority">Priority</option><option value="due">Due date</option><option value="title">Title</option></select>
-        {filter === 'upcoming' && <span>Upcoming deadlines</span>}
-      </div>
-      {!connected && snapshot && <p className="eyebrow">{S.lastKnown + age(snapshot.server_time)}</p>}
-      <div className="plan-list" data-quiet="">
-        <div className="plan-header" aria-hidden="true"><span>Task</span><span>Priority</span></div>
-        {list.length
-          ? list.slice(0, limit).map(t => <TaskRow key={t.id} task={t} />)
-          : <div className="empty"><p>No tasks in this view.</p><button type="button" className="text-button" onClick={addTask}>Add something for later</button></div>}
-      </div>
-      {list.length > limit && <button type="button" className="secondary" onClick={() => setLimit(n => n + 50)}>Show more ({list.length - limit} remaining)</button>}
-    </section>
+
+      {(attention.length > 0 || working.length > 0) && (
+        <section className="task-group" aria-labelledby="needs-you">
+          <h2 id="needs-you" className="eyebrow warn">Needs you</h2>
+          {attention.map(t => {
+            const link = reviewLink(t);
+            const question = t.runs.some(r => r.effective_status === 'needs_input');
+            return (
+              <div className="attention-row" key={t.id} data-task={t.id}>
+                <i className={question ? 'dot warn' : 'dot'} aria-hidden="true" />
+                <span className="mono attention-project">{t.project || t.runs[0]?.agent || '—'}</span>
+                <button type="button" className="attention-title" onClick={() => openDialog({ kind: 'task', id: t.id })}>
+                  <span>{readableTaskTitle(t)}</span>
+                  <small>{t.runs.some(r => r.effective_status === 'unknown') ? 'No recent updates · Check status' : t.attention_reason}</small>
+                </button>
+                {link
+                  ? <a className="act" href={link} target="_blank" rel="noopener noreferrer">Review ↗</a>
+                  : <button type="button" className="act" onClick={() => openDialog({ kind: 'task', id: t.id })}>Open</button>}
+              </div>
+            );
+          })}
+          {working.length > 0 && (
+            <Disclosure className="agents-toggle" label={<><i className="dots" aria-hidden="true"><i /><i /><i /></i>{working.length} agent{working.length === 1 ? '' : 's'} working</>}>
+              <ul className="agents-list" aria-label="Agents working">
+                {working.map(r => {
+                  const t = tasks.find(x => x.id === r.task_id);
+                  return (
+                    <li key={r.id}>
+                      <span className="mono">{t?.project || r.agent}</span>
+                      <button type="button" onClick={() => openDialog({ kind: 'task', id: r.task_id })}>{t ? readableTaskTitle(t) : r.agent}</button>
+                      <span className="mono">{r.agent} · {age(r.updated_at)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Disclosure>
+          )}
+        </section>
+      )}
+
+      <section className="task-group" aria-labelledby="to-do">
+        <h2 id="to-do" className="eyebrow">To do</h2>
+        {todo.slice(0, limit).map(t => <TaskRow key={t.id} task={t} />)}
+        {todo.length > limit && <button type="button" className="quiet-button show-more" onClick={() => setLimit(n => n + PAGE)}>Show more ({todo.length - limit} remaining)</button>}
+        {!todo.length && <p className="muted small empty-line">Nothing to do right now.</p>}
+        <button type="button" className="new-task" onClick={addTask}><span aria-hidden="true">+</span>New task<kbd>N</kbd></button>
+      </section>
+
+      {later.length > 0 && (
+        <section className="task-group later" aria-labelledby="later">
+          <h2 id="later" className="eyebrow">Later</h2>
+          {later.map(t => <button type="button" key={t.id} className="later-row" data-task={t.id} onClick={() => openDialog({ kind: 'task', id: t.id })}><i aria-hidden="true" />{readableTaskTitle(t)}</button>)}
+        </section>
+      )}
+
+      {doneToday.length > 0 && (
+        <Disclosure className="done-toggle" label={`Done today · ${doneToday.length}`}>
+          <section className="task-group" aria-label="Done today">{doneToday.map(t => <TaskRow key={t.id} task={t} />)}</section>
+        </Disclosure>
+      )}
+    </div>
   );
 }

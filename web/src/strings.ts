@@ -1,10 +1,3 @@
-type StatusSnapshot = {
-  tasks: readonly unknown[];
-  notes: readonly unknown[];
-  attention: readonly unknown[];
-  runs: readonly { effective_status: string }[];
-};
-
 export const S = {
   draftSaved: 'Draft on this device · not uploaded',
   draftError: 'Local save failed · keep this page open',
@@ -17,14 +10,6 @@ export const S = {
   unexpectedResponse: 'The server sent an unexpected response.',
   connected: 'Server connected',
   offline: 'Offline · local drafts',
-  statusSummary: (s: StatusSnapshot | null, connected: boolean): string =>
-    !connected
-      ? 'Status unavailable'
-      : !s?.tasks.length
-        ? s?.notes.length
-          ? `${s.notes.length} learning note${s.notes.length === 1 ? '' : 's'}`
-          : 'Nothing tracked yet'
-        : `${s.attention.length} need you · ${s.runs.filter((run) => run.effective_status === 'working').length} reported running`,
   outboxCount: (n: number): string => `${n} capture${n === 1 ? '' : 's'} on this device`,
   offlineBanner: (hasSnapshot: boolean, saveError: boolean): string =>
     `Server disconnected. ${hasSnapshot ? 'Showing the last server snapshot; agent status may be outdated.' : 'Current work and integration status are unavailable.'} ${saveError ? 'Local save failed; keep unsaved work open.' : 'Capture can save on this device when local storage is available.'}`,

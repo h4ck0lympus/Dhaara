@@ -27,7 +27,7 @@ async function waitForController(page: Page): Promise<void> {
 }
 
 async function shellVisible(page: Page): Promise<void> {
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
 }
 
 function serveV1(port: number): Promise<Server> {
@@ -56,7 +56,7 @@ test('Real loopback navigation and native service worker control', async ({ page
   expect(urls).toEqual(expect.arrayContaining(['/', '/manifest.webmanifest', '/icon.svg']));
   expect(urls.some((url) => /^\/assets\/.+\.js$/.test(url))).toBe(true);
   expect(urls.some((url) => /^\/assets\/.+\.css$/.test(url))).toBe(true);
-  expect(urls.filter((url) => url.endsWith('.otf'))).toHaveLength(4);
+  expect(urls.filter((url) => url.endsWith('.woff2'))).toHaveLength(5);
   expect(urls).not.toContain('/sw.js');
   expect(urls).not.toContain('/index.html');
   await page.goto(dhara.origin + '/');

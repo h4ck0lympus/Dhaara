@@ -16,7 +16,7 @@ const outboxIds = async (page: Page) => (await readLocalDb(page)).outbox.map((it
 
 async function openApp(page: Page, dhara: DharaServer): Promise<void> {
   await page.goto(dhara.origin + '/');
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
 }
 
 test('Upgrade: a v1 outbox item and drafts upload exactly once with the original id', async ({ page, dhara }) => {
@@ -27,7 +27,7 @@ test('Upgrade: a v1 outbox item and drafts upload exactly once with the original
   await expect.poll(async () => (await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
   await expect.poll(() => outboxIds(page)).toEqual([]);
   await page.reload();
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
   expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
   const local = await readLocalDb(page);
   expect(local.draft).toEqual({ ...draft, files: [] });
@@ -43,7 +43,7 @@ test('Upgrade from the pre-rename build: a queued capture in the old database is
   await expect.poll(() => page.evaluate(async () => (await indexedDB.databases()).map((info) => info.name))).toEqual([DB_NAME]);
   expect((await readLocalDb(page)).draft).toEqual({ ...draft, files: [] });
   await page.reload();
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
   expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
 });
 
@@ -52,7 +52,7 @@ test('Reconnect flushes queued capture to real server', async ({ page, dhara }) 
   await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
   await dhara.kill();
   await page.reload();
-  await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
+  await expect(page.locator('#root .topbar').first()).toBeVisible();
   await putOutboxItem(page, QUEUED);
   await dhara.restart();
   await page.reload();

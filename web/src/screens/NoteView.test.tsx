@@ -2,14 +2,14 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@tanstack/react-router', () => ({ useParams: () => ({ id: 'n1' }), Link: ({ children }: { children: unknown }) => <a href="#x">{children as never}</a> }));
+vi.mock('@tanstack/react-router', () => ({ Link: ({ children }: { children: unknown }) => <a href="#x">{children as never}</a> }));
 vi.mock('../routes/guards', () => ({ useNavigationGuard: vi.fn() }));
 vi.mock('../shell/dialogs', () => ({ openDialog: vi.fn() }));
 vi.mock('../shell/OfflineNotice', () => ({ OfflineNotice: () => null }));
 
 import { jsonResponse, renderWithClient, stubFetch } from '../test/harness';
 import { makeNote } from '../test/fixtures';
-import { NoteViewScreen } from './NoteView';
+import { EmbeddedNote } from './NoteView';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
@@ -23,11 +23,11 @@ function render(pendingPut: boolean) {
     const inner = globalThis.fetch;
     vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => (init?.method === 'PUT' ? new Promise<Response>(() => {}) : inner(input, init)));
   }
-  renderWithClient(<NoteViewScreen />);
+  renderWithClient(<EmbeddedNote id="n1" />);
   return calls;
 }
 
-describe('NoteViewScreen edit guards', () => {
+describe('EmbeddedNote edit guards', () => {
   it('disables the Note/Original tabs while a save is pending', async () => {
     render(true);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));

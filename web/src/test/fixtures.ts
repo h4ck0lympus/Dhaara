@@ -81,7 +81,7 @@ export function makeSnapshot(changes: Partial<Snapshot> = {}): Snapshot {
     focus: null,
     context: null,
     context_rules: [],
-    settings: { observation_enabled: false, motion: false, companion: 'cat', companion_size: 40, display_name: '' },
+    settings: { observation_enabled: false, motion: false, companion: 'cat', companion_size: 40, display_name: '', theme: 'dark' },
     available: [],
     attention: [],
     up_next: [],

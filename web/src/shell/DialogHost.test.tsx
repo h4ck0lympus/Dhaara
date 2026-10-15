@@ -20,7 +20,6 @@ const requests: Record<DialogRequest['kind'], DialogRequest> = {
   'task-capture': { kind: 'task-capture' },
   sketch: { kind: 'sketch' },
   outbox: { kind: 'outbox' },
-  settings: { kind: 'settings' },
   'note-history': { kind: 'note-history', noteId: 'n1' },
 };
 

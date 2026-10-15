@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { makeRun, makeSnapshot, makeTask } from '../test/fixtures';
 import { dateLabel } from './format';
 import {
-  RUN_LABEL, STATUS_LABEL, TASK_EDIT_FIELDS, TASK_FILTERS, editableFields, filterTasks, isSessionUrl, keepTimestamps,
+  RUN_LABEL, STATUS_LABEL, TASK_EDIT_FIELDS, editableFields, openTasks, isSessionUrl, keepTimestamps,
   needsReview, priorityLabel, reviewLink, taskMeta, waitingReason,
 } from './tasks';
 
@@ -25,31 +25,14 @@ describe('editableFields', () => {
   });
 });
 
-describe('filterTasks', () => {
-  const high = makeTask('high', { effective_priority: 'high' });
-  const low = makeTask('low', { effective_priority: 'low' });
-  const parked = makeTask('parked', { status: 'parked' });
-  const done = makeTask('done', { status: 'done' });
-  const running = makeTask('running', { runs: [makeRun({ status: 'working', effective_status: 'working', stale: false })] });
-  const asking = makeTask('asking', { runs: [makeRun({ status: 'needs_input', effective_status: 'needs_input', stale: false })] });
-  const stale = makeTask('stale', { runs: [makeRun({ status: 'working', effective_status: 'unknown', stale: true })] });
-  const snapshot = makeSnapshot({ tasks: [low, parked, done, high, running, asking, stale], attention: [asking], available: [low, high] });
-  const ids = (filter: Parameters<typeof filterTasks>[1]) => filterTasks(snapshot, filter).map(t => t.id);
-
-  it('lists the views with their visible labels', () => {
-    expect(TASK_FILTERS.map(f => f.label)).toEqual(['Open', 'Needs you', 'Running', 'Available now', 'Parked', 'Completed', 'All']);
+describe('openTasks', () => {
+  it('excludes parked and done, sorted high → low and stable within a priority', () => {
+    const tasks = [
+      makeTask('low', { effective_priority: 'low' }), makeTask('parked', { status: 'parked' }), makeTask('done', { status: 'done' }),
+      makeTask('high', { effective_priority: 'high' }), makeTask('m1', { effective_priority: 'medium' }), makeTask('m2', { effective_priority: 'medium', status: 'waiting' }),
+    ];
+    expect(openTasks(makeSnapshot({ tasks })).map(t => t.id)).toEqual(['high', 'm1', 'm2', 'low']);
   });
-  it('open excludes parked and done, sorted high → low (app.js:258)', () => {
-    expect(ids('open')).toEqual(['high', 'running', 'asking', 'stale', 'low']);
-  });
-  it('needs-you uses the server attention list', () => expect(ids('needs-you')).toEqual(['asking']));
-  it('running counts working and needs-input runs, never stale ones', () => expect(ids('running')).toEqual(['running', 'asking']));
-  it('available uses the server available list', () => expect(ids('available')).toEqual(['high', 'low']));
-  it('parked and done are distinct views', () => {
-    expect(ids('parked')).toEqual(['parked']);
-    expect(ids('done')).toEqual(['done']);
-  });
-  it('all keeps every task', () => expect(ids('all')).toHaveLength(7));
 });
 
 describe('row text', () => {

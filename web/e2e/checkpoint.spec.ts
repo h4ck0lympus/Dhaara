@@ -68,7 +68,7 @@ test.describe('Close checkpoint', () => {
     const note = await createNote(dhara, 'note under edit');
     await stubIpc(page);
     await gotoApp(page, dhara, `#/note/${note.id}`);
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.getByLabel('Note', { exact: true }).fill('half-finished edit');
     const declined = page.waitForEvent('dialog').then(async prompt => { expect(prompt.message()).toBe(S.closeConfirm); await prompt.dismiss(); });
     await requestClose(page);

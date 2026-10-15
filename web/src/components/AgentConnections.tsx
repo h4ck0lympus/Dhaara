@@ -7,9 +7,13 @@ const Connections = z.object({ connections: z.array(z.object({
   mode: z.enum(['hooks', 'plugin']).default('hooks'),
 })) });
 
+export function useAgentConnections() {
+  return useQuery({ queryKey: ['agent-connections'], queryFn: () => api('/agent-connections', Connections), refetchInterval: 5000 });
+}
+
 export function AgentConnections() {
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ['agent-connections'], queryFn: () => api('/agent-connections', Connections), refetchInterval: 5000 });
+  const query = useAgentConnections();
   const change = useMutation({
     mutationFn: ({ provider, enabled, mode }: { provider: string; enabled: boolean; mode?: 'hooks' | 'plugin' }) =>
       api(`/agent-connections/${provider}`, Connections, { method: 'POST', body: { enabled, ...(mode ? { mode } : {}) } }),
@@ -20,8 +24,8 @@ export function AgentConnections() {
     <p className="subtle-line">Connect once on this computer. Sessions appear automatically, with updates when an agent works, needs input, or has a result to review.</p>
     <p className="subtle-line">Shares status and the project folder name locally. Prompts, transcripts, files, and screen content stay out. Connecting adds dhaara hooks to your agent settings.</p>
     {query.isPending && <p className="subtle-line">Checking connections…</p>}
-    {(query.data?.connections ?? []).map(connection => <div className="settings-row" key={connection.provider}>
-      <div>{connection.name}<p>{connection.installed
+    {(query.data?.connections ?? []).map(connection => <div className="setting-row" key={connection.provider}>
+      <div className="setting-label">{connection.name}<p>{connection.installed
         ? connection.last_seen ? 'Updates received' : connection.mode === 'plugin' ? 'Plugin prepared · install it in your agent' : 'Hooks installed · waiting for the first update'
         : 'Not connected'}</p>
         {connection.installed && <p>{connection.provider === 'codex'

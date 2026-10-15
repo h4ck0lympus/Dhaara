@@ -1,114 +1,128 @@
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
-import { agentRun, noHorizontalOverflow, openKind, seed, task } from './nowSeed';
+import { agentRun, noHorizontalOverflow, note, openKind, seed, task } from './nowSeed';
 
 const LONG = 'Investigate-the-allocator-cleanup-path-without-any-spaces-' + 'x'.repeat(120);
+const PAGES = ['#/overview', '#/notes', '#/plan', '#/settings'];
 
 async function smallTargets(page: Page): Promise<string[]> {
   return page.evaluate(() => [...document.querySelectorAll<HTMLElement>('button, a[href], select, summary, input:not([type="hidden"]), textarea')]
+    .filter(el => el.tabIndex >= 0)
     .map(el => ({ el, box: el.getBoundingClientRect() }))
     .filter(({ el, box }) => box.width > 0 && box.height > 0 && getComputedStyle(el).visibility !== 'hidden')
     .filter(({ box }) => box.width < 43.5 || box.height < 43.5)
     .map(({ el, box }) => `${el.tagName.toLowerCase()}.${el.className} "${(el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40)}" ${Math.round(box.width)}×${Math.round(box.height)}`));
 }
-const sidebarBox = async (page: Page) => (await page.locator('.sidebar').boundingBox())!;
 
-test('Phone layout has no horizontal overflow', async ({ page, dhara }) => {
+async function seedEverything(dhara: Parameters<typeof seed>[0]): Promise<void> {
   await seed(dhara, 'available');
+  await seed(dhara, 'attention');
   await task(dhara, LONG);
+  await task(dhara, 'Someday idea', { status: 'parked' });
+  await agentRun(dhara, await task(dhara, 'Running agent task'));
+  await note(dhara, `${LONG} as a note title`);
+}
+
+test('Phone layout has no horizontal overflow on any page', async ({ page, dhara }) => {
+  await seedEverything(dhara);
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const hash of ['#/overview', '#/plan']) {
+  for (const hash of PAGES) {
     await gotoApp(page, dhara, hash);
     expect(await noHorizontalOverflow(page), hash).toBe(true);
   }
-  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  await gotoApp(page, dhara, '#/plan');
+  await page.getByRole('button', { name: /New task/ }).click();
   await page.getByRole('dialog', { name: 'Add task' }).locator('#task-details summary').click();
   expect(await noHorizontalOverflow(page)).toBe(true);
 });
 
-test('Tablet layout has no horizontal overflow', async ({ page, dhara }) => {
-  await seed(dhara, 'available');
-  await task(dhara, LONG);
-  for (const size of [{ width: 1024, height: 768 }, { width: 900, height: 700 }, { width: 820, height: 1180 }]) {
+test('Tablet and desktop layouts have no horizontal overflow', async ({ page, dhara }) => {
+  await seedEverything(dhara);
+  for (const size of [{ width: 1024, height: 768 }, { width: 900, height: 700 }, { width: 820, height: 1180 }, { width: 1920, height: 1080 }]) {
     await page.setViewportSize(size);
-    for (const hash of ['#/overview', '#/plan']) {
+    for (const hash of PAGES) {
       await gotoApp(page, dhara, hash);
       expect(await noHorizontalOverflow(page), `${size.width}×${size.height} ${hash}`).toBe(true);
     }
   }
 });
 
-test('Phone width moves the navigation to a bottom bar and gives content the full width', async ({ page, dhara }) => {
+test('Phone keeps the top navigation and gives Home the full width', async ({ page, dhara }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoApp(page, dhara);
-  const bar = await sidebarBox(page);
-  expect(Math.round(bar.y + bar.height)).toBe(844);
-  expect(Math.round(bar.width)).toBe(390);
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav.getByRole('link')).toHaveText(['Overview', 'Tasks']);
-  await page.getByRole('button', { name: 'Capture a thought…', exact: true }).click();
+  await expect(nav.getByRole('link')).toHaveText(['Home', 'Notes', 'Tasks']);
+  expect((await nav.boundingBox())!.y).toBeLessThan(80);
   const content = (await page.locator('main.content').boundingBox())!;
   expect(Math.round(content.x)).toBe(0);
   expect(Math.round(content.width)).toBe(390);
+  await page.getByRole('button', { name: /Capture a thought/ }).click();
+  await expect(page.getByLabel('Rough learning note')).toBeVisible();
   expect(await noHorizontalOverflow(page)).toBe(true);
 });
 
-test('Portrait tablet uses the phone bottom bar; landscape tablet keeps the sidebar', async ({ page, dhara }) => {
-  await page.setViewportSize({ width: 820, height: 1180 });
-  await gotoApp(page, dhara);
-  let bar = await sidebarBox(page);
-  expect(Math.round(bar.y + bar.height)).toBe(1180);
-  expect(Math.round(bar.width)).toBe(820);
-  await page.setViewportSize({ width: 900, height: 700 });
-  bar = await sidebarBox(page);
-  expect(Math.round(bar.x)).toBe(0);
-  expect(Math.round(bar.height)).toBe(700);
-  expect(bar.width).toBeLessThan(200);
+test('Phone Notes shows the list, then the note alone with a way back', async ({ page, dhara }) => {
+  const saved = await note(dhara, 'Phone reading note');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoApp(page, dhara, '#/notes');
+  await expect(page.getByRole('complementary', { name: 'Folders' })).toBeHidden();
+  await expect(page.getByLabel('Folder', { exact: true })).toBeVisible();
+  await page.locator('.note-row').first().click();
+  await expect(page).toHaveURL(new RegExp(`note=${saved.id}`));
+  await expect(page.locator('.list-pane')).toBeHidden();
+  await page.getByRole('link', { name: '← All notes' }).click();
+  await expect(page.locator('.list-pane')).toBeVisible();
 });
 
-test('Readable body/secondary text meets a 4.5 contrast ratio', async ({ page, context, dhara }) => {
+test('Readable text meets a 4.5 contrast ratio in dark and light', async ({ page, context, dhara }) => {
   await openKind(page, context, dhara, 'available');
-  const ratios = await page.evaluate(() => {
+  const measure = () => page.evaluate(() => {
     const lum = (color: string) => {
       const v = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(x => x / 255).map(x => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
       return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
     };
     const background = lum(getComputedStyle(document.body).backgroundColor);
-    return ['.preview-row small', '.focus-kind', '.overview-greeting', '#connection-label', '.status-summary', '.recent-notes h2'].map(selector => {
+    return ['.home-greeting p', '.focus-next', '.eyebrow', '#connection-label', '.task-title', '.nav-item:not(.active)'].map(selector => {
       const el = document.querySelector(selector);
-      return [selector, el ? (lum(getComputedStyle(el).color) + 0.05) / (background + 0.05) : 0] as const;
+      const fg = el ? lum(getComputedStyle(el).color) : background;
+      return [selector, (Math.max(fg, background) + 0.05) / (Math.min(fg, background) + 0.05)] as const;
     });
   });
-  for (const [selector, ratio] of ratios) expect(ratio, selector).toBeGreaterThanOrEqual(4.5);
+  for (const [selector, ratio] of await measure()) expect(ratio, `dark ${selector}`).toBeGreaterThanOrEqual(4.5);
+  await dhara.api('PATCH', '/api/settings', { theme: 'light' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  for (const [selector, ratio] of await measure()) expect(ratio, `light ${selector}`).toBeGreaterThanOrEqual(4.5);
 });
 
 test('Phone touch targets are at least 44×44 px', async ({ page, context, dhara }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openKind(page, context, dhara, 'available');
   expect(await smallTargets(page)).toEqual([]);
-  await seed(dhara, 'attention');
-  await seed(dhara, 'waiting');
-  await seed(dhara, 'complete');
-  await agentRun(dhara, await task(dhara, 'Running agent task'));
+  await seedEverything(dhara);
+  await task(dhara, 'Finished today', { status: 'done' });
   await gotoApp(page, dhara, '#/plan');
+  await page.getByRole('button', { name: /agents? working/ }).click();
+  await page.getByRole('button', { name: /Done today/ }).click();
   expect(await smallTargets(page)).toEqual([]);
-  for (const label of ['Needs you', 'Running', 'Available now', 'Completed', 'All']) {
-    await page.getByRole('group', { name: 'Task views' }).getByRole('button', { name: label, exact: true }).click();
-    expect(await smallTargets(page), label).toEqual([]);
-  }
-  await page.locator('.page-heading').getByRole('button', { name: 'Add task' }).click();
+  await gotoApp(page, dhara, '#/notes');
+  expect(await smallTargets(page)).toEqual([]);
+  await gotoApp(page, dhara, '#/settings');
+  expect(await smallTargets(page)).toEqual([]);
+  await gotoApp(page, dhara, '#/plan');
+  await page.getByRole('button', { name: /New task/ }).click();
   await page.getByRole('dialog', { name: 'Add task' }).locator('#task-details summary').click();
   expect(await smallTargets(page)).toEqual([]);
 });
 
-test('Plan rows are compact single lines at desktop width', async ({ page, dhara }) => {
+test('Task rows are compact single lines at desktop width', async ({ page, dhara }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   for (const title of ['Read the chapter', 'Review the fix', 'Trace ownership', 'Check duplicates', 'Write the summary']) await task(dhara, title, { project: 'Learning' });
   await gotoApp(page, dhara, '#/plan');
-  const rows = page.locator('.plan-list .task-row');
+  const rows = page.getByRole('region', { name: 'To do' }).locator('.task-row');
   await expect(rows).toHaveCount(5);
   for (const row of await rows.all()) {
-    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(72);
-    expect(await row.locator('.task-title > span').evaluate(el => el.getClientRects().length)).toBe(1);
+    expect((await row.boundingBox())!.height).toBeLessThanOrEqual(48);
+    expect(await row.locator('.task-title').evaluate(el => el.getClientRects().length)).toBe(1);
   }
 });

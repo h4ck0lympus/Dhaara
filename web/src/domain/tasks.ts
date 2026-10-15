@@ -21,30 +21,10 @@ export function priorityLabel(source: string): PriorityLabel {
   return 'Auto';
 }
 
-export type TaskFilter = 'open' | 'needs-you' | 'running' | 'available' | 'parked' | 'done' | 'all';
-export const TASK_FILTERS: readonly { id: TaskFilter; label: string }[] = [
-  { id: 'open', label: 'Open' }, { id: 'needs-you', label: 'Needs you' }, { id: 'running', label: 'Running' },
-  { id: 'available', label: 'Available now' }, { id: 'parked', label: 'Parked' }, { id: 'done', label: 'Completed' },
-  { id: 'all', label: 'All' },
-];
-
 const RANK = { high: 0, medium: 1, low: 2 } as const;
 
-export function filterTasks(snapshot: Snapshot, filter: TaskFilter): SnapshotTask[] {
-  const attention = new Set(snapshot.attention.map(t => t.id));
-  const available = new Set(snapshot.available.map(t => t.id));
-  const keep = (t: SnapshotTask): boolean => {
-    switch (filter) {
-      case 'open': return t.status !== 'done' && t.status !== 'parked';
-      case 'needs-you': return attention.has(t.id);
-      case 'running': return t.runs.some(r => r.effective_status === 'working' || r.effective_status === 'needs_input');
-      case 'available': return available.has(t.id);
-      case 'parked': return t.status === 'parked';
-      case 'done': return t.status === 'done';
-      case 'all': return true;
-    }
-  };
-  return snapshot.tasks.filter(keep).sort((a, b) => RANK[a.effective_priority] - RANK[b.effective_priority]);
+export function openTasks(snapshot: Snapshot): SnapshotTask[] {
+  return snapshot.tasks.filter(t => t.status !== 'done' && t.status !== 'parked').sort((a, b) => RANK[a.effective_priority] - RANK[b.effective_priority]);
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {

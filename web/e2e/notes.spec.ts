@@ -10,19 +10,29 @@ const rows = (page: Page) => page.locator('.note-row');
 const searchBox = (page: Page) => page.getByRole('searchbox', { name: 'Search notes' });
 
 test.describe('Notes list', () => {
-  test('Notes opens on search and recent notes', async ({ page, dhara }) => {
+  test('Notes shows folders, recent notes and opens one in the note pane', async ({ page, dhara }) => {
     const older = await createNote(dhara, 'heap slot cleanup observation');
     const newer = await createNote(dhara, 'two pointers on sorted input');
     await gotoApp(page, dhara, '#/notes');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Notes');
-    await expect(page.getByText('Your knowledge, with its original thinking intact.')).toBeVisible();
     await expect(searchBox(page)).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Recent notes' })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Notes in All notes' })).toBeVisible();
+    await expect(page.getByText('Choose a note to read it here.')).toBeVisible();
     await expect(rows(page)).toHaveCount(2);
     await expect(rows(page).nth(0)).toContainText(newer.title);
     await expect(rows(page).nth(1)).toContainText(older.title);
     await rows(page).nth(0).click();
-    await expect(page).toHaveURL(new RegExp(`#/note/${newer.id}$`));
+    await expect(page).toHaveURL(new RegExp(`#/notes\\?note=${newer.id}$`));
+    await expect(page.getByRole('article', { name: 'Open note' }).getByRole('heading', { level: 1 })).toHaveText(newer.title);
+    await expect(rows(page).nth(0)).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('Legacy note links open the note inside Notes', async ({ page, dhara }) => {
+    const note = await createNote(dhara, 'legacy link note');
+    await gotoApp(page, dhara, `#/note/${note.id}`);
+    await expect(page).toHaveURL(new RegExp(`#/notes\\?note=${note.id}$`));
+    await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Notes' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByRole('article', { name: 'Open note' }).getByRole('heading', { level: 1 })).toHaveText(note.title);
   });
 
   test('Search waits 300 ms and uses the server, which also matches the original wording', async ({ page, dhara }) => {
@@ -50,6 +60,15 @@ test.describe('Notes list', () => {
     await expect(searchBox(page)).toHaveAttribute('maxlength', '500');
   });
 
+  test('Search from another page lands in Notes with the query', async ({ page, dhara }) => {
+    await createNote(dhara, 'zebra pointer');
+    await gotoApp(page, dhara, '#/plan');
+    await searchBox(page).fill('zebra');
+    await expect(page).toHaveURL(/#\/notes\?q=zebra$/);
+    await expect(rows(page)).toHaveCount(1);
+    await expect(searchBox(page)).toHaveValue('zebra');
+  });
+
   test('Search falls back to title and folder matches on this device when the server search fails', async ({ page, dhara }) => {
     await failFetch(page, { path: /\/api\/search/, times: 10, fault: { status: 400, body: '{"detail":"Search failed"}', contentType: 'application/json' } });
     const note = await createNote(dhara, 'zebra pointer');
@@ -62,33 +81,36 @@ test.describe('Notes list', () => {
     await expect(page.getByText('No matching notes.')).toBeVisible();
   });
 
-  test('Desktop width shows a narrow folder pane that filters the list', async ({ page, dhara }) => {
+  test('Desktop folder pane filters the list and the choice is in the URL', async ({ page, dhara }) => {
     await editNote(dhara, await createNote(dhara, 'first'), { folder: 'Security / CTFs' });
     await editNote(dhara, await createNote(dhara, 'second'), { folder: 'Programming / Algorithms' });
     await page.setViewportSize({ width: 1440, height: 900 });
     await gotoApp(page, dhara, '#/notes');
-    const pane = page.getByRole('complementary', { name: 'Note folders' });
-    await expect(pane).toBeVisible();
+    const pane = page.getByRole('complementary', { name: 'Folders' });
     await expect(page.getByLabel('Folder', { exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Folders' })).toBeHidden();
-    await pane.getByRole('button', { name: 'Security / CTFs' }).click();
-    await expect(pane.getByRole('button', { name: 'Security / CTFs' })).toHaveAttribute('aria-pressed', 'true');
+    await pane.getByRole('button', { name: /^Security \/ CTFs/ }).click();
+    await expect(pane.getByRole('button', { name: /^Security \/ CTFs/ })).toHaveAttribute('aria-pressed', 'true');
     await expect(rows(page)).toHaveCount(1);
-    await expect(rows(page)).toContainText('Security / CTFs');
+    await expect(page.getByRole('region', { name: 'Notes in Security / CTFs' })).toBeVisible();
+    await page.reload();
+    await expect(rows(page)).toHaveCount(1);
   });
 
-  test('Tablet width shows a collapsible folder pane in Notes', async ({ page, dhara }) => {
+  test('Panes hide with their buttons and Ctrl+1/2/3, and stay hidden after reload', async ({ page, dhara }) => {
     await createNote(dhara, 'first');
-    await page.setViewportSize({ width: 900, height: 700 });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await gotoApp(page, dhara, '#/notes');
-    const toggle = page.getByRole('button', { name: 'Folders' });
-    const pane = page.getByRole('complementary', { name: 'Note folders' });
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(pane).toBeVisible();
-    await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(pane).toBeHidden();
+    await page.getByRole('button', { name: 'Hide folders' }).click();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toHaveCount(0);
+    await page.keyboard.press('Control+3');
+    await expect(page.getByRole('article', { name: 'Open note' })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toHaveCount(0);
     await expect(rows(page)).toHaveCount(1);
+    await page.keyboard.press('Control+1');
+    await page.getByRole('button', { name: 'Show note' }).click();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toBeVisible();
+    await expect(page.getByRole('article', { name: 'Open note' })).toBeVisible();
   });
 
   test('Phone width replaces the folder pane with a compact selector', async ({ page, dhara }) => {
@@ -96,21 +118,20 @@ test.describe('Notes list', () => {
     await editNote(dhara, await createNote(dhara, 'second'), { folder: 'Programming / Algorithms' });
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoApp(page, dhara, '#/notes');
-    await expect(page.getByRole('complementary', { name: 'Note folders' })).toBeHidden();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toBeHidden();
     await page.getByLabel('Folder', { exact: true }).selectOption('Programming / Algorithms');
     await expect(rows(page)).toHaveCount(1);
-    await expectPhoneFriendly(page, '.notes-screen');
+    await expectPhoneFriendly(page, '.notes');
   });
 
   test('Portrait tablet collapses to the single phone column', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'portrait reading');
     await page.setViewportSize({ width: 768, height: 1024 });
     await gotoApp(page, dhara, '#/notes');
-    await expect(page.getByRole('complementary', { name: 'Note folders' })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'Folders' })).toBeHidden();
+    await expect(page.getByRole('complementary', { name: 'Folders' })).toBeHidden();
     await expect(page.getByLabel('Folder', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    expect((await page.getByRole('region', { name: 'Recent notes' }).boundingBox())!.width).toBeGreaterThan(768 * 0.85);
+    expect((await page.locator('.list-pane').boundingBox())!.width).toBeGreaterThan(768 * 0.85);
     await expect(rows(page)).toContainText(note.title);
   });
 });
@@ -119,7 +140,7 @@ test.describe('Note view', () => {
   const noteField = (page: Page) => page.getByLabel('Note', { exact: true });
 
   async function editAndSave(page: Page, title: string, body: string) {
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.getByLabel('Title').fill(title);
     await noteField(page).fill(body);
     await page.getByRole('button', { name: 'Save changes' }).click();
@@ -140,7 +161,7 @@ test.describe('Note view', () => {
   test('Ctrl+Z in the note editor undoes typing', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'undo me');
     await gotoApp(page, dhara, `#/note/${note.id}`);
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await noteField(page).click();
     await page.keyboard.press('End');
     await page.keyboard.type(' and more words');
@@ -207,10 +228,10 @@ test.describe('Note view', () => {
     await page.locator('.saved-notice').getByRole('button', { name: 'Open note' }).click();
     await expect(page.locator('.note-page')).toContainText('A distinct learning note');
     await expect(page.locator('.embedded-image img')).toHaveCount(1);
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await noteField(page).fill('Edited organized note');
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(page.locator('.original-block')).toContainText('Keep the original intact.');
     await page.getByRole('button', { name: 'Note', exact: true }).click();
@@ -249,7 +270,7 @@ test.describe('Note view', () => {
   async function conflictedEdit(page: Page, dhara: DharaServer) {
     const note = await createNote(dhara, 'conflict base');
     await gotoApp(page, dhara, `#/note/${note.id}`);
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await page.getByLabel('Title').fill('My unsaved title');
     await noteField(page).fill('My unsaved body');
     await editNote(dhara, note, { title: 'Changed elsewhere', body: 'Other device body' });
@@ -293,19 +314,20 @@ test.describe('Note view', () => {
     const note = await createNote(dhara, 'guard me');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     expect(await beforeUnloadArmed(page)).toBe(false);
-    await page.getByRole('button', { name: 'Edit' }).click();
+    await page.getByRole('button', { name: 'Edit', exact: true }).click();
     await noteField(page).fill('unsaved words');
     expect(await beforeUnloadArmed(page)).toBe(true);
+    const tasksLink = page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Tasks' });
     page.once('dialog', prompt => { expect(prompt.message()).toBe(S.leaveNoteEdit); void prompt.dismiss(); });
-    await page.getByRole('link', { name: '← All notes', exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`#/note/${note.id}$`));
+    await tasksLink.click();
+    await expect(page).toHaveURL(new RegExp(`#/notes\\?note=${note.id}$`));
     await expect(noteField(page)).toHaveValue('unsaved words');
     page.once('dialog', prompt => { expect(prompt.message()).toBe(S.leaveNoteEdit); void prompt.dismiss(); });
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(noteField(page)).toHaveValue('unsaved words');
     page.once('dialog', prompt => void prompt.accept());
-    await page.getByRole('link', { name: '← All notes', exact: true }).click();
-    await expect(page).toHaveURL(/#\/notes$/);
+    await tasksLink.click();
+    await expect(page).toHaveURL(/#\/plan$/);
   });
 
   test('A missing note says so', async ({ page, dhara }) => {

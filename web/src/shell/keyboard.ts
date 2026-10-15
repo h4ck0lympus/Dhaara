@@ -1,5 +1,7 @@
-import { isDialogOpen } from './dialogs';
+import { isDialogOpen, openDialog } from './dialogs';
 import { isUnlockOpen } from './unlock';
+
+export const CAPTURE_EVENT = 'dhara-open-capture';
 
 function isField(element: Element | null): boolean {
   if (!(element instanceof HTMLElement)) return false;
@@ -9,20 +11,20 @@ function isField(element: Element | null): boolean {
 
 export function installKeyboard(navigate: (to: string) => void): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.isComposing || event.defaultPrevented) return;
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k'
-      && !isDialogOpen() && !isUnlockOpen()) {
+    if (event.isComposing || event.defaultPrevented || isDialogOpen() || isUnlockOpen()) return;
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       navigate('/overview');
-      setTimeout(() => window.dispatchEvent(new CustomEvent('dhaara-overview-pane', { detail: 'notes' })), 50);
-      setTimeout(() => document.querySelector<HTMLInputElement>('#note-search')?.focus(), 100);
+      setTimeout(() => window.dispatchEvent(new CustomEvent(CAPTURE_EVENT)), 50);
       return;
     }
-    if (event.key === 'n' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey
-      && !isField(document.activeElement) && !isDialogOpen() && !isUnlockOpen()) {
+    if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || isField(document.activeElement)) return;
+    if (event.key === '/') {
       event.preventDefault();
-      navigate('/overview');
-      setTimeout(() => window.dispatchEvent(new CustomEvent('dhaara-overview-pane', { detail: 'capture' })), 50);
+      document.querySelector<HTMLInputElement>('#site-search')?.focus();
+    } else if (event.key === 'n') {
+      event.preventDefault();
+      openDialog({ kind: 'task-capture' });
     }
   };
   document.addEventListener('keydown', onKeyDown);

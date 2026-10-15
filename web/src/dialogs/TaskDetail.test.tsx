@@ -160,7 +160,7 @@ describe('TaskDetailDialog', () => {
   it('links notes and captures what you learned for this task', async () => {
     const { onClose } = show(makeSnapshot({ tasks: [makeTask('t')], notes: [makeNoteSummary('n1', { title: 'Two pointers', task_id: 't' })] }));
     fireEvent.click(screen.getByRole('button', { name: 'Two pointers ↗' }));
-    expect(h.navigate).toHaveBeenCalledWith({ to: '/note/$id', params: { id: 'n1' } });
+    expect(h.navigate).toHaveBeenCalledWith({ to: '/notes', search: { note: 'n1' } });
     fireEvent.click(screen.getByRole('button', { name: '＋ Capture what you learned' }));
     await waitFor(() => expect(h.navigate).toHaveBeenCalledWith({ to: '/capture' }));
     expect(captureDraftStore.setTaskId).toHaveBeenCalledWith('t');

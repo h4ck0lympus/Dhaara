@@ -47,7 +47,7 @@ export const test = base.extend<{ dhara: DharaServer; guards: void }>({
 
 export async function gotoApp(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
   await page.goto(`${dhara.origin}/${hash}`);
-  await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('#connection-label')).toHaveText(S.connected, { timeout: 30_000 });
 }
 
 export function openLocalDb(name = 'dhara-local-v1'): Promise<IDBDatabase> {
@@ -141,17 +141,17 @@ export async function readLocalDb(page: Page): Promise<LocalDbSnapshot> {
 }
 
 export async function expectFontsLoaded(page: Page): Promise<void> {
-  const fonts = ['16px Inter', '500 16px Inter', '16px Display', 'italic 16px Display'];
+  const fonts = ['16px "IBM Plex Sans"', '500 16px "IBM Plex Sans"', '600 16px "IBM Plex Sans"', '16px "IBM Plex Mono"', '500 16px "IBM Plex Mono"'];
   const loaded = await page.evaluate(async (list) => {
     await Promise.all(list.map((font) => document.fonts.load(font)));
     return list.every((font) => document.fonts.check(font));
   }, fonts);
   expect(loaded).toBe(true);
   const fontPaths = await page.evaluate(() =>
-    performance.getEntriesByType('resource').map((entry) => new URL(entry.name).pathname).filter((path) => path.endsWith('.otf')),
+    performance.getEntriesByType('resource').map((entry) => new URL(entry.name).pathname).filter((path) => path.endsWith('.woff2')),
   );
-  expect(fontPaths).toHaveLength(4);
-  for (const path of fontPaths) expect(path).toMatch(/^\/assets\/.+-[A-Za-z0-9_-]{8}\.otf$/);
+  expect(fontPaths).toHaveLength(5);
+  for (const path of fontPaths) expect(path).toMatch(/^\/assets\/.+-[A-Za-z0-9_-]{8}\.woff2$/);
 }
 
 export async function refetch(page: Page): Promise<void> {

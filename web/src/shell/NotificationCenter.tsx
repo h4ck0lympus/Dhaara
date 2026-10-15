@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { useSnapshot } from '../state/queries';
 import { useConnected } from '../domain/connection';
@@ -8,6 +9,7 @@ import { MUTE_KEY, mutedUntil, notificationItems } from './notifications';
 const KEY = 'dhaara-notification-read';
 function readIds(): string[] { try { const value = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(value) ? value.filter(x => typeof x === 'string').slice(-500) : []; } catch { return []; } }
 export function NotificationCenter() {
+  const navigate = useNavigate();
   const snapshot = useSnapshot().data;
   const connected = useConnected();
   const [open, setOpen] = useState(false);
@@ -38,7 +40,7 @@ export function NotificationCenter() {
       {!connected && <p className="small muted">Offline · showing last known updates.</p>}
       {items.map(item => <article className="notification-item" key={item.id} data-unread={!read.includes(item.id)}><strong>{item.label}</strong><p>{item.title}</p><div className="section-header"><button type="button" className="quiet-button" onClick={() => { mark([item.id]); setOpen(false); openDialog({ kind: 'task', id: item.taskId }); }}>{item.action}</button><button type="button" className="quiet-button" onClick={() => snooze(item.id)}>Snooze 1h</button>{!read.includes(item.id) && <button type="button" className="quiet-button" onClick={() => mark([item.id])}>Mark read</button>}</div></article>)}
       {!items.length && <p className="empty">You’re up to date.</p>}
-      <button type="button" className="quiet-button" onClick={() => { setOpen(false); openDialog({ kind: 'settings' }); }}>Notification settings</button>
+      <button type="button" className="quiet-button" onClick={() => { setOpen(false); void navigate({ to: '/settings' }); }}>Notification settings</button>
     </section>}
   </div>;
 }

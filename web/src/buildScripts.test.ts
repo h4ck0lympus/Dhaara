@@ -35,7 +35,7 @@ const SHELL = {
 
 describe('check-hashes.mjs', () => {
   it('accepts a dist whose assets all carry an 8-character content hash', () => {
-    const result = run('check-hashes.mjs', makeDist({ 'assets/index-AbCd1234.js': '', 'assets/Inter-Regular-a_b-C9d0.otf': '' }));
+    const result = run('check-hashes.mjs', makeDist({ 'assets/index-AbCd1234.js': '', 'assets/IBMPlexSans-400-a_b-C9d0.woff2': '' }));
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
   });
