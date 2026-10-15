@@ -16,6 +16,8 @@ from pathlib import Path
 from uuid import uuid4
 
 log = logging.getLogger('dhara.store')
+STALE_SECONDS, TOOL_STALE_SECONDS = 120, 30 * 60
+TOOL_MESSAGE = 'The agent is running a tool.'
 
 
 def now() -> str:
@@ -139,6 +141,8 @@ class Store:
             c.executescript(SCHEMA)
             if 'planned_on' not in {r['name'] for r in c.execute('PRAGMA table_info(tasks)')}:
                 c.execute('ALTER TABLE tasks ADD COLUMN planned_on TEXT')
+            if 'task_version' not in {r['name'] for r in c.execute('PRAGMA table_info(hook_sessions)')}:
+                c.execute('ALTER TABLE hook_sessions ADD COLUMN task_version INTEGER NOT NULL DEFAULT 1')
             for key, value in {'settings': DEFAULT_SETTINGS, 'focus': None, 'context': None}.items():
                 c.execute('INSERT OR IGNORE INTO meta VALUES(?,?)', (key, jd(value)))
         self.path.chmod(0o600)
@@ -455,14 +459,15 @@ class Store:
             tasks = [self.task_row(r) for r in c.execute('''SELECT tasks.*, task_captures.raw AS original_input,
                 task_captures.interpretation FROM tasks LEFT JOIN task_captures ON tasks.id=task_captures.task_id
                 ORDER BY tasks.created_at DESC''')]
-            runs = [dict(r) for r in c.execute('SELECT * FROM runs ORDER BY updated_at DESC')]
+            runs = [dict(r) for r in c.execute('SELECT * FROM runs ORDER BY created_at DESC, rowid DESC')]
             reminders = [dict(r) for r in c.execute("SELECT * FROM reminders WHERE state!='dismissed' ORDER BY at")]
             notes = [dict(r) for r in c.execute('SELECT id,title,folder,project,task_id,mode,processing,error,version,created_at,updated_at FROM notes ORDER BY updated_at DESC')]
             rules = [dict(r) for r in c.execute('SELECT * FROM context_rules')]
         by_id = {t['id']:t for t in tasks}
         by_task = {}
         for run in runs:
-            run['stale'] = run['status'] in ('working','needs_input') and elapsed(run['updated_at']) > 120
+            limit = TOOL_STALE_SECONDS if run['status']=='working' and run['message']==TOOL_MESSAGE else STALE_SECONDS
+            run['stale'] = run['status'] in ('working','needs_input') and elapsed(run['updated_at']) > limit
             run['effective_status'] = 'unknown' if run['stale'] else run['status']
             by_task.setdefault(run['task_id'],[]).append(run)
         focus = self.meta('focus')
@@ -480,17 +485,18 @@ class Store:
             task['priority_source'] = 'automatic' if task['priority']=='auto' else 'you'
             unfinished = task['status'] not in ('done','parked')
             task['attention_reason'] = ''
+            latest = task['runs'][0] if task['runs'] else {}
             if unfinished:
                 if any(r['state']=='due' for r in task['reminders']): task['attention_reason']='You asked to revisit this.'
                 elif any(r['effective_status']=='needs_input' for r in task['runs']): task['attention_reason']='An agent needs your input.'
-                elif task['status']=='review' or any(r['status']=='review' for r in task['runs']): task['attention_reason']='A result is ready for your review.'
-                elif any(r['status']=='failed' for r in task['runs']): task['attention_reason']='An agent reported a failure.'
-                elif any(r['stale'] for r in task['runs']): task['attention_reason']='An agent has stopped reporting. Status unknown.'
+                elif task['status']=='review' or latest.get('status')=='review': task['attention_reason']='A result is ready for your review.'
+                elif latest.get('status')=='failed': task['attention_reason']='An agent reported a failure.'
+                elif latest.get('stale'): task['attention_reason']='An agent has stopped reporting. Status unknown.'
                 elif task['due_at'] and task['due_at']<=stamp: task['attention_reason']='Your deadline has arrived.'
                 if task['attention_reason']: attention.append(task)
             ready = unfinished and task['status'] in ('todo','active','review') and not task['blocked_by'] and (not task['not_before'] or task['not_before']<=stamp)
-            if any(r['status'] in ('working','needs_input') for r in task['runs']): ready=False
-            if any(r['status']=='failed' for r in task['runs']): ready=False
+            if any(r['effective_status'] in ('working','needs_input') for r in task['runs']): ready=False
+            if latest.get('effective_status') in ('failed','unknown'): ready=False
             if focus and focus['task_id']==task['id']: ready=False
             if minutes is not None and (task['estimate_minutes'] is None or task['estimate_minutes']>minutes): ready=False
             task['available']=ready

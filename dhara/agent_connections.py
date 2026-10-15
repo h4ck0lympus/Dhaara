@@ -12,8 +12,8 @@ import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from .agent_hook import EVENTS, SCHEMA
-from .store import Problem
+from .agent_hook import EVENTS, SCHEMA, SKIPPED
+from .store import Problem, TOOL_MESSAGE
 
 PROVIDERS = {'claude': 'Claude Code', 'codex': 'Codex'}
 CONFIG_LOCK = threading.RLock()
@@ -106,8 +106,7 @@ def _configure(store, provider, enabled, home=None, mode='hooks'):
         import subprocess
         parts = [python, str(receiver.resolve()), '--inbox', str(inbox.resolve()), '--provider', provider]
         command = subprocess.list2cmdline(parts) if os.name == 'nt' else shlex.join(parts)
-        events = [e for e in EVENTS if not (provider == 'claude' and e == 'Interrupt')
-                  and not (provider == 'codex' and e == 'StopFailure')]
+        events = [e for e in EVENTS if e not in SKIPPED[provider]]
         for event in events if mode == 'hooks' else []:
             hooks.setdefault(event, []).append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
         installed[provider] = {'commands': [command] if mode == 'hooks' else [], 'path': str(path),
@@ -141,6 +140,13 @@ def drain(store):
             queue.execute('DELETE FROM queue WHERE id<=?', (rows[-1]['id'],))
 
 
+def _touched(db, task):
+    focus = json.loads(db.execute("SELECT value FROM meta WHERE key='focus'").fetchone()[0]) or {}
+    return focus.get('task_id') == task or db.execute(
+        "SELECT 1 FROM reminders WHERE task_id=? AND state!='dismissed'", (task,)).fetchone() or db.execute(
+        'SELECT 1 FROM tasks, json_each(tasks.dependencies) WHERE json_each.value=?', (task,)).fetchone()
+
+
 def accept(store, event):
     """One task per session. The queue sequence makes crash replay idempotent."""
     provider, session, state = event['provider'], event['session'], event['state']
@@ -164,8 +170,18 @@ def accept(store, event):
         else:
             task, run = old['task_id'], old['run_id']
         current = db.execute('SELECT * FROM runs WHERE id=?', (run,)).fetchone()
-        if state == 'ended':
+        ended, tool = state == 'ended', state == 'tool'
+        state = 'working' if tool else state
+        if ended:
             state = current['status'] if current and current['status'] in ('review', 'failed', 'cancelled') else 'cancelled'
+        version = old['task_version'] if old else 1
+        if ended and current and current['status'] == 'cancelled' and not _touched(db, task):
+            version += db.execute('''UPDATE tasks SET status='done',updated_at=?,version=version+1 WHERE id=? AND version=? AND status='active'
+                AND NOT EXISTS (SELECT 1 FROM runs WHERE task_id=? AND id!=? AND status IN ('working','needs_input'))''',
+                (stamp, task, version, task, run)).rowcount
+        elif not ended:
+            version += db.execute("UPDATE tasks SET status='active',updated_at=?,version=version+1 WHERE id=? AND version=? AND status='done'",
+                                  (stamp, task, version)).rowcount
         if current and current['status'] in ('review', 'failed', 'cancelled') and state == 'working':
             db.execute("UPDATE runs SET status='cancelled' WHERE id=?", (run,))
             run = uuid4().hex
@@ -177,7 +193,8 @@ def accept(store, event):
         db.execute('''INSERT INTO runs VALUES(?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET status=excluded.status,message=excluded.message,
             seq=excluded.seq,updated_at=excluded.updated_at''',
-            (run, task, PROVIDERS[provider], '', state, messages[state], event['id'], stamp, stamp))
-        db.execute('''INSERT INTO hook_sessions VALUES(?,?,?,?,?,?,?)
-            ON CONFLICT(provider,session) DO UPDATE SET run_id=excluded.run_id,seq=excluded.seq,observed=excluded.observed''',
-            (provider, session, task, run, event['id'], stamp, stamp))
+            (run, task, PROVIDERS[provider], '', state, TOOL_MESSAGE if tool else messages[state], event['id'], stamp, stamp))
+        db.execute('''INSERT INTO hook_sessions VALUES(?,?,?,?,?,?,?,?)
+            ON CONFLICT(provider,session) DO UPDATE SET run_id=excluded.run_id,seq=excluded.seq,observed=excluded.observed,
+            task_version=excluded.task_version''',
+            (provider, session, task, run, event['id'], stamp, stamp, version))

@@ -1,16 +1,21 @@
 """Single, on-demand AI worker. No inference, downloads or external calls at idle."""
 from __future__ import annotations
 import json
+import logging
 import os
 import re
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
 from .env import env
 from .store import ident, now, Problem
+
+log = logging.getLogger(__name__)
+REPEAT_LOG_SECONDS = 600
 
 FOLDERS = ['Inbox','Security / CTFs','Security / Reverse Engineering','Programming / Algorithms','Learning / Neural Networks','Work / Learning','Applications / Learning','Personal']
 
@@ -65,14 +70,17 @@ class Worker:
         if self.thread: self.thread.join(timeout=3)
 
     def loop(self):
+        last, logged = None, 0.0
         while not self.stop_event.is_set():
             try:
                 from .agent_connections import drain
                 drain(self.store)
                 self.store.tick()
                 self.process_one()
-            except Exception:
-                pass
+            except Exception as error:
+                if repr(error) != last or time.monotonic() - logged >= REPEAT_LOG_SECONDS:
+                    log.exception('Background worker iteration failed; retrying')
+                    last, logged = repr(error), time.monotonic()
             self.stop_event.wait(3)
 
     def organize(self,text):

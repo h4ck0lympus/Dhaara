@@ -5,7 +5,7 @@ from pathlib import Path
 import shlex
 import shutil
 
-from .agent_hook import EVENTS
+from .agent_hook import EVENTS, SKIPPED
 
 SKILL = '''---
 name: dhaara
@@ -53,8 +53,7 @@ def build_plugin(folder, provider, inbox, python):
         command = f'"{python}" "%{variable}%/hooks/report.py" --inbox "{inbox}" --provider {provider}'
     else:
         command = f'{shlex.quote(python)} "${{{variable}}}/hooks/report.py" --inbox {shlex.quote(str(inbox))} --provider {provider}'
-    events = [e for e in EVENTS if not (provider == 'claude' and e == 'Interrupt')
-              and not (provider == 'codex' and e == 'StopFailure')]
+    events = [e for e in EVENTS if e not in SKIPPED[provider]]
     config = {'hooks': {event: [{'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]}] for event in events}}
     (folder / 'hooks' / 'hooks.json').write_text(json.dumps(config, indent=2) + '\n')
     return folder

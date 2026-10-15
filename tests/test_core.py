@@ -350,3 +350,24 @@ def test_transcribe_off_names_the_setup_commands(env):
     c,s,w=env;n=capture(c);r=c.post(f"/api/notes/{n['id']}/transcribe");assert r.status_code==409
     detail=r.json()['detail']
     for needle in ('pip install -e ".[speech]"','tools/download_speech_model.py base.en','DHARA_SPEECH_MODEL','CPU','the packaged build does not include speech','Your recording is saved'):assert needle in detail,detail
+
+def test_worker_loop_logs_errors_without_spam(env,monkeypatch,caplog):
+    import dhara.worker as module
+    c,store,worker=env
+    clock,errors,calls=[1000.0],iter(['locked']*5+['disk full']+['disk full']*3+[None]),[]
+    class Stop:
+        def is_set(self): return False
+        def wait(self,seconds):
+            clock[0]+=seconds
+            if len(calls)==4: clock[0]+=module.REPEAT_LOG_SECONDS
+            if len(calls)==10: raise SystemExit
+    def process_one():
+        calls.append(1); message=next(errors)
+        if message: raise RuntimeError(message)
+    monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
+    monkeypatch.setattr(worker,'process_one',process_one)
+    worker.stop_event=Stop()
+    with caplog.at_level('ERROR',logger='dhara.worker'),pytest.raises(SystemExit): worker.loop()
+    assert len(calls)==10
+    assert [r.exc_info[1].args[0] for r in caplog.records]==['locked','locked','disk full']
+    assert all(r.name=='dhara.worker' and r.levelname=='ERROR' for r in caplog.records)

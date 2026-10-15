@@ -13,11 +13,12 @@ import sys
 import time
 
 EVENTS = {
-    'UserPromptSubmit': 'working', 'PreToolUse': 'working',
+    'UserPromptSubmit': 'working', 'PreToolUse': 'tool',
     'PostToolUse': 'working', 'PermissionRequest': 'needs_input',
     'Stop': 'review', 'SessionEnd': 'ended', 'Interrupt': 'cancelled',
-    'StopFailure': 'failed',
+    'StopFailure': 'failed', 'PostToolUseFailure': 'working',
 }
+SKIPPED = {'claude': {'Interrupt'}, 'codex': {'StopFailure', 'PostToolUseFailure'}}
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS queue (
  id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL,

@@ -167,3 +167,194 @@ def test_api_requires_admin_local_client_and_exports_plugin(tmp_path, monkeypatc
     assert client.post(url, json={'enabled': False}, headers={'Authorization': 'Bearer ' + token}).status_code == 403
     remote = TestClient(app, client=('192.0.2.1', 1234))
     assert remote.post(url, json={'enabled': True}, headers=dict(client.headers)).status_code == 403
+
+
+def ago(seconds):
+    from datetime import datetime, timedelta, timezone
+    return (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat()
+
+
+def age(store, seconds):
+    with store.db() as db:
+        db.execute('UPDATE runs SET updated_at=?', (ago(seconds),))
+
+
+def queued(inbox):
+    with sqlite3.connect(inbox) as db:
+        db.row_factory = sqlite3.Row
+        return [dict(r) for r in db.execute('SELECT * FROM queue ORDER BY id')]
+
+
+def session_tasks(store, inbox, *sessions):
+    import hashlib
+    for s in sessions:
+        report(inbox, 'UserPromptSubmit', s)
+    tasks = {t['title'][-6:]: t for t in store.snapshot()['tasks']}
+    return [tasks[hashlib.sha256(s.encode()).hexdigest()[:6]] for s in sessions]
+
+
+BLANK = {'project': 'p', 'detail': '', 'next_action': '', 'status': 'active', 'priority': 'auto', 'due_at': None,
+         'not_before': None, 'estimate_minutes': None, 'dependencies': [], 'session_url': ''}
+
+
+def end_tracking(store):
+    for run in store.snapshot()['runs']:
+        if run['status'] in ('working', 'review'):
+            store.cancel_run(run['id'])
+
+
+def test_attention_uses_only_latest_run(connected):
+    store, home, inbox = connected
+    ids = {t: store.put_task({**BLANK, 'title': t})['id'] for t in 'ABCDFGH'}
+    with store.db() as db:
+        for run, status, created, updated in [('a1', 'review', 3600, 3600), ('a2', 'working', 0, 0),
+                                              ('b1', 'failed', 3600, 3600), ('b2', 'review', 60, 60),
+                                              ('c1', 'needs_input', 3600, 3600), ('c2', 'cancelled', 0, 0),
+                                              ('d1', 'cancelled', 3600, 3600),
+                                              ('f1', 'review', 60, 60), ('f2', 'working', 60, 0),
+                                              ('g1', 'needs_input', 600, 10), ('g2', 'working', 0, 0),
+                                              ('h1', 'failed', 3600, 3600), ('h2', 'cancelled', 0, 0)]:
+            db.execute("INSERT INTO runs VALUES(?,?,'x','',?,'',0,?,?)",
+                       (run, ids[run[0].upper()], status, ago(created), ago(updated)))
+        db.execute("UPDATE runs SET created_at=(SELECT created_at FROM runs WHERE id='f1') WHERE id='f2'")
+    snapshot = store.snapshot()
+    reasons = {t['title']: t['attention_reason'] for t in snapshot['attention']}
+    assert reasons == {'B': 'A result is ready for your review.', 'G': 'An agent needs your input.'}
+    assert {t['title'] for t in snapshot['available']} == {'B', 'C', 'D', 'H'}
+    store.cancel_run('b1')
+    with store.db() as db:
+        db.execute("UPDATE runs SET status='cancelled' WHERE id='a2'")
+    assert {t['title'] for t in store.snapshot()['attention']} == {'B', 'G'}
+
+
+def test_clean_session_end_closes_auto_task_and_replay_is_harmless(connected):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    report(inbox, 'Stop')
+    end_tracking(store)
+    report(inbox, 'UserPromptSubmit', 'codex-one', 'codex')
+    report(inbox, 'Interrupt', 'codex-one', 'codex')
+    report(inbox, 'SessionEnd')
+    report(inbox, 'SessionEnd', 'codex-one', 'codex')
+    rows = queued(inbox)
+    snapshot = store.snapshot()
+    assert [t['status'] for t in snapshot['tasks']] == ['done', 'done']
+    assert all(r['status'] == 'cancelled' for r in snapshot['runs'])
+    assert not snapshot['available'] and not snapshot['attention']
+    for event in rows:
+        accept(store, event)
+    accept(store, {**rows[-1], 'id': rows[-1]['id'] + 1000})
+    assert [t['status'] for t in store.snapshot()['tasks']] == ['done', 'done']
+
+
+def test_resumed_session_reopens_and_can_close_again(connected):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    report(inbox, 'Stop')
+    end_tracking(store)
+    report(inbox, 'SessionEnd')
+    assert store.snapshot()['tasks'][0]['status'] == 'done'
+    report(inbox, 'UserPromptSubmit')
+    snapshot = store.snapshot()
+    assert snapshot['tasks'][0]['status'] == 'active'
+    assert [r['status'] for r in snapshot['runs']] == ['working', 'cancelled']
+    report(inbox, 'Stop')
+    assert len(store.snapshot()['attention']) == 1
+    end_tracking(store)
+    report(inbox, 'SessionEnd')
+    snapshot = store.snapshot()
+    assert snapshot['tasks'][0]['status'] == 'done' and snapshot['tasks'][0]['version'] == 4
+
+
+def test_auto_close_bumps_version_so_stale_form_conflicts(connected):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    form = store.snapshot()['tasks'][0]
+    end_tracking(store)
+    report(inbox, 'SessionEnd')
+    assert store.snapshot()['tasks'][0]['status'] == 'done'
+    with pytest.raises(Problem) as error:
+        store.put_task({**form, 'title': 'Renamed'}, form['id'], form['version'])
+    assert error.value.status == 409
+
+
+def test_session_end_while_working_keeps_task(connected):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    report(inbox, 'SessionEnd')
+    snapshot = store.snapshot()
+    assert snapshot['tasks'][0]['status'] == 'active' and snapshot['runs'][0]['status'] == 'cancelled'
+    assert len(snapshot['available']) == 1
+
+
+@pytest.mark.parametrize('event,status', [('Stop', 'review'), ('StopFailure', 'failed'), ('PermissionRequest', 'cancelled')])
+def test_session_end_keeps_task_needing_the_user(connected, event, status):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    report(inbox, event)
+    report(inbox, 'SessionEnd')
+    snapshot = store.snapshot()
+    assert snapshot['tasks'][0]['status'] == 'active' and snapshot['runs'][0]['status'] == status
+    assert len(snapshot['attention']) == (status != 'cancelled')
+
+
+def test_session_end_never_closes_user_touched_task(connected):
+    store, home, inbox = connected
+    one, two, three, four = session_tasks(store, inbox, 'one', 'two', 'three', 'four')
+    end_tracking(store)
+    store.put_task({**one, 'title': 'Renamed'}, one['id'], one['version'])
+    store.focus(two['id'])
+    store.reminder(three['id'], '2099-01-01T00:00:00+00:00')
+    store.put_task({**BLANK, 'title': 'Deploy', 'dependencies': [four['id']]})
+    for session in ('one', 'two', 'three', 'four'):
+        report(inbox, 'SessionEnd', session)
+    snapshot = store.snapshot()
+    assert all(t['status'] == 'active' for t in snapshot['tasks'])
+    assert all(r['status'] == 'cancelled' for r in snapshot['runs'])
+
+
+def test_session_end_keeps_task_with_another_live_run(connected):
+    store, home, inbox = connected
+    task, = session_tasks(store, inbox, 'one')
+    end_tracking(store)
+    with store.db() as db:
+        db.execute("INSERT INTO runs VALUES('api',?,'x','','needs_input','',0,?,?)", (task['id'], ago(0), ago(0)))
+    report(inbox, 'SessionEnd', 'one')
+    snapshot = store.snapshot()
+    assert snapshot['tasks'][0]['status'] == 'active'
+    assert snapshot['attention'][0]['attention_reason'] == 'An agent needs your input.'
+
+
+def test_long_tool_call_uses_longer_stale_threshold(connected):
+    store, home, inbox = connected
+    report(inbox, 'PreToolUse', tool_name='Bash')
+    for seconds, stale in [(300, False), (31 * 60, True)]:
+        store.snapshot()
+        age(store, seconds)
+        snapshot = store.snapshot()
+        assert snapshot['runs'][0]['status'] == 'working' and snapshot['runs'][0]['stale'] is stale
+        assert len(snapshot['attention']) == stale
+    report(inbox, 'PostToolUse')
+    for seconds, stale in [(119, False), (121, True)]:
+        store.snapshot()
+        age(store, seconds)
+        assert store.snapshot()['runs'][0]['stale'] is stale
+    report(inbox, 'PreToolUse', tool_name='Bash')
+    report(inbox, 'PostToolUseFailure')
+    store.snapshot()
+    age(store, 121)
+    assert store.snapshot()['runs'][0]['stale'] is True
+    report(inbox, 'PreToolUse', tool_name='AskUserQuestion')
+    assert store.snapshot()['runs'][0]['status'] == 'needs_input'
+    assert 'PostToolUseFailure' in json.loads(config_path('claude', home).read_text())['hooks']
+    assert 'PostToolUseFailure' not in json.loads(config_path('codex', home).read_text())['hooks']
+
+
+def test_tool_start_after_finished_turn_starts_new_run(connected):
+    store, home, inbox = connected
+    report(inbox, 'UserPromptSubmit')
+    report(inbox, 'Stop')
+    report(inbox, 'PreToolUse', tool_name='Bash')
+    snapshot = store.snapshot()
+    assert [r['status'] for r in snapshot['runs']] == ['working', 'cancelled']
+    assert not snapshot['attention']
