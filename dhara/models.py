@@ -132,6 +132,7 @@ class SettingsInput(Input):
     companion: Literal['cat', 'dot', 'hidden'] | None = None
     companion_size: int | None = Field(default=None, ge=24, le=72)
     display_name: str | None = Field(default=None, max_length=60)
+    theme: Literal['dark', 'light', 'system'] | None = None
 
     @field_validator('display_name', mode='before')
     @classmethod

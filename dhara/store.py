@@ -105,7 +105,7 @@ CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, seq);
 CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
 '''
 
-DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': True, 'companion': 'cat', 'companion_size': 40, 'display_name': ''}
+DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': True, 'companion': 'cat', 'companion_size': 40, 'display_name': '', 'theme': 'dark'}
 
 class Store:
     NOTEBOOK = 'dhara.sqlite3'

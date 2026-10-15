@@ -111,6 +111,17 @@ def test_display_name_setting(env):
     assert old['display_name']==''
     assert old['observation_enabled'] is False and old['motion'] is False
 
+def test_theme_setting(env):
+    c,s,w=env
+    assert c.get('/api/state').json()['settings']['theme']=='dark'
+    for theme in ('light','system','dark'):
+        assert c.patch('/api/settings',json={'theme':theme}).json()['theme']==theme
+    assert c.patch('/api/settings',json={'theme':'sepia'}).status_code==422
+    assert c.patch('/api/settings',json={'theme':'light'}).status_code==200
+    assert c.patch('/api/settings',json={'motion':False}).json()['theme']=='light'
+    s.set_meta('settings',{'observation_enabled':False,'motion':False,'companion':'cat','companion_size':40})
+    assert c.get('/api/state').json()['settings']['theme']=='dark'
+
 def test_companion_saved_actions_preserve_available_order_and_pin(env):
  c,s,w=env
  pinned=task(c,title='Pinned synthetic task',priority='low',next_action='Keep this focus.')
