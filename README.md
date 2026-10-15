@@ -377,7 +377,6 @@ tools/sway_companion.py  Tiny experimental native Sway overlay (sprite: tools/as
 tools/transcribe.py      Isolated CPU transcription worker
 tools/doctor.py          Read-only setup diagnostics
 tests/                   Backend, helper and cutover regression tests
-experiments/ui-ab/       Variant A/B experiment evidence (history)
 ```
 
 No code has been installed on your device by creating this package. The downloaded source is the handoff point for running and continuing the project.

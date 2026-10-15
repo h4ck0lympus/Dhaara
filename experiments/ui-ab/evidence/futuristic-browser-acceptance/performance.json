@@ -1,6 +1,0 @@
-{
-  "samples": 53,
-  "mean_callback_ms": 3.04,
-  "p95_callback_ms": 4.2,
-  "environment": "Local sandboxed headless Chromium; native checks running concurrently; callback timing excludes GPU compositing"
-}

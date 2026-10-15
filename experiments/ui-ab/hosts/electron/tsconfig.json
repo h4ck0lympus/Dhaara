@@ -1,1 +1,0 @@
-{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","strict":true,"skipLibCheck":true,"outDir":"../../dist-host","rootDir":"../..","types":["node"]},"include":["*.mts","*.cts","../../frontend/src/model.ts","../../frontend/src/field.ts"]}

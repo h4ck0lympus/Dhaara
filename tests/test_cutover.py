@@ -4,8 +4,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
-DELETED = ['public', 'desktop', 'experiments/ui-ab/hosts/wry',
-           'experiments/ui-ab/hosts/companion', 'tests/now_state.test.cjs']
+DELETED = ['public', 'desktop', 'experiments', 'tests/now_state.test.cjs']
 
 # Quoted path literals only: a comment citing an old source ("port of desktop/src/main.rs:79")
 # is history, but a quoted path is something code would open at runtime.

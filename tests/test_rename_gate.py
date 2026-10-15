@@ -7,10 +7,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Paths that keep the old name: archives and evidence, this migration's specs and plans, the shims and the migration code
+# Paths that keep the old name: the shims and the migration code
 # with their tests and the historical v1 service-worker fixture.
 ALLOWED_PATHS = (
-    'experiments/',
     'noema/', 'dhara/env.py', 'electron/src/env.ts', 'electron/test/env.test.ts',
     'web/src/local/migrate.ts', 'web/src/local/migrate.test.ts', 'web/e2e/v1/sw.js',
     'tests/test_shims.py', 'tests/test_rename_gate.py',

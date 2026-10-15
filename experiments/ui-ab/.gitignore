@@ -1,6 +1,0 @@
-node_modules/
-dist/
-dist-host/
-.demo/
-hosts/wry/target/
-__pycache__/
