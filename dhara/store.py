@@ -98,10 +98,6 @@ CREATE TABLE IF NOT EXISTS tokens(
  id TEXT PRIMARY KEY, hash TEXT NOT NULL UNIQUE, name TEXT NOT NULL, scope TEXT NOT NULL,
  task_ids TEXT NOT NULL, created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS context_rules(
- id TEXT PRIMARY KEY, app TEXT NOT NULL, contains_text TEXT NOT NULL,
- task_id TEXT NOT NULL REFERENCES tasks(id)
-);
 CREATE INDEX IF NOT EXISTS note_time ON notes(updated_at);
 CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, seq);
 CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
@@ -145,6 +141,7 @@ class Store:
                 c.execute('ALTER TABLE hook_sessions ADD COLUMN task_version INTEGER NOT NULL DEFAULT 1')
             for key, value in {'settings': DEFAULT_SETTINGS, 'focus': None, 'context': None}.items():
                 c.execute('INSERT OR IGNORE INTO meta VALUES(?,?)', (key, jd(value)))
+            c.execute("UPDATE meta SET value='null' WHERE key='focus' AND json_extract(value,'$.source')='context'")
         self.path.chmod(0o600)
 
     @contextmanager
@@ -246,11 +243,11 @@ class Store:
         return self.put_task(fields, capture={'id': capture.capture_id, 'raw': capture.raw,
             'fingerprint': fingerprint, 'interpretation': explanation})
 
-    def focus(self, task_id, pinned=True, source='manual'):
+    def focus(self, task_id, pinned=True):
         if task_id:
             task = self.task(task_id)
             if task['status'] in ('done', 'parked'): raise Problem(400, 'Choose an unfinished, unparked task')
-        value = {'task_id': task_id, 'pinned': pinned, 'source': source, 'updated_at': now()} if task_id else None
+        value = {'task_id': task_id, 'pinned': pinned, 'source': 'manual', 'updated_at': now()} if task_id else None
         self.set_meta('focus', value)
         return value
 
@@ -397,19 +394,17 @@ class Store:
             c.execute("UPDATE reminders SET state='due' WHERE state='scheduled' AND at<=? AND task_id IN (SELECT id FROM tasks WHERE status!='done')", (now(),))
 
     def token(self, data):
-        for task_id in data.task_ids: self.task(task_id)
-        if data.scope == 'agent' and not data.task_ids: raise Problem(400, 'Choose at least one task for an agent token')
         token = secrets.token_urlsafe(32)
         tid = ident()
         with self.db() as c:
-            c.execute('INSERT INTO tokens VALUES(?,?,?,?,?,?)', (tid,hashlib.sha256(token.encode()).hexdigest(),data.name,data.scope,jd(data.task_ids),now()))
-        return {'id':tid,'token':token,'scope':data.scope,'task_ids':data.task_ids}
+            c.execute('INSERT INTO tokens VALUES(?,?,?,?,?,?)', (tid,hashlib.sha256(token.encode()).hexdigest(),data.name,data.scope,'[]',now()))
+        return {'id':tid,'token':token,'scope':data.scope}
 
     def auth_token(self, token):
         with self.db() as c:
             row = c.execute('SELECT * FROM tokens WHERE hash=?', (hashlib.sha256(token.encode()).hexdigest(),)).fetchone()
             if not row: return None
-            item = dict(row); item['task_ids'] = json.loads(item['task_ids']); return item
+            return dict(row)
 
     def settings(self, updates=None):
         result = {**DEFAULT_SETTINGS, **self.meta('settings')}
@@ -418,34 +413,13 @@ class Store:
             self.set_meta('settings', result)
             if not result['observation_enabled']:
                 self.set_meta('context', None)
-                focus = self.meta('focus')
-                if focus and focus['source']=='context': self.set_meta('focus',None)
         return result
-
-    def add_rule(self, data):
-        self.task(data.task_id)
-        if not data.app.strip() and not data.contains.strip(): raise Problem(400, 'Specify an application or title match')
-        item = {'id':ident(),'app':data.app.strip(),'contains_text':data.contains.strip(),'task_id':data.task_id}
-        with self.db() as c: c.execute('INSERT INTO context_rules VALUES(?,?,?,?)', tuple(item.values()))
-        return item
 
     def observe(self, data):
         if not self.settings()['observation_enabled']: raise Problem(409, 'Screen context is paused. Enable it explicitly in Settings.')
         value = data.model_dump()
-        value.update({'updated_at':now(), 'source':'window metadata', 'suggested_task_id':None})
-        with self.db() as c:
-            rules = [dict(r) for r in c.execute('SELECT * FROM context_rules')]
-        matched = set()
-        for r in rules:
-            if (not r['app'] or r['app'].lower() == data.app.lower()) and (not r['contains_text'] or r['contains_text'].lower() in data.title.lower()):
-                task = self.task(r['task_id'])
-                if task['status'] not in ('done','parked'): matched.add(r['task_id'])
-        if len(matched)==1: value['suggested_task_id'] = matched.pop()
+        value.update({'updated_at':now(), 'source':'window metadata'})
         self.set_meta('context', value)
-        focus = self.meta('focus')
-        if not focus or not focus.get('pinned'):
-            if value['suggested_task_id']: self.focus(value['suggested_task_id'],False,'context')
-            elif focus and focus.get('source')=='context': self.set_meta('focus',None)
         return value
 
     def snapshot(self, minutes=None):
@@ -462,7 +436,6 @@ class Store:
             runs = [dict(r) for r in c.execute('SELECT * FROM runs ORDER BY created_at DESC, rowid DESC')]
             reminders = [dict(r) for r in c.execute("SELECT * FROM reminders WHERE state!='dismissed' ORDER BY at")]
             notes = [dict(r) for r in c.execute('SELECT id,title,folder,project,task_id,mode,processing,error,version,created_at,updated_at FROM notes ORDER BY updated_at DESC')]
-            rules = [dict(r) for r in c.execute('SELECT * FROM context_rules')]
         by_id = {t['id']:t for t in tasks}
         by_task = {}
         for run in runs:
@@ -474,7 +447,6 @@ class Store:
         context = self.meta('context')
         if context:
             context['stale'] = elapsed(context['updated_at']) > 120
-            if context['stale'] and focus and focus['source']=='context': focus = None
         available, attention = [], []
         stamp = now()
         for task in tasks:
@@ -507,7 +479,7 @@ class Store:
         available.sort(key=rank); attention.sort(key=rank)
         future = sorted([t for t in tasks if t['status']!='done'],key=rank)
         return {'tasks':tasks,'notes':notes,'runs':runs,'reminders':reminders,'focus':focus,
-                'context':context,'context_rules':rules,'settings':self.settings(),
+                'context':context,'settings':self.settings(),
                 'available':available,'attention':attention,'up_next':future,'server_time':stamp}
 
     def export_data(self):

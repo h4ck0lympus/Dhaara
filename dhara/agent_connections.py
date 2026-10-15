@@ -57,17 +57,16 @@ def connection_status(store):
     with store.db() as db:
         sessions = [dict(r) for r in db.execute('SELECT provider, max(observed) AS last_seen FROM hook_sessions GROUP BY provider')]
     seen = {r['provider']: r['last_seen'] for r in sessions}
-    return {'connections': [{'provider': p, 'name': name, 'installed': p in installed,
-                             'mode': installed.get(p, {}).get('mode', 'hooks'),
+    return {'connections': [{'provider': p, 'name': name, 'installed': bool(installed.get(p, {}).get('commands')),
                              'last_seen': seen.get(p)} for p, name in PROVIDERS.items()]}
 
 
-def configure(store, provider, enabled, home=None, mode='hooks'):
+def configure(store, provider, enabled, home=None):
     with CONFIG_LOCK:
-        return _configure(store, provider, enabled, home, mode)
+        return _configure(store, provider, enabled, home)
 
 
-def _configure(store, provider, enabled, home=None, mode='hooks'):
+def _configure(store, provider, enabled, home=None):
     if provider not in PROVIDERS:
         raise Problem(404, 'Unknown agent')
     installed = store.meta('agent_connections') or {}
@@ -101,24 +100,21 @@ def _configure(store, provider, enabled, home=None, mode='hooks'):
             python = shutil.which('python3') or shutil.which('python')
             if not python:
                 raise Problem(409, 'A Python runtime is needed for agent hooks in this packaged build.')
-        from .agent_plugin import build_plugin
-        build_plugin(folder / 'plugins' / provider, provider, inbox.resolve(), python)
         import subprocess
         parts = [python, str(receiver.resolve()), '--inbox', str(inbox.resolve()), '--provider', provider]
         command = subprocess.list2cmdline(parts) if os.name == 'nt' else shlex.join(parts)
         events = [e for e in EVENTS if e not in SKIPPED[provider]]
-        for event in events if mode == 'hooks' else []:
+        for event in events:
             hooks.setdefault(event, []).append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
-        installed[provider] = {'commands': [command] if mode == 'hooks' else [], 'path': str(path),
-                               'mode': mode, 'since': previous.get('since', time.time())}
+        installed[provider] = {'commands': [command], 'path': str(path), 'since': previous.get('since', time.time())}
     else:
         installed.pop(provider, None)
-    if path.exists() and (owned or (enabled and mode == 'hooks')):
+    if path.exists() and (owned or enabled):
         backup = path.with_name(path.name + '.before-dhaara')
         if not backup.exists():
             shutil.copyfile(path, backup)
             backup.chmod(0o600)
-    if owned or (enabled and mode == 'hooks'):
+    if owned or enabled:
         atomic_json(path, config)
     store.set_meta('agent_connections', installed)
     return connection_status(store)
@@ -133,7 +129,8 @@ def drain(store):
         queue.row_factory = sqlite3.Row
         rows = queue.execute('SELECT * FROM queue ORDER BY id LIMIT 500').fetchall()
     for row in rows:
-        if row['provider'] in installed and row['observed'] >= installed[row['provider']].get('since', 0):
+        entry = installed.get(row['provider'], {})
+        if entry.get('commands') and row['observed'] >= entry.get('since', 0):
             accept(store, dict(row))
     if rows:
         with sqlite3.connect(inbox, timeout=.2) as queue:

@@ -15,7 +15,7 @@ export function DialogHost(): JSX.Element | null {
     case 'sketch': return <SketchDialog onClose={closeDialog} />;
     case 'outbox': return <OutboxDialog onClose={closeDialog} />;
     case 'note-history': return <NoteHistoryDialog onClose={closeDialog} noteId={request.noteId} />;
-    case 'settings': return <SettingsDialog onClose={closeDialog} section={request.section} />;
+    case 'settings': return <SettingsDialog onClose={closeDialog} />;
     case undefined: return null;
     default: {
       const unhandled: never = request;

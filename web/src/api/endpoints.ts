@@ -8,7 +8,6 @@ export const ENDPOINTS = {
   search: { method: 'GET', path: '/search', replay: 'read' },
   note: { method: 'GET', path: '/notes/:id', replay: 'read' },
   noteHistory: { method: 'GET', path: '/notes/:id/history', replay: 'read' },
-  tokens: { method: 'GET', path: '/tokens', replay: 'read' },
   capture: { method: 'POST', path: '/captures', replay: 'idempotent-by-key' },
   taskCapture: { method: 'POST', path: '/task-captures', replay: 'idempotent-by-key' },
   focus: { method: 'POST', path: '/focus', replay: 'once-per-action' },
@@ -23,10 +22,6 @@ export const ENDPOINTS = {
   reminderDismiss: { method: 'DELETE', path: '/reminders/:id', replay: 'once-per-action' },
   runEndTracking: { method: 'POST', path: '/runs/:id/end-tracking', replay: 'once-per-action' },
   settingsUpdate: { method: 'PATCH', path: '/settings', replay: 'once-per-action' },
-  ruleCreate: { method: 'POST', path: '/context/rules', replay: 'once-per-action' },
-  ruleDelete: { method: 'DELETE', path: '/context/rules/:id', replay: 'once-per-action' },
-  tokenCreate: { method: 'POST', path: '/tokens', replay: 'once-per-action' },
-  tokenRevoke: { method: 'DELETE', path: '/tokens/:id', replay: 'once-per-action' },
   sessionCreate: { method: 'POST', path: '/session', replay: 'once-per-action' },
   sessionDelete: { method: 'DELETE', path: '/session', replay: 'once-per-action' },
 } as const satisfies Record<string, EndpointSpec>;

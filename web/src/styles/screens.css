@@ -70,7 +70,6 @@
 .original-block { margin: 8px 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-small); background: #08090b; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .run-detail, .token-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
 .pill { overflow-wrap: anywhere; padding: 2px 10px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-dim); font-size: 12px; }
-.token-value { display: block; margin: 6px 0; overflow-wrap: anywhere; }
 
 @media (max-width: 649.98px) {
   .task-row { flex-wrap: wrap; gap: 8px; padding: 8px 2px; }
@@ -111,10 +110,6 @@
 .inline-task { margin-top: 18px; }
 .task-search-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
 .task-search-tools input { flex: 1; min-width: 140px; }
-.processing-settings { margin: 24px 0; }
-.processing-settings h3 { font-size: 17px; font-weight: 500; }
-.processing-settings details { padding: 16px 0; color: var(--text-dim); }
-.processing-settings dd { overflow-wrap: anywhere; margin: 6px 0 14px; font-size: 12px; }
 .notification-center { position: relative; }
 .notification-trigger { position: relative; min-width: 44px; min-height: 44px; display: grid; place-items: center; }
 .notification-badge { position: absolute; right: 0; top: 0; border-radius: 10px; background: #94b9f5; color: #0c0e11; padding: 1px 5px; font-size: 10px; }
@@ -135,14 +130,9 @@
   .inline-workspace .notes-layout { grid-template-columns: minmax(0,1fr); }
   .topbar-search span { display: none; }
 }
-.settings-jump { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 26px; }
-.settings-jump button { padding: 7px 10px; border: 1px solid var(--line); border-radius: 20px; font-size: 12px; color: var(--text-dim); }
-.settings-jump button:hover { color: var(--text); background: var(--surface-hover); }
-.settings-group-title { margin: 28px 0 8px; font-size: 17px; font-weight: 500; scroll-margin-top: 16px; }
-.settings-row p { max-width: 45ch; }
 .settings-dialog .inline-actions input { min-width: 0; max-width: 100%; }
 @media (max-width: 649.98px), (max-width: 1000px) and (orientation: portrait) {
-  .preview-row, .recent-notes > button, .settings-jump button { min-height: 44px; min-width: 44px; }
+  .preview-row, .recent-notes > button { min-height: 44px; min-width: 44px; }
 }
 
 .workspace { display: flex; flex-direction: column; min-height: 100dvh; }

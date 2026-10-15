@@ -2,7 +2,6 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { useSyncExternalStore } from 'react';
 import { ApiError, call } from '../api/client';
 import {
-  ContextRuleSchema,
   FocusSchema,
   NoteSchema,
   NoteSummarySchema,
@@ -13,8 +12,6 @@ import {
   SettingsSchema,
   SnapshotSchema,
   TaskSchema,
-  TokenCreatedSchema,
-  TokenSummarySchema,
   type Focus,
   type Note,
   type NoteSummary,
@@ -27,8 +24,6 @@ import {
   type Task,
   type TaskEditable,
   type TaskUpdateBody,
-  type TokenCreated,
-  type TokenSummary,
 } from '../api/schemas';
 import { fetchSnapshot } from '../api/session';
 import { connection } from '../domain/connection';
@@ -44,14 +39,11 @@ export const queryKeys = {
   note: (id: string) => ['note', id] as const,
   noteHistory: (id: string) => ['note', id, 'history'] as const,
   search: (q: string) => ['search', q] as const,
-  tokens: ['tokens'] as const,
 };
 
 const RevisionListSchema = z.array(RevisionSchema);
 const NoteSummaryListSchema = z.array(NoteSummarySchema);
-const TokenSummaryListSchema = z.array(TokenSummarySchema);
 type Ok = z.infer<typeof OkSchema>;
-type ContextRule = z.infer<typeof ContextRuleSchema>;
 type ReminderCreated = z.infer<typeof ReminderCreatedSchema>;
 
 let budget: number | null = null;
@@ -129,10 +121,6 @@ export function useSearch(q: string): UseQueryResult<NoteSummary[], ApiError> {
   return useQuery<NoteSummary[], ApiError>({ queryKey: queryKeys.search(q), queryFn: () => call('search', NoteSummaryListSchema, { query: { q } }), enabled: q !== '' });
 }
 
-export function useTokens(enabled: boolean): UseQueryResult<TokenSummary[], ApiError> {
-  return useQuery<TokenSummary[], ApiError>({ queryKey: queryKeys.tokens, queryFn: () => call('tokens', TokenSummaryListSchema), enabled });
-}
-
 function useApiMutation<V, R>(mutationFn: (variables: V) => Promise<R>, extraKeys: (variables: V) => QueryKey[] = () => []): UseMutationResult<R, ApiError, V> {
   const qc = useQueryClient();
   return useMutation<R, ApiError, V>({
@@ -206,23 +194,4 @@ export function useEndTracking(): UseMutationResult<Run, ApiError, { runId: stri
 
 export function useUpdateSettings(): UseMutationResult<Settings, ApiError, SettingsPatch> {
   return useApiMutation((patch: SettingsPatch) => call('settingsUpdate', SettingsSchema, { body: patch }));
-}
-
-export function useCreateRule(): UseMutationResult<ContextRule, ApiError, { app: string; contains: string; task_id: string }> {
-  return useApiMutation((v: { app: string; contains: string; task_id: string }) => call('ruleCreate', ContextRuleSchema, { body: v }));
-}
-
-export function useDeleteRule(): UseMutationResult<Ok, ApiError, { id: string }> {
-  return useApiMutation((v: { id: string }) => call('ruleDelete', OkSchema, { params: { id: v.id } }));
-}
-
-export function useCreateToken(): UseMutationResult<TokenCreated, ApiError, { name: string; scope: 'agent' | 'observer'; task_ids: string[] }> {
-  return useApiMutation(
-    (v: { name: string; scope: 'agent' | 'observer'; task_ids: string[] }) => call('tokenCreate', TokenCreatedSchema, { body: v }),
-    () => [queryKeys.tokens],
-  );
-}
-
-export function useRevokeToken(): UseMutationResult<Ok, ApiError, { id: string }> {
-  return useApiMutation((v: { id: string }) => call('tokenRevoke', OkSchema, { params: { id: v.id } }), () => [queryKeys.tokens]);
 }

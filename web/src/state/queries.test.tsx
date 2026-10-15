@@ -9,7 +9,7 @@ import { kvGet, kvPut } from '../local/db';
 import { flushOutbox } from '../local/outbox';
 import { makeSnapshot, makeTask } from '../test/fixtures';
 import { createQueryClient } from './queryClient';
-import { installRefetchTriggers, readCachedSnapshot, runFlush, useCreateToken, usePatchTask, useSetFocus, useSnapshot, useTimeBudget } from './queries';
+import { installRefetchTriggers, readCachedSnapshot, runFlush, usePatchTask, useSetFocus, useSnapshot, useTimeBudget } from './queries';
 
 vi.mock('../local/db', () => ({ kvGet: vi.fn(), kvPut: vi.fn(async () => {}) }));
 vi.mock('../local/outbox', () => ({ flushOutbox: vi.fn(async () => ({ sent: 0, stop: 'done' })) }));
@@ -173,14 +173,6 @@ describe('mutations', () => {
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(calls('PUT', '/tasks/task-1')).toBe(1);
     expect(calls('GET', '/tasks/task-1')).toBe(1);
-  });
-
-  it('token mutations also refresh the token list', async () => {
-    const spy = vi.spyOn(qc, 'invalidateQueries');
-    fetchMock.mockImplementation(async () => json({ id: 'tok-1', token: 'secret', scope: 'agent', task_ids: ['task-1'] }, 201));
-    const { result } = renderHook(() => useCreateToken(), { wrapper });
-    await act(() => result.current.mutateAsync({ name: 'codex', scope: 'agent', task_ids: ['task-1'] }));
-    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['snapshot'], ['tokens']]);
   });
 });
 

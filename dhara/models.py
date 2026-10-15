@@ -111,8 +111,7 @@ class RunEvent(Input):
 
 class TokenInput(Input):
     name: str = Field(min_length=1, max_length=80)
-    scope: Literal['agent', 'observer'] = 'agent'
-    task_ids: list[str] = Field(default_factory=list, max_length=50)
+    scope: Literal['observer'] = 'observer'
 
 class ContextInput(Input):
     device: str = Field(default='desktop', max_length=80)
@@ -120,11 +119,6 @@ class ContextInput(Input):
     title: str = Field(default='', max_length=1000)
     workspace: str = Field(default='', max_length=80)
     monitor: str = Field(default='', max_length=80)
-
-class RuleInput(Input):
-    app: str = Field(default='', max_length=160)
-    contains: str = Field(default='', max_length=200)
-    task_id: str
 
 class SettingsInput(Input):
     observation_enabled: bool | None = None
@@ -141,4 +135,3 @@ class SettingsInput(Input):
 
 class AgentConnectionInput(Input):
     enabled: bool
-    mode: Literal['hooks', 'plugin'] = 'hooks'

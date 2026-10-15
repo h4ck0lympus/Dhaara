@@ -10,8 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 from dhara.server import create_app
 from dhara.env import PREFIXES
-from dhara.store import Problem,now
-from dhara.models import TokenInput,ContextInput,RuleInput,RunEvent
+from dhara.store import Problem,Store,now
+from dhara.models import TokenInput,ContextInput,RunEvent
 from dhara.worker import validate_organized,basic_filing
 
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=')
@@ -268,24 +268,20 @@ def test_stale_agent_unknown(env):
  with s.db() as db:db.execute('UPDATE runs SET updated_at=? WHERE id=?',((datetime.now(timezone.utc)-timedelta(minutes=3)).isoformat(),r['id']))
  snap=s.snapshot();assert snap['runs'][0]['effective_status']=='unknown';assert not snap['available'];assert 'unknown' in snap['attention'][0]['attention_reason']
 
-def test_task_scoped_agent_cannot_read_other_data(env):
- c,s,w=env;a=task(c);b=task(c);tok=c.post('/api/tokens',json={'name':'agent','scope':'agent','task_ids':[a['id']]}).json()['token'];c.headers['Authorization']='Bearer '+tok
- assert c.get('/api/state').status_code==403;assert c.get('/api/agent/tasks/'+a['id']).status_code==200;assert c.get('/api/agent/tasks/'+b['id']).status_code==403;assert c.post('/api/runs',json={'task_id':b['id'],'agent':'bad'}).status_code==403
-
-def test_scope_agent_can_report_own_run(env):
- c,s,w=env;t=task(c);tok=s.token(TokenInput(name='a',task_ids=[t['id']]))['token'];c.headers['Authorization']='Bearer '+tok;r=run(c,t);assert event(c,r,1,'completed').status_code==200
-
 def test_revoked_token_fails(env):
- c,s,w=env;t=task(c);tok=s.token(TokenInput(name='a',task_ids=[t['id']]));c.delete('/api/tokens/'+tok['id']);c.headers['Authorization']='Bearer '+tok['token'];assert c.get('/api/agent/tasks/'+t['id']).status_code==401
+ c,s,w=env;tok=s.token(TokenInput(name='a'));c.delete('/api/tokens/'+tok['id']);c.headers['Authorization']='Bearer '+tok['token'];assert c.get('/api/companion').status_code==401
 
 def test_observation_off_by_default(env):
  c,s,w=env;assert not s.settings()['observation_enabled'];assert c.post('/api/context',json={'app':'firefox','title':'secret'}).status_code==409;assert s.meta('context') is None
 
-def test_context_mapping_and_pin(env):
- c,s,w=env;a=task(c);b=task(c);s.settings({'observation_enabled':True});s.add_rule(RuleInput(app='firefox',contains='LeetCode',task_id=a['id']));s.observe(ContextInput(app='firefox',title='LeetCode Two Sum',monitor='DP-1',workspace='3'));assert s.meta('focus')['task_id']==a['id'];s.focus(b['id'],True);s.observe(ContextInput(app='firefox',title='LeetCode'));assert s.meta('focus')['task_id']==b['id']
+def test_legacy_inferred_focus_cleared_on_start(env):
+ c,s,w=env;a=task(c);s.set_meta('focus',{'task_id':a['id'],'pinned':False,'source':'context'});assert Store(s.root).meta('focus') is None
 
-def test_unmatched_window_clears_only_inferred_focus(env):
- c,s,w=env;t=task(c);s.settings({'observation_enabled':True});s.add_rule(RuleInput(app='firefox',task_id=t['id']));s.observe(ContextInput(app='firefox'));s.observe(ContextInput(app='terminal'));assert s.meta('focus') is None
+def test_legacy_agent_token_is_refused(env):
+ c,s,w=env
+ with s.db() as db:db.execute("INSERT INTO tokens VALUES('old',?,'agent','agent','[]',?)",(hashlib.sha256(b'legacy').hexdigest(),now()))
+ t=task(c);c.headers['Authorization']='Bearer legacy'
+ assert c.get('/api/companion').status_code==403;assert c.post('/api/runs',json={'task_id':t['id'],'agent':'x'}).status_code==403
 
 def test_pause_clears_retained_context(env):
  c,s,w=env;s.settings({'observation_enabled':True});s.observe(ContextInput(title='private title'));s.settings({'observation_enabled':False});assert s.meta('context') is None

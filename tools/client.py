@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 class Client:
     def __init__(self,url='http://127.0.0.1:8765',token=None):
         self.url=url.rstrip('/');self.token=token or env('TOKEN','')
-        if not self.token: raise ValueError('Set DHARA_TOKEN to a task-scoped agent token or observer token from Settings.')
+        if not self.token: raise ValueError('Set DHARA_TOKEN to an observer token.')
         parsed=urlsplit(self.url)
         if parsed.scheme not in ('http','https') or not parsed.hostname or parsed.username or parsed.password:
             raise ValueError('Use a plain http(s) server origin, without embedded credentials.')

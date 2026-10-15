@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from dhara.agent_connections import configure, config_path, drain, accept
+from dhara.agent_connections import configure, config_path, connection_status, drain, accept
 from dhara.agent_hook import enqueue
 from dhara.store import Store, Problem
 
@@ -113,13 +113,15 @@ def test_invalid_config_preserved_and_disabled_queue_ignored(connected):
     assert path.read_text() == 'not json'
 
 
-def test_switch_to_plugin_removes_direct_hooks_without_disabling_ingestion(connected):
+def test_legacy_plugin_mode_reconnects_with_hooks(connected):
     store, home, inbox = connected
-    result = configure(store, 'codex', True, home, mode='plugin')
-    assert result['connections'][1]['mode'] == 'plugin'
-    assert json.loads(config_path('codex', home).read_text())['hooks'] == {}
-    report(inbox, 'Stop', provider='codex')
-    assert store.snapshot()['runs'][0]['status'] == 'review'
+    configure(store, 'codex', False, home)
+    store.set_meta('agent_connections', {**store.meta('agent_connections'), 'codex': {'commands': [], 'mode': 'plugin', 'since': 0}})
+    assert connection_status(store)['connections'][1]['installed'] is False
+    report(inbox, 'UserPromptSubmit', 'plugin', 'codex')
+    assert not store.snapshot()['tasks']
+    assert configure(store, 'codex', True, home)['connections'][1]['installed'] is True
+    assert json.loads(config_path('codex', home).read_text())['hooks']['Stop']
 
 
 def test_receiver_is_quiet_when_disconnected(connected):
@@ -131,26 +133,7 @@ def test_receiver_is_quiet_when_disconnected(connected):
     assert result.returncode == 0 and not result.stdout and not result.stderr
 
 
-@pytest.mark.parametrize('provider,variable,manifest', [
-    ('claude', 'CLAUDE_PLUGIN_ROOT', '.claude-plugin'),
-    ('codex', 'PLUGIN_ROOT', '.codex-plugin'),
-])
-def test_plugin_package_executes_without_source_imports(connected, provider, variable, manifest):
-    import os
-    store, home, inbox = connected
-    plugin = store.root / 'agent-hooks' / 'plugins' / provider
-    assert json.loads((plugin / manifest / 'plugin.json').read_text())['name'] == 'dhaara'
-    assert (plugin / 'skills' / 'dhaara' / 'SKILL.md').exists()
-    config = json.loads((plugin / 'hooks' / 'hooks.json').read_text())
-    command = config['hooks']['Stop'][0]['hooks'][0]['command']
-    result = subprocess.run(command, shell=True, env={**os.environ, variable: str(plugin)},
-                            input=json.dumps({'hook_event_name': 'Stop', 'session_id': 'plugin', 'cwd': '/project'}),
-                            text=True, capture_output=True)
-    assert result.returncode == 0 and not result.stdout and not result.stderr
-    assert store.snapshot()['runs'][0]['status'] == 'review'
-
-
-def test_api_requires_admin_local_client_and_exports_plugin(tmp_path, monkeypatch):
+def test_api_requires_admin_local_client(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from dhara.server import create_app
     monkeypatch.delenv('CODEX_HOME', raising=False)
@@ -161,8 +144,6 @@ def test_api_requires_admin_local_client_and_exports_plugin(tmp_path, monkeypatc
     assert client.post(url, json={'enabled': True}).status_code == 401
     client.headers['Authorization'] = 'Bearer test-admin-token-for-agent-hooks'
     assert client.post(url, json={'enabled': True}).status_code == 200
-    result = client.get(url + '/plugin')
-    assert result.status_code == 200 and result.headers['content-type'] == 'application/zip'
     token = client.post('/api/tokens', json={'name': 'Observer', 'scope': 'observer'}).json()['token']
     assert client.post(url, json={'enabled': False}, headers={'Authorization': 'Bearer ' + token}).status_code == 403
     remote = TestClient(app, client=('192.0.2.1', 1234))

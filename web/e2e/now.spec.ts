@@ -54,23 +54,11 @@ test('Empty workspace has no agent setup or all-complete claim', async ({ page, 
   expect((await serverState(dhara)).tasks).toHaveLength(0);
 });
 
-test('Inferred focus is separately labeled', async ({ page, context, dhara }) => {
-  await openKind(page, context, dhara, 'available');
-  const chosen = (await serverState(dhara)).tasks.find(t => t.title === 'Study allocator cleanup')!;
-  await dhara.api('PATCH', '/api/settings', { observation_enabled: true });
-  await dhara.api('POST', '/api/context/rules', { app: 'dhara-fixture', task_id: chosen.id });
-  await dhara.api('POST', '/api/context', { app: 'dhara-fixture', title: 'Fixture window metadata' });
-  await page.reload();
-  await expect(page.getByRole('region', { name: 'Current focus' })).toContainText('Inferred from window metadata');
-});
-
 test('Observer metadata never overrides a pinned focus', async ({ page, context, dhara }) => {
   await openKind(page, context, dhara, 'available');
   const tasks = (await serverState(dhara)).tasks;
-  const chosen = tasks.find(t => t.title === 'Study allocator cleanup')!;
   const pinned = tasks.find(t => t.title === 'Read the ownership chapter')!;
   await dhara.api('PATCH', '/api/settings', { observation_enabled: true });
-  await dhara.api('POST', '/api/context/rules', { app: 'dhara-fixture', task_id: chosen.id });
   await dhara.api('POST', '/api/focus', { task_id: pinned.id, pinned: true });
   await dhara.api('POST', '/api/context', { app: 'dhara-fixture', title: 'Fixture window metadata' });
   await page.reload();
@@ -164,19 +152,6 @@ test('Saved task is visible and reopenable from Now after reload; pin is preserv
   await expect(page.getByRole('dialog', { name: 'Practice LeetCode' })).toContainText('Practice LeetCode');
   expect((await serverState(dhara)).focus).toMatchObject({ task_id: pinned.id, pinned: true });
   await expect(page.getByRole('region', { name: 'Current focus' })).toContainText('Pinned by you');
-});
-
-test('Agent setup creates a real task-scoped token', async ({ page, context, dhara }) => {
-  await openKind(page, context, dhara, 'available');
-  await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
-  const dialog = page.getByRole('dialog', { name: 'Settings' });
-  await dialog.getByText('Advanced: agent & observer tokens').click();
-  await dialog.getByLabel('Label').fill('Isolated UI token');
-  const first = (await serverState(dhara)).tasks[0];
-  await dialog.getByLabel('Allowed tasks · agent tokens').selectOption([first.id]);
-  await dialog.getByRole('button', { name: 'Create token' }).click();
-  await expect(dialog.locator('.token-value')).toHaveText(/\S{20,}/);
-  await expect.poll(async () => (await dhara.api<{ name: string; scope: string }[]>('GET', '/api/tokens')).map(t => [t.name, t.scope])).toEqual([['Isolated UI token', 'agent']]);
 });
 
 test('No duration, deadline or progress is fabricated', async ({ page, dhara }) => {

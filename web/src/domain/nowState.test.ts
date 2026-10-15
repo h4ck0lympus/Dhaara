@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Focus, Snapshot } from '../api/schemas';
 import { makeNoteSummary, makeRun, makeSnapshot, makeTask } from '../test/fixtures';
-import { focusKind, nowState, observationStatus } from './nowState';
+import { focusKind, nowState } from './nowState';
 
 const focus = (task_id: string, pinned: boolean, source = 'manual'): NonNullable<Focus> =>
   ({ task_id, pinned, source, updated_at: '2026-10-08T11:00:00+00:00' });
-const context = (stale: boolean): NonNullable<Snapshot['context']> => ({
-  device: 'desktop', app: 'fixture', title: 'Fixture window', workspace: '1', monitor: 'eDP-1',
-  updated_at: '2026-10-08T11:59:00+00:00', source: 'window metadata', suggested_task_id: null, stale,
-});
-const settings = (observation_enabled: boolean) => ({ ...makeSnapshot().settings, observation_enabled });
 
 describe('nowState (verbatim port of the legacy Now-state cases)', () => {
   it('empty connected workspace is new, not complete', () => {
@@ -89,10 +84,9 @@ describe('nowState (verbatim port of the legacy Now-state cases)', () => {
     expect(nowState(makeSnapshot({ tasks: [t], available: [t] }), false).alternatives).toHaveLength(0);
   });
 
-  it('manual, inferred and pinned focus have different labels', () => {
+  it('manual and pinned focus have different labels', () => {
     expect(focusKind(focus('t', false, 'manual'))).toBe('Selected by you');
-    expect(focusKind(focus('t', false, 'context'))).toBe('Inferred from window metadata');
-    expect(focusKind(focus('t', true, 'context'))).toBe('Pinned by you');
+    expect(focusKind(focus('t', true))).toBe('Pinned by you');
   });
 
   it('deriving suggestions never changes a pinned focus', () => {
@@ -110,12 +104,6 @@ describe('nowState (verbatim port of the legacy Now-state cases)', () => {
   it('time filter never supplies an estimate for a focused task', () => {
     const t = makeTask('focus');
     expect(nowState(makeSnapshot({ tasks: [t], focus: focus(t.id, false) }), true, 15).primary).toBeNull();
-  });
-
-  it('observation enabled without fresh metadata is not active capture', () => {
-    expect(observationStatus(makeSnapshot())).toBe('Observation paused');
-    expect(observationStatus(makeSnapshot({ settings: settings(true) }))).toMatch(/no recent observer report/);
-    expect(observationStatus(makeSnapshot({ settings: settings(true), context: context(true) }))).toMatch(/no recent observer report/);
   });
 
   it('actionable pin is continued when no competing available item exists', () => {

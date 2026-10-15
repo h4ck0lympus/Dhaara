@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { Settings, SettingsPatch, TokenCreated } from '../api/schemas';
-import { observationStatus } from '../domain/nowState';
+import { useEffect, useRef, useState } from 'react';
+import type { Settings, SettingsPatch } from '../api/schemas';
+import { useOutboxCount } from '../local/outbox';
 import { openDialog } from '../shell/dialogs';
 import { NOTIFICATIONS_KEY, notificationsOptedIn } from '../shell/notifications';
-import { useCreateRule, useCreateToken, useDeleteRule, useRevokeToken, useSnapshot, useTokens, useUpdateSettings } from '../state/queries';
+import { useSnapshot, useUpdateSettings } from '../state/queries';
 import { S } from '../strings';
 import { Dialog } from '../ui/Dialog';
 import { messageOf, toast } from '../ui/Toast';
@@ -13,41 +12,25 @@ import { AgentConnections } from '../components/AgentConnections';
 
 export const DISPLAY_NAME_MAX = 60;
 export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;
-export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';
 export const SETTINGS_TEXT = {
   title: 'Settings',
   offline: 'Settings load from your server. Reconnect to change them.',
-  nameSaved: 'Name saved.',
-  tokenOnce: 'Copy this token now. It will not be displayed again.',
 } as const;
 
 function pick(source: Settings, changes: SettingsPatch): SettingsPatch {
   return Object.fromEntries(Object.keys(changes).map(key => [key, source[key as keyof SettingsPatch]])) as SettingsPatch;
 }
 
-export function SettingsDialog({ onClose, section }: { onClose: () => void; section?: 'agents' }) {
+export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const snapshot = useSnapshot().data ?? null;
-  const queryClient = useQueryClient();
   const [form, setForm] = useState<Settings | null>(snapshot?.settings ?? null);
   const [name, setName] = useState(snapshot?.settings.display_name ?? '');
   const savedSize = useRef(snapshot?.settings.companion_size ?? 40);
   const [error, setError] = useState<string | null>(null);
   const [notify, setNotify] = useState(notificationsOptedIn);
-  const [agentsOpen, setAgentsOpen] = useState(section === 'agents');
-  const [ruleError, setRuleError] = useState<string | null>(null);
-  const [tokenError, setTokenError] = useState<string | null>(null);
-  const [created, setCreated] = useState<TokenCreated | null>(null);
-  const [scope, setScope] = useState<'agent' | 'observer'>('agent');
-  const [taskIds, setTaskIds] = useState<string[]>([]);
   const sizeInput = useRef<HTMLInputElement>(null);
-  const agents = useRef<HTMLDivElement>(null);
-  const tokenLabel = useRef<HTMLInputElement>(null);
   const update = useUpdateSettings();
-  const createRule = useCreateRule();
-  const deleteRule = useDeleteRule();
-  const createToken = useCreateToken();
-  const revokeToken = useRevokeToken();
-  const tokens = useTokens(agentsOpen);
+  const queued = useOutboxCount();
 
   useEffect(() => {
     if (form !== null || !snapshot) return;
@@ -55,14 +38,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
     setName(snapshot.settings.display_name);
     savedSize.current = snapshot.settings.companion_size;
   }, [form, snapshot]);
-
-  useEffect(() => {
-    if (section !== 'agents') return;
-    const frame = requestAnimationFrame(() => {
-      agents.current?.scrollIntoView?.({ block: 'nearest' });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [section]);
 
   async function patch(changes: SettingsPatch): Promise<boolean> {
     const previous = form;
@@ -92,13 +67,10 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
     return () => input.removeEventListener('change', commit);
   }, [form?.companion_size]);
 
-  async function saveName(event: FormEvent) {
-    event.preventDefault();
+  async function saveName() {
     const value = name.trim();
-    if (await patch({ display_name: value })) {
-      setName(value);
-      toast(SETTINGS_TEXT.nameSaved);
-    }
+    setName(value);
+    if (form && value !== form.display_name) await patch({ display_name: value });
   }
 
   async function toggleNotifications() {
@@ -120,212 +92,64 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
     }
   }
 
-  async function addRule(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const element = event.currentTarget;
-    const data = new FormData(element);
-    setRuleError(null);
-    try {
-      await createRule.mutateAsync({ app: String(data.get('app') ?? ''), contains: String(data.get('window_contains') ?? ''), task_id: String(data.get('task_id') ?? '') });
-      element.reset();
-    } catch (caught) {
-      setRuleError(messageOf(caught));
-    }
-  }
-
-  async function removeRule(id: string) {
-    setRuleError(null);
-    try {
-      await deleteRule.mutateAsync({ id });
-    } catch (caught) {
-      setRuleError(messageOf(caught));
-    }
-  }
-
-  async function addToken(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const element = event.currentTarget;
-    const data = new FormData(element);
-    setTokenError(null);
-    setCreated(null);
-    try {
-      const result = await createToken.mutateAsync({
-        name: String(data.get('name') ?? '').trim(),
-        scope,
-        task_ids: scope === 'agent' ? taskIds : [],
-      });
-      const cache = queryClient.getMutationCache();
-      cache.findAll({ predicate: mutation => mutation.state.data === result }).forEach(mutation => cache.remove(mutation));
-      createToken.reset();
-      setCreated(result);
-      element.reset();
-      setTaskIds([]);
-    } catch (caught) {
-      setTokenError(messageOf(caught));
-    }
-  }
-
-  async function revoke(id: string) {
-    setTokenError(null);
-    try {
-      await revokeToken.mutateAsync({ id });
-    } catch (caught) {
-      setTokenError(messageOf(caught));
-    }
-  }
-
-  const needsTask = scope === 'agent' && taskIds.length === 0;
-  const tasks = snapshot?.tasks ?? [];
   const capabilities = snapshot?.capabilities;
-  const taskTitle = (id: string) => tasks.find(task => task.id === id)?.title ?? 'Unavailable task';
 
   return (
-    <Dialog title={SETTINGS_TEXT.title} onRequestClose={onClose} className="settings-dialog">
-      <nav className="settings-jump" aria-label="Settings sections">
-        {['Appearance', 'Notifications', 'Processing', 'Privacy', 'Agents', 'Data'].map(label => <button type="button" key={label} onClick={() => document.getElementById(`settings-${label.toLowerCase()}`)?.scrollIntoView({ block: 'start', behavior: 'instant' })}>{label}</button>)}
-      </nav>
-      <h3 className="settings-group-title" id="settings-appearance">Appearance &amp; companion</h3>
+    <Dialog title={SETTINGS_TEXT.title} onRequestClose={() => { void saveName(); onClose(); }} className="settings-dialog">
       {form ? (
         <>
-          <form className="settings-row" onSubmit={event => void saveName(event)}>
-            <div>
-              <label htmlFor="settings-display-name">Your name</label>
-              <p>Shown in the Overview greeting. Leave it empty for no name.</p>
-            </div>
-            <div className="inline-actions">
-              <input id="settings-display-name" value={name} maxLength={DISPLAY_NAME_MAX} autoComplete="name" onChange={event => setName(event.target.value)} />
-              <button type="submit" className="secondary" disabled={update.isPending}>Save name</button>
-            </div>
+          <form className="settings-row" onSubmit={event => { event.preventDefault(); void saveName(); }}>
+            <label htmlFor="settings-display-name">Name</label>
+            <input id="settings-display-name" value={name} maxLength={DISPLAY_NAME_MAX} autoComplete="name" onChange={event => setName(event.target.value)} onBlur={() => void saveName()} />
           </form>
+          <label className="settings-row">
+            Motion
+            <input type="checkbox" checked={form.motion} onChange={event => void patch({ motion: event.target.checked })} />
+          </label>
           <div className="settings-row">
-            <div>Slow background motion<p>Gentle motion. Pauses when hidden; respects reduced motion.</p></div>
-            <input type="checkbox" aria-label="Enable background motion" checked={form.motion} onChange={event => void patch({ motion: event.target.checked })} />
-          </div>
-          <div className="settings-row">
-            <div>Companion<p>Your desktop kitten stays separate from this window. Requires the native companion to be running.</p></div>
-            <select aria-label="Companion mode" value={form.companion} onChange={event => void patch({ companion: event.target.value as Settings['companion'] })}>
-              {(['cat', 'dot', 'hidden'] as const).map(mode => <option key={mode} value={mode}>{mode}</option>)}
-            </select>
-          </div>
-          <div className="settings-row">
-            <div>Companion size<p>Choose a comfortable size. Currently {form.companion_size} px.</p></div>
-            <input
-              ref={sizeInput}
-              type="range"
-              aria-label="Companion size"
-              min={COMPANION_SIZE_MIN}
-              max={COMPANION_SIZE_MAX}
-              value={form.companion_size}
-              onChange={event => {
-                const value = Number(event.target.value);
-                setForm(current => current && { ...current, companion_size: value });
-              }}
-            />
+            Cat
+            <div className="inline-actions">
+              <select aria-label="Companion mode" value={form.companion} onChange={event => void patch({ companion: event.target.value as Settings['companion'] })}>
+                {(['cat', 'dot', 'hidden'] as const).map(mode => <option key={mode} value={mode}>{mode}</option>)}
+              </select>
+              <input
+                ref={sizeInput}
+                type="range"
+                aria-label="Companion size"
+                min={COMPANION_SIZE_MIN}
+                max={COMPANION_SIZE_MAX}
+                value={form.companion_size}
+                onChange={event => {
+                  const value = Number(event.target.value);
+                  setForm(current => current && { ...current, companion_size: value });
+                }}
+              />
+            </div>
           </div>
         </>
       ) : (
         <p className="notice" role="status">{SETTINGS_TEXT.offline}</p>
       )}
-      {error && <p className="field-error" role="alert">{error}</p>}
-      <h3 className="settings-group-title" id="settings-notifications">Notifications</h3>
-      <div className="settings-row">
-        <div>Desktop notifications<p>Agent input, review results and due reminders. Delivered while dhaara is running.</p></div>
-        <button type="button" className="secondary" onClick={() => void toggleNotifications()}>{notify ? 'Disable notifications' : 'Enable notifications'}</button>
-      </div>
-      {capabilities && (
-        <>
-          <section className="processing-settings" aria-label="Capture and processing">
-            <h3 id="settings-processing" className="settings-group-title">Capture &amp; processing</h3>
-            <div className="settings-row"><div>Voice transcription<p>{capabilities.speech ? 'On this device · Ready' : 'Not configured · You can still save recordings'}</p></div><span className="pill">{capabilities.speech ? 'Available' : 'Off'}</span></div>
-            <div className="settings-row"><div>Note cleanup<p>{capabilities.organizer ? 'Local processing · Original text is preserved' : 'Your original wording is preserved'}</p></div><span className="pill">{capabilities.organizer ? 'Available' : 'Off'}</span></div>
-            <details><summary>Advanced details</summary><p className="small muted">Models are optional and never downloaded automatically.</p><dl><dt>Note model</dt><dd>{capabilities.model || 'Not configured'}</dd><dt>Speech model</dt><dd>{capabilities.speech_model || 'Not configured'}</dd></dl></details>
-          </section>
-        </>
-      )}
-      <h3 className="settings-group-title" id="settings-privacy">Privacy &amp; context</h3>
-      {form && <>
-          <div className="settings-row">
-            <div>Screen context<p>Off by default. The Sway helper reports window metadata only. No screenshot analysis is implemented in this build.</p></div>
-            <input type="checkbox" aria-label="Enable window context" checked={form.observation_enabled} onChange={event => void patch({ observation_enabled: event.target.checked })} />
-          </div>
-          <p className="subtle-line" id="observation-status">{observationStatus(snapshot)}. Window metadata only; no screenshot observation is implemented.</p>
+      <label className="settings-row">
+        Alerts
+        <input type="checkbox" checked={notify} onChange={() => void toggleNotifications()} />
+      </label>
+      {capabilities && <>
+        <div className="settings-row">Note AI<span className="pill">{(capabilities.organizer && capabilities.model) || 'Off'}</span></div>
+        <div className="settings-row">Voice<span className="pill">{capabilities.speech ? 'Ready' : 'Off'}</span></div>
       </>}
-      <details className="settings-section">
-        <summary>Window-to-task rules</summary>
-        <p className="subtle-line">A known application or title maps to a task. Unmatched windows do not become made-up focus claims. Pinned focus wins.</p>
-        <ul className="history-list">
-          {(snapshot?.context_rules ?? []).map(rule => (
-            <li key={rule.id} className="inline-actions">
-              <span>{rule.app || 'Any app'} / {rule.contains_text || 'Any title'} → {taskTitle(rule.task_id)}</span>
-              <button type="button" className="quiet-button" onClick={() => void removeRule(rule.id)}>Remove</button>
-            </li>
-          ))}
-        </ul>
-        <form className="settings-form" onSubmit={event => void addRule(event)}>
-          <div><label htmlFor="rule-app">App ID</label><input id="rule-app" name="app" maxLength={160} placeholder="org.mozilla.firefox" /></div>
-          <div><label htmlFor="rule-contains">Title contains</label><input id="rule-contains" name="window_contains" maxLength={200} placeholder="Two Sum" /></div>
-          <div className="full">
-            <label htmlFor="rule-task">Task</label>
-            <select id="rule-task" name="task_id" required>
-              {tasks.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
-            </select>
-          </div>
-          <div className="full">
-            <button type="submit" className="secondary" disabled={tasks.length === 0 || createRule.isPending}>Add rule</button>
-            {ruleError && <p className="field-error" role="alert">{ruleError}</p>}
-          </div>
-        </form>
-      </details>
-      <h3 className="settings-group-title" id="settings-agents">Agents</h3>
-      <div ref={agents}><AgentConnections /></div>
-      <details className="settings-section" onToggle={event => setAgentsOpen(event.currentTarget.open)}>
-        <summary>Advanced: agent &amp; observer tokens</summary>
-        <p className="subtle-line">An agent token can report runs and read only the tasks you choose. Observer tokens may report window context and read the small companion summary. Never paste tokens into notes.</p>
-        {tokens.isError && <p className="field-error" role="alert">{tokens.error.message}</p>}
-        <ul className="history-list">
-          {(tokens.data ?? []).map(token => (
-            <li key={token.id} className="inline-actions">
-              <span>{token.name} · {token.scope}</span>
-              <button type="button" className="quiet-button" onClick={() => void revoke(token.id)}>Revoke</button>
-            </li>
-          ))}
-        </ul>
-        <form className="settings-form" onSubmit={event => void addToken(event)}>
-          <div><label htmlFor="token-name">Label</label><input ref={tokenLabel} id="token-name" name="name" required maxLength={80} placeholder="Local coding agent" /></div>
-          <div>
-            <label htmlFor="token-scope">Access</label>
-            <select id="token-scope" value={scope} onChange={event => setScope(event.target.value as 'agent' | 'observer')}>
-              <option value="agent">Task-scoped agent</option>
-              <option value="observer">Window observer</option>
-            </select>
-          </div>
-          <div className="full">
-            <label htmlFor="token-tasks">Allowed tasks · agent tokens</label>
-            <select id="token-tasks" multiple size={3} disabled={scope !== 'agent'} value={taskIds} onChange={event => setTaskIds(Array.from(event.target.selectedOptions, option => option.value))}>
-              {tasks.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}
-            </select>
-          </div>
-          <div className="full">
-            <button type="submit" className="secondary" disabled={createToken.isPending || needsTask}>Create token</button>
-            {tokenError && <p className="field-error" role="alert">{tokenError}</p>}
-            {needsTask && <p className="field-error" role="status">{AGENT_TASK_REQUIRED}</p>}
-          </div>
-        </form>
-        {created && (
-          <div className="notice" role="status">
-            <p>{SETTINGS_TEXT.tokenOnce}</p>
-            <code className="token-value">{created.token}</code>
-          </div>
-        )}
-        <p className="subtle-line">Use the generated task-scoped token with tools/agent.py. The wrapper tracks only the command you explicitly start; it does not attach to arbitrary browser sessions. See the README for the exact command and token environment setup.</p>
-      </details>
-      <h3 className="settings-group-title" id="settings-data">Your data</h3>
-      <p className="subtle-line">One SQLite database and an attachments directory on the server. This build does not automatically deploy or synchronize independent servers.</p>
+      <AgentConnections />
+      {form && (
+        <label className="settings-row">
+          Screen
+          <input type="checkbox" checked={form.observation_enabled} onChange={event => void patch({ observation_enabled: event.target.checked })} />
+        </label>
+      )}
+      {error && <p className="field-error" role="alert">{error}</p>}
       <div className="inline-actions">
         <a href="/api/export" className="secondary" download>Export notes &amp; tasks</a>
-        <button type="button" className="quiet-button" onClick={() => openDialog({ kind: 'outbox' })}>Local capture queue</button>
+        {queued > 0 && <button type="button" className="quiet-button" onClick={() => openDialog({ kind: 'outbox' })}>Local capture queue</button>}
       </div>
-      <p className="subtle-line">Version 0.1.0 · local-first development build</p>
     </Dialog>
   );
 }

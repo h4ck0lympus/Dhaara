@@ -80,7 +80,6 @@ export function makeSnapshot(changes: Partial<Snapshot> = {}): Snapshot {
     reminders: [],
     focus: null,
     context: null,
-    context_rules: [],
     settings: { observation_enabled: false, motion: false, companion: 'cat', companion_size: 40, display_name: '' },
     available: [],
     attention: [],

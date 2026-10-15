@@ -78,12 +78,7 @@
 
 .history-list, .outbox-list { display: flex; flex-direction: column; gap: 14px; list-style: none; margin: 0; padding: 0; }
 .settings-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.settings-row p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
-.settings-section { margin-top: 16px; }
-.settings-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-.settings-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.settings-form .full { grid-column: 1 / -1; }
-.token-value { display: block; margin-top: 8px; padding: 8px; overflow-wrap: anywhere; user-select: all; }
+.settings-row .inline-actions { margin-top: 0; }
 
 @media (min-width: 650px) and (max-width: 999.98px) and (orientation: landscape) {
   .notes-layout { grid-template-columns: 155px minmax(0, 1fr); gap: 20px; }
@@ -100,5 +95,4 @@
   .writing-canvas > textarea { min-height: min(calc(100dvh - 340px), 200px); font-size: 16px; }
   .canvas-tools { align-items: flex-end; }
   .note-page { padding: 16px; }
-  .settings-form { grid-template-columns: 1fr; }
 }

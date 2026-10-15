@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { createStore } from '../state/store';
 
 export type DialogRequest =
-  | { kind: 'task'; id: string } | { kind: 'task-capture' } | { kind: 'settings'; section?: 'agents' }
+  | { kind: 'task'; id: string } | { kind: 'task-capture' } | { kind: 'settings' }
   | { kind: 'outbox' } | { kind: 'note-history'; noteId: string } | { kind: 'sketch' };
 
 const store = createStore<DialogRequest | null>(null);

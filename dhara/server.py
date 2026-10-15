@@ -108,7 +108,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         authorization=request.headers.get('authorization','')
         raw_token=authorization[7:] if authorization.startswith('Bearer ') else (request.cookies.get(SESSION_COOKIE) or request.cookies.get(LEGACY_SESSION_COOKIE,''))   # rename-shim: an old cookie signs in until it expires
         if raw_token:
-            if secrets.compare_digest(raw_token.encode(),admin.encode()): identity={'scope':'admin','task_ids':[]}
+            if secrets.compare_digest(raw_token.encode(),admin.encode()): identity={'scope':'admin'}
             else: identity=store.auth_token(raw_token)
         request.state.identity=identity
         path=request.url.path
@@ -117,9 +117,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             if not authorization and request.method not in ('GET','HEAD') and not has_request_marker(request):
                 return JSONResponse({'detail':'Missing same-origin request marker'},status_code=403)
             if identity['scope']!='admin':
-                allowed=(identity['scope']=='agent' and (path=='/api/runs' or path.startswith('/api/runs/') or path.startswith('/api/agent/tasks/')))
-                allowed=allowed or (identity['scope']=='observer' and path in ('/api/context','/api/companion'))
-                if not allowed: return JSONResponse({'detail':'This token is not authorized for that resource'},status_code=403)
+                if not (identity['scope']=='observer' and path in ('/api/context','/api/companion')): return JSONResponse({'detail':'This token is not authorized for that resource'},status_code=403)
         response=await call_next(request)
         response.headers['X-Content-Type-Options']='nosniff'
         response.headers['Referrer-Policy']='no-referrer'
@@ -128,11 +126,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         if path.startswith('/api/'): response.headers['Cache-Control']='no-store'
         return response
-
-    def task_scope(request,task_id):
-        identity=request.state.identity
-        if identity['scope']=='admin': return
-        if task_id not in identity['task_ids']: raise Problem(403,'Token is not authorized for this task')
 
     @app.get('/api/agent-connections')
     def agent_connections():
@@ -145,24 +138,9 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
             raise Problem(403, 'Connect agents from dhaara on this computer.')
         from .agent_connections import configure
         try:
-            return configure(store, provider, data.enabled, mode=data.mode)
+            return configure(store, provider, data.enabled)
         except OSError:
             raise Problem(409, 'Could not write the agent configuration. Check this computer’s file permissions.') from None
-
-    @app.get('/api/agent-connections/{provider}/plugin')
-    def agent_plugin(provider: str):
-        if provider not in ('claude', 'codex'):
-            raise Problem(404, 'Unknown agent')
-        folder = store.root / 'agent-hooks' / 'plugins' / provider
-        if not folder.exists():
-            raise Problem(404, 'Connect this agent once to prepare its local plugin.')
-        stream = io.BytesIO()
-        with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED) as archive:
-            for path in folder.rglob('*'):
-                if path.is_file():
-                    archive.write(path, 'dhaara/' + str(path.relative_to(folder)))
-        return Response(stream.getvalue(), media_type='application/zip',
-                        headers={'Content-Disposition': f'attachment; filename="dhaara-{provider}-plugin.zip"'})
 
     @app.get('/api/health')
     def health(): return {'ok':True,'version':__version__}
@@ -310,25 +288,13 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     def dismiss(rid): return store.snooze(rid)
 
     @app.post('/api/runs',status_code=201)
-    def run(data:RunCreate,request:Request):
-        task_scope(request,data.task_id)
-        return store.create_run(data)
+    def run(data:RunCreate): return store.create_run(data)
 
     @app.post('/api/runs/{run_id}/events')
-    def event(run_id,data:RunEvent,request:Request):
-        task_scope(request,store.run(run_id)['task_id'])
-        return store.run_event(run_id,data)
+    def event(run_id,data:RunEvent): return store.run_event(run_id,data)
 
     @app.post('/api/runs/{run_id}/end-tracking')
-    def end_run(run_id,request:Request):
-        if request.state.identity['scope']!='admin': raise Problem(403,'Only you can end tracking manually')
-        return store.cancel_run(run_id)
-
-    @app.get('/api/agent/tasks/{task_id}')
-    def agent_task(task_id,request:Request):
-        task_scope(request,task_id)
-        task=store.task(task_id)
-        return {k:task[k] for k in ('id','title','project','detail','next_action','status','session_url')}
+    def end_run(run_id): return store.cancel_run(run_id)
 
     @app.post('/api/tokens',status_code=201)
     def issue_token(data:TokenInput): return store.token(data)
@@ -347,14 +313,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/context')
     def context(data:ContextInput): return store.observe(data)
-
-    @app.post('/api/context/rules')
-    def new_rule(data:RuleInput): return store.add_rule(data)
-
-    @app.delete('/api/context/rules/{rid}')
-    def remove_rule(rid):
-        with store.db() as c: c.execute('DELETE FROM context_rules WHERE id=?',(rid,))
-        return {'ok':True}
 
     @app.get('/api/companion')
     def companion():

@@ -10,13 +10,8 @@ export type NowState = {
 const WAITING_RUN = ['working', 'needs_input', 'unknown'];
 const BLOCKING_FOCUS_RUN = ['working', 'needs_input', 'unknown', 'failed'];
 
-export function focusKind(focus: Focus): 'Pinned by you' | 'Inferred from window metadata' | 'Selected by you' {
-  return focus?.pinned ? 'Pinned by you' : focus?.source === 'context' ? 'Inferred from window metadata' : 'Selected by you';
-}
-
-export function observationStatus(snapshot: Snapshot | null): string {
-  if (!snapshot?.settings?.observation_enabled) return 'Observation paused';
-  return snapshot.context && !snapshot.context.stale ? 'Recent window metadata report' : 'Allowed · no recent observer report';
+export function focusKind(focus: Focus): 'Pinned by you' | 'Selected by you' {
+  return focus?.pinned ? 'Pinned by you' : 'Selected by you';
 }
 
 export function nowState(snapshot: Snapshot | null, connected: boolean, budget: number | null = null): NowState {

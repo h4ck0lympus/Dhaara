@@ -174,12 +174,6 @@ function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
           : <p className="small muted">No notes linked yet.</p>}
         <button type="button" className="quiet-button small" onClick={() => void captureForTask()}>＋ Capture what you learned</button>
       </section>
-      <details>
-        <summary>Connect an agent</summary>
-        <p className="small muted">Create a task-scoped token in Settings, then wrap your command. Task ID:</p>
-        <code className="token-value">{task.id}</code>
-        <pre className="original-block">{`python tools/agent.py --task ${task.id} -- your-command`}</pre>
-      </details>
     </>
   );
 }

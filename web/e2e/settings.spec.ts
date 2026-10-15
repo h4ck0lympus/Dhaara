@@ -5,7 +5,7 @@ import { createNote, navLink, openRuntimeLink } from './screenTest';
 import { serverState } from './nowSeed';
 import type { DharaServer } from './server';
 
-type SettingsBody = { settings: { display_name: string; observation_enabled: boolean; motion: boolean; companion: string; companion_size: number }; context_rules: unknown[] };
+type SettingsBody = { settings: { display_name: string; observation_enabled: boolean; motion: boolean; companion: string; companion_size: number } };
 const settingsDialog = (page: Page) => page.getByRole('dialog', { name: 'Settings' });
 const serverBody = (dhara: DharaServer) => dhara.api<SettingsBody>('GET', '/api/state');
 const serverSettings = async (dhara: DharaServer) => (await serverBody(dhara)).settings;
@@ -16,11 +16,11 @@ test.describe('Settings', () => {
     await gotoApp(page, dhara, '#/settings');
     await expect(page.locator('.avatar')).toHaveCount(0);
     const dialog = settingsDialog(page);
-    const name = dialog.getByLabel('Your name');
+    const name = dialog.getByLabel('Name', { exact: true });
     await expect(name).toHaveValue('');
     await expect(name).toHaveAttribute('maxlength', '60');
     await name.fill('  Ada  ');
-    await dialog.getByRole('button', { name: 'Save name' }).click();
+    await name.press('Enter');
     await expect.poll(async () => (await serverSettings(dhara)).display_name).toBe('Ada');
     await expect(name).toHaveValue('Ada');
     await page.keyboard.press('Escape');
@@ -31,7 +31,7 @@ test.describe('Settings', () => {
 
   test('A snapshot refetch never replaces the name being typed', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#/settings');
-    const name = settingsDialog(page).getByLabel('Your name');
+    const name = settingsDialog(page).getByLabel('Name', { exact: true });
     await name.fill('Half-typed');
     await dhara.api('PATCH', '/api/settings', { display_name: 'Other device' });
     await refetch(page);
@@ -40,7 +40,7 @@ test.describe('Settings', () => {
 
   test('Native settings URL opens actual existing dialog at startup', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#settings');
-    await expect(settingsDialog(page).getByLabel('Enable window context')).toBeVisible();
+    await expect(settingsDialog(page).getByLabel('Screen', { exact: true })).toBeVisible();
   });
 
   test('Settings link adds no navigation screen', async ({ page, dhara }) => {
@@ -52,7 +52,7 @@ test.describe('Settings', () => {
 
   test('Linked settings edits actual existing server permission', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#settings');
-    await settingsDialog(page).getByLabel('Enable window context').check();
+    await settingsDialog(page).getByLabel('Screen', { exact: true }).check();
     await expect.poll(async () => (await serverSettings(dhara)).observation_enabled).toBe(true);
   });
 
@@ -61,7 +61,7 @@ test.describe('Settings', () => {
     const editor = page.getByLabel('Rough learning note');
     await editor.fill('Synthetic unsaved capture for settings-link recovery.');
     await openRuntimeLink(page, 'settings');
-    await expect(settingsDialog(page).getByLabel('Enable window context')).toBeVisible();
+    await expect(settingsDialog(page).getByLabel('Screen', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(settingsDialog(page)).toBeHidden();
     await expect(editor).toHaveValue('Synthetic unsaved capture for settings-link recovery.');
@@ -86,7 +86,7 @@ test.describe('Settings', () => {
     const field = page.getByLabel('Note', { exact: true });
     await field.fill('Synthetic unsaved note edit.');
     await openRuntimeLink(page, 'settings');
-    await expect(settingsDialog(page).getByLabel('Enable window context')).toBeVisible();
+    await expect(settingsDialog(page).getByLabel('Screen', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(settingsDialog(page)).toBeHidden();
     await expect(field).toHaveValue('Synthetic unsaved note edit.');
@@ -112,21 +112,7 @@ test.describe('Settings', () => {
     const size = dialog.getByLabel('Companion size');
     await expect(size).toHaveAttribute('min', '24');
     await expect(size).toHaveAttribute('max', '72');
-    await expect(dialog.getByText(/Choose a comfortable size\. Currently/)).toBeVisible();
-    await expect(dialog.getByLabel('Enable window context')).toBeVisible();
-  });
-
-  test('Observation permission does not claim an active observer or screenshots', async ({ page, dhara }) => {
-    await gotoApp(page, dhara, '#/settings');
-    const dialog = settingsDialog(page);
-    const status = dialog.locator('#observation-status');
-    await expect(status).toContainText('Observation paused');
-    await dialog.getByLabel('Enable window context').check();
-    await expect(status).toContainText('Allowed · no recent observer report');
-    await expect(status).toContainText('no screenshot observation is implemented');
-    await expect(dialog).not.toContainText('Recent window metadata report');
-    await dialog.getByLabel('Enable window context').uncheck();
-    await expect(status).toContainText('Observation paused');
+    await expect(dialog.getByLabel('Screen', { exact: true })).toBeVisible();
   });
 
   test('Companion modes persist; browser reports no native connection and contains no kitten overlay', async ({ page, dhara }) => {
@@ -134,7 +120,6 @@ test.describe('Settings', () => {
     let dialog = settingsDialog(page);
     await dialog.getByLabel('Companion mode').selectOption('dot');
     await expect.poll(async () => (await serverSettings(dhara)).companion).toBe('dot');
-    await expect(dialog.getByText('Your desktop kitten stays separate from this window. Requires the native companion to be running.')).toBeVisible();
     await page.reload();
     await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
     await navSettings(page).click();
@@ -146,10 +131,10 @@ test.describe('Settings', () => {
   test('Observation starts off and motion starts on; observation, companion mode and size reach the server', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
-    const observation = dialog.getByLabel('Enable window context');
+    const observation = dialog.getByLabel('Screen', { exact: true });
     await expect(observation).not.toBeChecked();
-    await expect(dialog.getByLabel('Enable background motion')).toBeChecked();
-    await dialog.getByLabel('Enable background motion').uncheck();
+    await expect(dialog.getByLabel('Motion', { exact: true })).toBeChecked();
+    await dialog.getByLabel('Motion', { exact: true }).uncheck();
     await observation.check();
     await dialog.getByLabel('Companion mode').selectOption('dot');
     await dialog.getByLabel('Companion size').fill('56');
@@ -157,58 +142,13 @@ test.describe('Settings', () => {
       .toMatchObject({ observation_enabled: true, motion: false, companion: 'dot', companion_size: 56 });
   });
 
-  test('Window-to-task rules can be added and removed', async ({ page, dhara }) => {
-    await dhara.api('POST', '/api/tasks', { title: 'Two Sum' });
-    await gotoApp(page, dhara, '#/settings');
-    const dialog = settingsDialog(page);
-    await dialog.getByText('Window-to-task rules').click();
-    await dialog.getByLabel('App ID').fill('org.mozilla.firefox');
-    await dialog.getByLabel('Title contains').fill('Two Sum');
-    await dialog.getByLabel('Task', { exact: true }).selectOption({ label: 'Two Sum' });
-    await dialog.getByRole('button', { name: 'Add rule' }).click();
-    await expect(dialog.getByText('org.mozilla.firefox / Two Sum → Two Sum')).toBeVisible();
-    expect((await serverBody(dhara)).context_rules).toHaveLength(1);
-    await dialog.getByRole('button', { name: 'Remove' }).click();
-    await expect.poll(async () => (await serverBody(dhara)).context_rules.length).toBe(0);
-  });
-
-  test('A new token is shown once, survives nowhere, and can be revoked', async ({ page, dhara }) => {
-    await dhara.api('POST', '/api/tasks', { title: 'Two Sum' });
-    await gotoApp(page, dhara, '#/settings');
-    let dialog = settingsDialog(page);
-    await dialog.getByText('Advanced: agent & observer tokens').click();
-    await dialog.getByLabel('Label').fill('Local coding agent');
-    await expect(dialog.getByRole('button', { name: 'Create token' })).toBeDisabled();
-    await expect(dialog.getByText('Choose at least one task for an agent token')).toBeVisible();
-    await dialog.getByLabel('Allowed tasks · agent tokens').selectOption({ label: 'Two Sum' });
-    await dialog.getByRole('button', { name: 'Create token' }).click();
-    const value = dialog.locator('.token-value');
-    await expect(value).toHaveText(/\S{20,}/);
-    const token = (await value.textContent())!;
-    await expect(dialog.getByText('Copy this token now. It will not be displayed again.')).toBeVisible();
-    await expect(dialog.getByText('Local coding agent · agent')).toBeVisible();
-    expect(await page.evaluate(() => JSON.stringify({ ...localStorage }))).not.toContain(token);
-    await page.reload();
-    await expect(page.getByText(S.connected, { exact: true })).toBeVisible();
-    await navSettings(page).click();
-    dialog = settingsDialog(page);
-    await dialog.getByText('Advanced: agent & observer tokens').click();
-    await expect(dialog.getByText('Local coding agent · agent')).toBeVisible();
-    await expect(dialog.locator('.token-value')).toHaveCount(0);
-    await dialog.getByRole('button', { name: 'Revoke' }).click();
-    await expect(dialog.getByText('Local coding agent · agent')).toHaveCount(0);
-    expect(await dhara.api<unknown[]>('GET', '/api/tokens')).toEqual([]);
-  });
-
-  test('Export downloads the notebook archive; Local capture queue opens the outbox', async ({ page, dhara }) => {
+  test('Export downloads the notebook archive; an empty capture queue stays hidden', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#/settings');
     const dialog = settingsDialog(page);
     const download = page.waitForEvent('download');
     await dialog.getByRole('link', { name: 'Export notes & tasks' }).click();
     expect((await download).suggestedFilename()).toBe('dhara-export.zip');
-    await expect(dialog.getByText('Version 0.1.0 · local-first development build')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Local capture queue' }).click();
-    await expect(page.getByRole('dialog', { name: S.outboxTitle })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Local capture queue' })).toHaveCount(0);
   });
 
   test('Settings opens from the navigation on every screen', async ({ page, dhara }) => {

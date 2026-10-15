@@ -10,8 +10,7 @@ const SPEC_ONCE_PER_ACTION = [
   'POST /api/focus', 'PUT /api/tasks/{id}', 'PUT /api/notes/{id}', 'POST /api/notes/{id}/restore/{v}',
   'POST /api/notes/{id}/suggestions/{sid}/apply', 'POST /api/notes/{id}/organize', 'POST /api/notes/{id}/transcribe',
   'POST /api/reminders', 'POST /api/reminders/{id}/snooze', 'DELETE /api/reminders/{id}', 'POST /api/runs/{id}/end-tracking',
-  'PATCH /api/settings', 'POST /api/context/rules', 'DELETE /api/context/rules/{id}',
-  'POST /api/tokens', 'DELETE /api/tokens/{id}', 'POST /api/session', 'DELETE /api/session',
+  'PATCH /api/settings', 'POST /api/session', 'DELETE /api/session',
 ];
 const normalise = (route: string) => route.replace(/\{\w+\}|:\w+/g, '{}');
 

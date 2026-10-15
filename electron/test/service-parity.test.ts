@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LEGACY_PREFIX, PREFIX } from '../src/env.js';
 import { LifecycleError, MESSAGES, prepareWorkspace } from '../src/lifecycle.js';
-import { ELECTRON_ROOT, FAKE, PYTHON, REPO_ROOT, RUN_PY, admin, freePort, live, readPids, rejection, serviceFactory, tempDir, until, workspace } from './helpers.js';
+import { ELECTRON_ROOT, FAKE, PYTHON, RUN_PY, admin, freePort, live, readPids, rejection, serviceFactory, tempDir, until, workspace } from './helpers.js';
 
 const service = serviceFactory();
 const strays: ChildProcess[] = [];
@@ -163,35 +163,6 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     expect(error.code).toBe('workspace-locked');
     expect(external.exitCode).toBeNull();
     expect((await admin(ws, port, '/state')).tasks).toEqual([]);
-  });
-
-  it('lets a separately wrapped agent survive an owned quit (:244)', async () => {
-    const port = await freePort();
-    const ws = workspace();
-    const owner = service({ port, workspace: ws });
-    await owner.start();
-    const task = await admin(ws, port, '/tasks', { method: 'POST', body: { title: 'Synthetic agent task' } });
-    const { token } = await admin(ws, port, '/tokens', { method: 'POST', body: { name: 'Fixture agent', scope: 'agent', task_ids: [task.id] } });
-    const release = path.join(tempDir(), 'release');
-    const code = `from pathlib import Path; import time\np=Path(${JSON.stringify(release)})\nwhile not p.exists(): time.sleep(.05)`;
-    const agent = spawn(PYTHON, [path.join(REPO_ROOT, 'tools/agent.py'), '--url', `http://127.0.0.1:${port}`, '--task', task.id,
-      '--outbox', path.join(tempDir(), 'agent-outbox.sqlite3'), '--', PYTHON, '-c', code], { stdio: 'ignore', env: { ...process.env, DHARA_TOKEN: token } });
-    strays.push(agent);
-    const agentExit = once(agent, 'exit');
-    try {
-      await until(async () => (await admin(ws, port, '/state')).runs.length === 1);
-      await owner.stop();
-      expect(agent.exitCode).toBeNull();
-      await service({ port, workspace: ws }).start();
-      fs.writeFileSync(release, '');
-      const [exitCode] = await agentExit;
-      expect(exitCode).toBe(0);
-      const state = await admin(ws, port, '/state');
-      expect(state.tasks[0].status).toBe('todo');
-      expect(state.runs[0].effective_status).toBe('review');
-    } finally {
-      fs.writeFileSync(release, '');
-    }
   });
 
   it('disables inherited optional features and never uses DHARA_DATA_DIR (:292)', async () => {

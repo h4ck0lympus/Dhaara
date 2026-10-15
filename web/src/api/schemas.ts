@@ -107,11 +107,9 @@ export const ContextSchema = z
     monitor: z.string(),
     updated_at: z.string(),
     source: z.string(),
-    suggested_task_id: z.string().nullable(),
     stale: z.boolean().optional(),
   })
   .nullable();
-export const ContextRuleSchema = z.object({ id: z.string(), app: z.string(), contains_text: z.string(), task_id: z.string() });
 export const SettingsSchema = z.object({
   observation_enabled: z.boolean(),
   motion: z.boolean(),
@@ -134,7 +132,6 @@ export const SnapshotSchema = z.object({
   reminders: z.array(ReminderSchema),
   focus: FocusSchema,
   context: ContextSchema,
-  context_rules: z.array(ContextRuleSchema),
   settings: SettingsSchema,
   available: z.array(SnapshotTaskSchema),
   attention: z.array(SnapshotTaskSchema),
@@ -142,8 +139,6 @@ export const SnapshotSchema = z.object({
   server_time: z.string(),
   capabilities: CapabilitiesSchema,
 });
-export const TokenSummarySchema = z.object({ id: z.string(), name: z.string(), scope: z.enum(['agent', 'observer']), created_at: z.string() });
-export const TokenCreatedSchema = z.object({ id: z.string(), token: z.string(), scope: z.enum(['agent', 'observer']), task_ids: z.array(z.string()) });
 export const OkSchema = z.object({ ok: z.literal(true) });
 
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
@@ -159,8 +154,6 @@ export type Revision = z.infer<typeof RevisionSchema>;
 export type Focus = z.infer<typeof FocusSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 export type Snapshot = z.infer<typeof SnapshotSchema>;
-export type TokenSummary = z.infer<typeof TokenSummarySchema>;
-export type TokenCreated = z.infer<typeof TokenCreatedSchema>;
 
 export type TaskEditable = Pick<Task, (typeof TASK_EDIT_FIELDS)[number]>;
 export type TaskUpdateBody = TaskEditable & { expected_version: number };

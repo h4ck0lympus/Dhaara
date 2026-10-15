@@ -100,7 +100,7 @@ This is the AppImage's workspace, so both share one notebook; pick another path 
 2. Open **Overview** to see Current focus and **Available next** (the Tasks screen also has an **Available now** filter). Tasks are excluded if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called.
 3. On **Overview**, click **Capture a thought…** (or **+ Note**) and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
 4. Open the saved note from **Search notes…** or Recent notes on Overview. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
-5. To track a command or agent, create a task-scoped token in Settings and use the wrapper described below.
+5. To track Claude Code or Codex sessions, connect them once in Settings (see below).
 
 You do not have to create tasks from learning notes. Linking a note to a task is optional. Tentative ideas in notes are not automatically turned into obligations.
 
@@ -114,11 +114,11 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |
 | Voice | Records and saves audio. Optional faster-whisper CPU worker transcribes after saving. **No live transcript in this release.** |
 | Recovery | Local browser draft/outbox, retry on reconnect, explicit failed-upload queue, original capture, note revisions, optimistic edit-conflict detection. |
-| Tasks | Dependencies, future start, planned day, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus; Needs you, Running, Parked, Completed and All views. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
+| Tasks | Dependencies, future start, planned day, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual focus; Needs you, Running, Parked, Completed and All views. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
 | Next action | Deterministic “What can I do now?” selection from existing actionable tasks; unknown estimates are not fabricated. |
-| Agent lifecycle | One-click Claude Code / Codex hook connection (or a local plugin package); scoped event API and real subprocess wrapper; ordered/deduplicated events, stale-run status, durable wrapper outbox. An exited agent that finished a turn or failed leaves an attention item, and any other exit keeps its task open; an untouched auto-created session task is marked done only when its last run was interrupted or its review was dismissed (end tracking) before the session ended. |
+| Agent lifecycle | One-click Claude Code / Codex hook connection; ordered/deduplicated events, stale-run status. An exited agent that finished a turn or failed leaves an attention item, and any other exit keeps its task open; an untouched auto-created session task is marked done only when its last run was interrupted or its review was dismissed (end tracking) before the session ended. |
 | Reminders | Persisted schedule, in-app due queue, snooze/dismiss, due processing after server restart. Optional browser notification while the app is running. |
-| Window context | Experimental opt-in Sway metadata observer with application/title-to-task rules. Pinned focus wins. **No screenshot capture or vision inference.** |
+| Window context | Experimental opt-in Sway metadata observer. **No screenshot capture or vision inference.** |
 | Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/kitten-illustrated.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
 | Portability | Markdown/JSON/attachment export. One local SQLite server, no managed cloud account or automatic synchronization of independent installations. |
 
@@ -177,10 +177,10 @@ Reference: [faster-whisper](https://github.com/SYSTRAN/faster-whisper).
 
 ## Connect Claude Code or Codex once
 
-Open **Settings → Connect your agents → Connect Claude Code / Connect Codex**.
+Open **Settings** and click **Connect** next to Claude Code or Codex.
 This adds lifecycle hooks to that agent on the same computer, preserving other
 settings and backing up the original configuration. Claude Code loads the
-changes in a new session. In Codex, open `/hooks` and review/trust the dhaara
+changes in a new session. The row shows **Waiting** until the first update arrives. In Codex, open `/hooks` and review/trust the dhaara
 hooks once. That review is required by Codex; dhaara does not bypass it.
 
 Subsequent sessions register automatically: **no task IDs, tokens or wrapper
@@ -202,16 +202,8 @@ oldest event if full. An unavailable/unwritable queue must not block an agent.
 
 **Disconnect** removes only the commands installed by dhaara and disables
 future ingestion for that provider. Existing tasks and reports remain.
-Advanced task-scoped tokens remain available for custom integrations.
-
-Connecting a provider also prepares a **local plugin package** for it,
-including its manifest, lifecycle hooks and a troubleshooting skill. Download
-it from the connection's Plugin package disclosure after choosing **Use plugin instead**.
-That switch removes direct hooks while keeping ingestion enabled. Packages target this
-computer and workspace; use either direct hooks or a plugin, not both.
-Generated sources live in `<data-dir>/agent-hooks/plugins/{claude,codex}`.
-The plugin requires its corresponding connection to remain enabled for ingestion.
-The direct installer is the normal one-click path; downloading a plugin is optional.
+If you installed the old dhaara plugin package, remove it from the agent before
+clicking **Connect**; otherwise every event is reported twice.
 
 Hook execution uses the current Python runtime in a source install. The AppImage
 does not yet support agent connections: hooks need a `python3` on PATH, and the
@@ -222,51 +214,19 @@ receiver execution, queues, configuration preservation and HTTP authorization
 are covered by automated tests.
 
 Sources: [Codex hooks](https://learn.chatgpt.com/docs/hooks),
-[Codex plugin packaging](https://developers.openai.com/plugins/build/plugins),
 [Claude Code hooks](https://code.claude.com/docs/en/hooks).
-
-## Advanced: connect another local agent or command
-
-This does not inspect arbitrary existing conversations. You deliberately wrap a command that belongs to a task.
-
-In **Settings**, expand **Advanced: agent & observer tokens**, set **Access** to **Task-scoped agent** and select the allowed task(s). Copy the token when shown. In a task's detail view, expand **Connect an agent** to copy its ID.
-
-```bash
-export DHARA_TOKEN='paste-the-task-scoped-token-here'
-python tools/agent.py --task TASK_ID --name 'Coding agent' -- your-command argument1
-```
-
-For a harmless first check:
-
-```bash
-python tools/agent.py --task TASK_ID --name 'Test command' -- python -c "print('Ready for review')"
-```
-
-The wrapper leaves output in the terminal, creates a run, reports liveness every 30 seconds, and reports the exit status. It removes `DHARA_TOKEN` and `DHARA_ACCESS_TOKEN` (and their pre-rename equivalents) from the child environment. A zero exit code means ready for human review, not verified success. Terminal output/prompt text is not automatically copied into notes.
-
-Events are written to an SQLite outbox before delivery. If the server goes away, they can be replayed after reconnect:
-
-```bash
-python tools/agent.py --flush
-```
-
-Use a separate `--outbox` path per concurrently used token/task scope so an unauthorized older event from one scope does not block another queue:
-
-```bash
-python tools/agent.py --task TASK_ID --outbox .data/coding-events.sqlite3 -- your-command
-python tools/agent.py --outbox .data/coding-events.sqlite3 --flush
-```
-
-The initial run registration requires a reachable server. For interactive agents with native lifecycle/approval hooks, use the event API rather than treating terminal-process liveness as semantic progress.
 
 ## Tiny Sway companion (experimental)
 
 The in-app browser kitten preview was removed at the React + Electron cutover. The native Linux helper is separate:
 
 ```bash
-export DHARA_TOKEN='paste-an-observer-token-created-in-settings'
+export DHARA_TOKEN=$(curl -s -H "Authorization: Bearer ${DHARA_ACCESS_TOKEN:-$(cat DATA_DIR/admin.token)}" -H 'Content-Type: application/json' \
+  -d '{"name":"Sway companion"}' http://127.0.0.1:8765/api/tokens | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
 /usr/bin/python3 tools/sway_companion.py
 ```
+
+List tokens with `curl -H "Authorization: Bearer $ADMIN" http://127.0.0.1:8765/api/tokens` and revoke one with `curl -X DELETE -H "Authorization: Bearer $ADMIN" http://127.0.0.1:8765/api/tokens/ID`, where `$ADMIN` is the admin token above.
 
 System prerequisites are **Sway, PyGObject, GTK 3, GtkLayerShell introspection bindings, and the PyGObject Cairo bridge** (often `python3-cairo` / `python3-gi-cairo`). Install the matching packages through your distribution. The system Python usually sees these bindings while a normal venv does not. The helper does not need FastAPI, a browser engine, or a model.
 
@@ -288,7 +248,7 @@ To enable window metadata, both the helper flag and the server permission must b
 /usr/bin/python3 tools/sway_companion.py --observe-window-context
 ```
 
-Then enable **Window context** in Dhara Settings and add application/title-to-task rules. Alternatively, run only the observer without the native cat:
+Then enable **Screen** in Dhara Settings. Alternatively, run only the observer without the native cat:
 
 ```bash
 python tools/sway_context.py --observe-window-context
@@ -298,7 +258,7 @@ It reads the focused application's identifier, title, output and workspace every
 five seconds when permitted. A change must persist across two samples; stable
 context refreshes every 30 seconds. The companion uses that output/workspace to
 place itself and hides when that workspace is not visible. Global pause in
-Settings clears the latest stored context and inferred focus. The native
+Settings clears the latest stored context. The native
 popover's Pause/Resume controls gate only this explicitly enabled helper's
 future polls; an in-flight request can finish and other observers are unaffected.
 Observation settings opens the real web settings. Permission, this helper's
@@ -372,7 +332,6 @@ dhara/worker.py                 Single optional AI/transcription worker
 dhara/task_capture.py           Rule-based task capture parsing (no model)
 dhara/agent_connections.py      Claude Code / Codex hook install and removal
 dhara/agent_hook.py             Standalone hook receiver and local event queue
-dhara/agent_plugin.py           Local plugin package builder
 dhara/desktop_service.py        Linux managed-mode lease (protocol 2)
 dhara/env.py                    Environment helpers (with a fallback to pre-rename variable names)
 noema/                          rename-shim: legacy import shim, kept for one release
@@ -381,7 +340,6 @@ web/e2e/                        Playwright tests against run.py on a temporary d
 electron/                       Electron desktop shell and managed lifecycle
 electron/e2e/                   Playwright tests in a private headless Sway
 release/                        Linux AppImage build (build.sh, PyInstaller spec, launcher)
-tools/agent.py                  Command tracking + durable event outbox
 tools/client.py                 Shared HTTP client for the helpers
 tools/sway_context.py           Opt-in metadata observer
 tools/sway_companion.py         Tiny experimental native Sway overlay (sprite: tools/assets/kitten-illustrated.png)

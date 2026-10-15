@@ -14,8 +14,7 @@ it('connects once without a task or token and allows disconnection', async () =>
   });
   renderWithClient(<AgentConnections />);
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Codex' }));
-  expect(await screen.findByText(/trust the dhaara hooks once/)).toBeTruthy();
-  expect(screen.getByText(/waiting for the first update/)).toBeTruthy();
+  expect(await screen.findByText('Open /hooks in Codex and trust the dhaara hooks')).toBeTruthy();
   expect(calls.find(c => c.method === 'POST')).toEqual({ url: '/api/agent-connections/codex', method: 'POST', body: { enabled: true } });
   fireEvent.click(screen.getByRole('button', { name: 'Disconnect Codex' }));
   await screen.findByRole('button', { name: 'Connect Codex' });
@@ -30,4 +29,10 @@ it('keeps the connection uninstalled when configuration cannot be written', asyn
   fireEvent.click(await screen.findByRole('button', { name: 'Connect Claude Code' }));
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('preserved'));
   expect(screen.getByRole('button', { name: 'Connect Claude Code' })).toBeTruthy();
+});
+
+it('shows Connected once the agent has reported', async () => {
+  stubFetch(() => jsonResponse(200, { connections: [{ provider: 'claude', name: 'Claude Code', installed: true, last_seen: '2026-01-01T00:00:00Z' }] }));
+  renderWithClient(<AgentConnections />);
+  expect(await screen.findByText('Connected')).toBeTruthy();
 });

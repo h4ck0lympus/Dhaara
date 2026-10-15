@@ -138,7 +138,7 @@ test.describe('terrain state machine', () => {
     await openField(page, dhara);
     await expectState(page, 'static');
     await page.evaluate(() => { location.hash = '#/settings'; });
-    await page.getByLabel('Enable background motion').check();
+    await page.getByLabel('Motion', { exact: true }).check();
     await expectState(page, 'animated');
   });
 
