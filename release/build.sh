@@ -33,7 +33,7 @@ fetch() {   # fetch URL SHA256 FILE
 }
 
 case "$(node --version 2>/dev/null)" in v22.*) ;; *) fail 'Node 22 is required: export PATH=$HOME/.nvm/versions/node/v22.23.3/bin:$PATH' ;; esac
-[ -x .venv/bin/python ] || fail '.venv/bin/python is missing; create the venv as the README says'
+[ -x .venv/bin/python ] || fail '.venv/bin/python is missing; run `uv sync` as the README says'
 [ "$(uname -m)" = x86_64 ] || fail 'this build targets x86_64 only'
 VERSION=$(node -p "require('./electron/package.json').version")
 PY_VERSION=$(.venv/bin/python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
@@ -51,7 +51,7 @@ npm --prefix web ci          # one command per line: set -e ignores a failure in
 npm --prefix web run build
 
 echo "== 2/7 PyInstaller from the release extra"
-.venv/bin/pip install -q -e '.[release]'
+uv pip install -q --python .venv/bin/python -e '.[release]'
 
 echo "== 3/7 frozen service"
 rm -rf "$OUT/service" "$OUT/build"

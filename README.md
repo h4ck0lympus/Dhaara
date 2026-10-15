@@ -48,11 +48,9 @@ sandboxed; it never runs without the sandbox. Contributors: the development flow
 From the extracted `dhara` directory:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+uv sync                      # creates .venv from uv.lock (install uv: https://docs.astral.sh/uv/)
 npm --prefix web ci && npm --prefix web run build
-python run.py --open
+uv run run.py --open
 ```
 
 The interface is at `http://127.0.0.1:8765`. Stop the server with Ctrl-C. Starting it again opens the same saved workspace.
@@ -76,11 +74,10 @@ npm --prefix electron start -- --manage-service --data-dir /absolute/workspace
 Activation is not required:
 
 ```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+uv sync
 npm --prefix web ci
 npm --prefix web run build
-.\.venv\Scripts\python.exe run.py --open
+uv run run.py --open
 ```
 
 This distribution contains portable source, not a Windows installer, macOS application bundle, or Android APK. Native packaging has not been tested.
@@ -90,7 +87,7 @@ This distribution contains portable source, not a Windows installer, macOS appli
 The default data directory is `.data` beside `run.py`. To keep data independent of code upgrades:
 
 ```bash
-python run.py --data-dir "$HOME/.local/share/dhara" --open
+uv run run.py --data-dir "$HOME/.local/share/dhara" --open
 ```
 
 Use the same path on subsequent starts. Files include `dhara.sqlite3`, an `attachments/` directory, and `admin.token`. Keep the directory private. An OS account with access to these files can read the data; this build does not encrypt it at rest.
@@ -133,7 +130,7 @@ Install/start Ollama separately using its official instructions. Choose a model 
 ```bash
 ollama pull qwen2.5:3b
 export DHARA_MODEL='qwen2.5:3b'
-python run.py --open
+uv run run.py --open
 ```
 
 `ollama pull` explicitly downloads model files. It is not part of ordinary Dhara startup. On PowerShell, set `$env:DHARA_MODEL = 'qwen2.5:3b'` instead of `export`.
@@ -150,13 +147,13 @@ Official references: [Ollama generate API](https://docs.ollama.com/api/generate)
 
 Recording does not require a speech model. Save first; configure transcription when ready.
 
-Within the same Python environment:
+`uv sync` keeps only the extras you name, so list every one you use (e.g. `--extra speech --extra test`):
 
 ```bash
-python -m pip install -e '.[speech]'
-python tools/download_speech_model.py base.en
+uv sync --extra speech
+uv run tools/download_speech_model.py base.en
 export DHARA_SPEECH_MODEL="$PWD/.data/models/whisper-base.en"
-python run.py --open          # or: python run.py --desktop
+uv run run.py --open          # or: uv run run.py --desktop
 ```
 
 No GPU is needed: transcription runs on the CPU, and `base.en` keeps up with real time on a
@@ -349,7 +346,7 @@ Do not simply bind the development app to `0.0.0.0` and expose it to the interne
 ## Verification
 
 The cutover gate, run in this order from the repository root after
-`python -m pip install -e '.[test]'`:
+`uv sync --extra test`:
 
 ```bash
 npm --prefix web ci
