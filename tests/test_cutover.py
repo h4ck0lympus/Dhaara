@@ -6,8 +6,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 DELETED = ['public', 'desktop', 'experiments', 'tests/now_state.test.cjs']
 
-# Quoted path literals only: a comment citing an old source ("port of desktop/src/main.rs:79")
-# is history, but a quoted path is something code would open at runtime.
 STALE = re.compile(r"""['"](?:\.{1,2}/)*(?:public/|public['"]|desktop/)"""
                    r"""|['"][^'"\n]*(?:hosts/wry|hosts/companion|now_state\.test\.cjs)""")
 
@@ -16,7 +14,6 @@ SCANNED = ['run.py', 'dhara',
            'tools', 'tests', 'electron/src', 'electron/test', 'electron/e2e',
            'web/src', 'web/e2e', 'web/scripts']
 TEXT_SUFFIXES = {'.py', '.ts', '.tsx', '.mts', '.cts', '.mjs', '.js', '.json'}
-# This file names the deleted paths on purpose, as the things it forbids.
 SELF_CHECKS = {'tests/test_cutover.py'}
 
 
@@ -43,7 +40,6 @@ def test_nothing_points_at_deleted_trees():
     assert hits == []
 
 
-# A focused test silently stops the rest of its file from running in Playwright.
 FOCUSED = re.compile(r'\.only\(')
 FOCUS_SCANNED = ['web/src', 'web/e2e', 'electron/test', 'electron/e2e']
 

@@ -1,4 +1,3 @@
-// web/src/shell/notifications.test.ts
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Reminder } from '../api/schemas';

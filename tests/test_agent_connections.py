@@ -65,7 +65,7 @@ def test_replay_is_idempotent_and_offline_updates_keep_order(connected):
         rows = [dict(r) for r in db.execute('SELECT * FROM queue ORDER BY id')]
     for event in rows:
         accept(store, event)
-    drain(store)  # replay after an imagined crash before queue acknowledgement
+    drain(store)
     snapshot = store.snapshot()
     assert len(snapshot['tasks']) == len(snapshot['runs']) == 1
     assert snapshot['runs'][0]['status'] == 'review'

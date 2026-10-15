@@ -1,4 +1,3 @@
-// web/src/domain/tasks.ts
 import type { Snapshot, SnapshotRun, SnapshotTask, Task, TaskEditable, TaskStatus } from '../api/schemas';
 import { dateLabel, localDateInput } from './format';
 
@@ -19,7 +18,7 @@ export function priorityLabel(source: string): PriorityLabel {
   if (source === 'automatic' || source === 'rules') return 'Auto · rules';
   if (source === 'ai') return 'Auto · AI';
   if (source === 'you') return 'Set by you';
-  return 'Auto'; // unknown future sources need no frontend change (spec §4.7)
+  return 'Auto';
 }
 
 export type TaskFilter = 'open' | 'needs-you' | 'running' | 'available' | 'parked' | 'done' | 'all';
@@ -83,7 +82,6 @@ export function needsReview(task: SnapshotTask): boolean {
   return task.status === 'review' || task.runs.some(r => r.status === 'review');
 }
 
-// Runs arrive newest first (store.py: ORDER BY updated_at DESC).
 export function reviewLink(task: SnapshotTask): string | null {
   const run = task.runs.find(r => r.status === 'review' && isSessionUrl(r.session_url));
   if (run) return run.session_url;
@@ -95,7 +93,6 @@ export function keepTimestamps(values: TaskEditable, original: Task): Pick<TaskE
   return { due_at: keep(values.due_at, original.due_at), not_before: keep(values.not_before, original.not_before) };
 }
 
-/** Hide legacy transport identifiers without inventing a task description. */
 export function readableTaskTitle(task: { title: string }): string {
   const match = /^(Codex|Claude Code) · (.+) · [a-f0-9]{6}$/.exec(task.title);
   if (!match) return task.title;

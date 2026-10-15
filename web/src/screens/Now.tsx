@@ -35,7 +35,6 @@ export function NowScreen() {
     .sort((a, b) => Date.parse(a.due_at!) - Date.parse(b.due_at!));
   const nextDue = upcoming.filter(t => !used.has(t.id));
   function show(next: typeof pane, id: string | null = null) {
-    // Inline panes honor the same recording, saving and unsaved-edit guards as routes.
     if (!allowNavigation('/overview/pane')) return;
     setPane(next); setNoteId(id);
     if (next === 'capture') setTimeout(() => document.querySelector<HTMLTextAreaElement>('#capture-input')?.focus(), 0);

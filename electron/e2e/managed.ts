@@ -10,7 +10,6 @@ export const FAKE = path.join(REPO_ROOT, 'electron/test/fixtures/fake_service.py
 
 export type Managed = { dataDir: string; port: number; origin: string; args: string[]; env: Record<string, string> };
 
-/** Managed mode on a free port. The override needs DHARA_ELECTRON_TEST=1 and is unreachable from the CLI (spec §6.4.2). */
 export async function managedSetup(): Promise<Managed> {
   const port = await getFreePort();
   const dataDir = path.join(tempDir('dhara-managed-'), 'data');
@@ -34,11 +33,9 @@ async function pageWhere(app: ElectronApplication, matches: (url: string) => boo
   throw new Error('No matching Electron page');
 }
 
-/** The startup/crash overlay: a WebContentsView, which Playwright lists with the windows. */
 export const startupPage = (app: ElectronApplication) => pageWhere(app, (url) => url.startsWith('file://') && url.endsWith('/static/startup.html'));
 export const appPage = (app: ElectronApplication, origin: string) => pageWhere(app, (url) => url.startsWith(`${origin}/`));
 
-/** The main window's URL as Electron sees it. It stays non-http until the service identity is verified. */
 export function mainUrl(app: ElectronApplication): Promise<string> {
   return app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.webContents.getURL() ?? '');
 }
@@ -47,13 +44,12 @@ export async function servicePid(origin: string): Promise<number> {
   return ((await (await fetch(`${origin}/api/desktop-instance`)).json()) as { pid: number }).pid;
 }
 
-/** Live direct children of the Electron main process that are managed services (only our own fixture's children). */
 export function ownedServices(electronPid: number): number[] {
   const children = fs.readdirSync(`/proc/${electronPid}/task`).flatMap((tid) => {
     try {
       return fs.readFileSync(`/proc/${electronPid}/task/${tid}/children`, 'utf8').split(' ').filter(Boolean).map(Number);
     } catch {
-      return [];   // a thread that just exited
+      return [];
     }
   });
   return children.filter((pid) => {
@@ -65,7 +61,6 @@ export function ownedServices(electronPid: number): number[] {
   });
 }
 
-/** Runs the Electron app without Playwright, for command-line exits that never open a window. */
 export function runElectron(args: string[], env: Record<string, string> = {}): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(ELECTRON_BIN, [MAIN, ...args], { env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -82,7 +77,6 @@ export function runElectron(args: string[], env: Record<string, string> = {}): P
   });
 }
 
-/** Window content size and the bounds of every child view over it (the startup/crash overlay is one of them). */
 export function overlayBounds(app: ElectronApplication) {
   return app.evaluate(({ BrowserWindow }) => {
     const win = BrowserWindow.getAllWindows()[0];

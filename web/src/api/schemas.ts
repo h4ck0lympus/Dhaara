@@ -1,4 +1,3 @@
-// Response schemas (contract §3.3). z.object strips unknown keys; nothing is coerced. Shapes: dhara/store.py, dhara/server.py.
 import { z } from '../zod';
 import type { TASK_EDIT_FIELDS } from '../domain/tasks';
 
@@ -20,7 +19,6 @@ export const RunSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
 });
-// store.py:432-433
 export const SnapshotRunSchema = RunSchema.extend({ stale: z.boolean(), effective_status: z.union([RunStatusSchema, z.literal('unknown')]) });
 
 export const ReminderSchema = z.object({
@@ -30,12 +28,10 @@ export const ReminderSchema = z.object({
   state: z.enum(['scheduled', 'due', 'dismissed']),
   created_at: z.string(),
 });
-// store.py:351
 export const ReminderCreatedSchema = z.object({ id: z.string(), task_id: z.string(), at: z.string(), state: z.literal('scheduled') });
 
 export const InterpretationSchema = z.looseObject({ explanation: z.string().optional(), manual_fields: z.array(z.string()).optional() });
 
-// store.task_row: LEFT JOIN task_captures, so original_input is null for tasks created without a capture.
 export const TaskSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -56,7 +52,6 @@ export const TaskSchema = z.object({
   original_input: z.string().nullable(),
   interpretation: InterpretationSchema,
 });
-// store.py:443-466. priority_source is open: 'automatic' | 'you' today, 'rules' | 'ai' after spec §11.1.
 export const SnapshotTaskSchema = TaskSchema.extend({
   runs: z.array(SnapshotRunSchema),
   blocked_by: z.array(z.string()),
@@ -122,7 +117,7 @@ export const SettingsSchema = z.object({
   motion: z.boolean(),
   companion: z.enum(['cat', 'dot', 'hidden']),
   companion_size: int().min(24).max(72),
-  display_name: z.string().max(60).default(''), // a v1-written snapshot has no key; mirrors the server's DEFAULT_SETTINGS merge
+  display_name: z.string().max(60).default(''),
 });
 export const CapabilitiesSchema = z.object({
   organizer: z.boolean(),
@@ -167,7 +162,6 @@ export type Snapshot = z.infer<typeof SnapshotSchema>;
 export type TokenSummary = z.infer<typeof TokenSummarySchema>;
 export type TokenCreated = z.infer<typeof TokenCreatedSchema>;
 
-// Request bodies.
 export type TaskEditable = Pick<Task, (typeof TASK_EDIT_FIELDS)[number]>;
 export type TaskUpdateBody = TaskEditable & { expected_version: number };
 export type TaskCaptureBody = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };

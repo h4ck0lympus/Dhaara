@@ -1,4 +1,3 @@
-// web/src/components/PriorityControl.tsx
 import { useId, type JSX } from 'react';
 import type { Priority, SnapshotTask } from '../api/schemas';
 import { priorityLabel } from '../domain/tasks';
@@ -11,7 +10,6 @@ const MANUAL = ['high', 'medium', 'low'] as const;
 export function PriorityControl({ task }: { task: SnapshotTask }): JSX.Element {
   const patch = usePatchTask();
   const reasonId = useId();
-  // The selected option always reads "effective · source", so the closed control shows both (spec §4.7).
   const current = `${task.effective_priority} · ${priorityLabel(task.priority_source)}`;
 
   async function change(priority: Priority) {

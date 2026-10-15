@@ -20,7 +20,6 @@ function pattern(path: string | RegExp): PathPattern {
   return typeof path === 'string' ? { source: path, flags: null } : { source: path.source, flags: path.flags };
 }
 
-// One fetch patch per document; every helper only appends a rule, so all fetch faults share one matcher.
 async function addFetchRule(page: Page, rule: FetchRule): Promise<void> {
   await page.addInitScript((rule: FetchRule) => {
     const w = window as unknown as FaultWindow;
@@ -116,13 +115,11 @@ export async function failIdbWrite(
         if (this.name === store && (key === undefined || target === key) && remaining > 0) {
           remaining -= 1;
           const tx = this.transaction;
-          // A real quota failure aborts after the request is queued, with the error on the transaction.
           Object.defineProperty(tx, 'error', { configurable: true, get: () => new DOMException(`Injected ${error}`, error) });
           queueMicrotask(() => {
             try {
               tx.abort();
             } catch {
-              // already finished
             }
           });
         }
@@ -138,7 +135,6 @@ export async function delayIdbTransactions(page: Page, ms: number): Promise<void
     (IDBDatabase.prototype as unknown as { transaction: (...args: unknown[]) => IDBTransaction }).transaction = function (this: IDBDatabase, ...args: unknown[]) {
       const tx = original.apply(this, args);
       let handler: ((this: IDBTransaction, event: Event) => unknown) | null = null;
-      // Shadow the prototype's oncomplete so the app's handler runs late; addEventListener('complete') users are not delayed.
       Object.defineProperty(tx, 'oncomplete', { configurable: true, get: () => handler, set: (value) => { handler = value; } });
       tx.addEventListener('complete', (event) => {
         setTimeout(() => handler?.call(tx, event), ms);

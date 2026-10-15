@@ -1,5 +1,3 @@
-// Port of public/app.js:331-344 (Edit task). Server values are copied into the form once, when it opens,
-// so a snapshot refetch never replaces in-progress input (spec §4.3).
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type JSX, type MutableRefObject } from 'react';
 import { ApiError, call } from '../api/client';
@@ -12,13 +10,12 @@ import { messageOf, toast } from '../ui/Toast';
 
 export const DISCARD_EDITS = 'Discard your unsaved edits?';
 
-// dirtyRef lets the hosting dialog ask the same question when Escape, the backdrop or the close button asks to leave.
 export function TaskEditForm({ task, tasks, onDone, onCancel, dirtyRef }: {
   task: Task; tasks: SnapshotTask[]; onDone: () => void; onCancel: () => void; dirtyRef: MutableRefObject<boolean>;
 }): JSX.Element {
   const save = useSaveTask();
   const qc = useQueryClient();
-  const [opened, setOpened] = useState<Task>(task); // the version and stored timestamps this form edits
+  const [opened, setOpened] = useState<Task>(task);
   const [values, setValues] = useState<TaskEditable>(() => editableFields(task));
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
@@ -42,7 +39,7 @@ export function TaskEditForm({ task, tasks, onDone, onCancel, dirtyRef }: {
       onDone();
     } catch (err) {
       setError(messageOf(err));
-      setConflict(err instanceof ApiError && err.status === 409); // a conflict never overwrites; the user reopens explicitly
+      setConflict(err instanceof ApiError && err.status === 409);
     }
   }
 
@@ -66,7 +63,6 @@ export function TaskEditForm({ task, tasks, onDone, onCancel, dirtyRef }: {
   return (
     <form className="task-edit-form" onSubmit={e => void submit(e)}>
       <label className="task-input-label">Title
-        {/* autoFocus: the dialog is already open, so its mount-time data-autofocus does not apply here. */}
         <input name="title" required maxLength={240} autoFocus value={values.title} onChange={e => change('title', e.target.value)} />
       </label>
       <details id="task-details">

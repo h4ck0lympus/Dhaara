@@ -1,4 +1,3 @@
-// web/src/ui/Icon.tsx
 import type { JSX, ReactNode } from 'react';
 
 export type IconName = 'home' | 'pen' | 'notes' | 'task-check' | 'arrow' | 'waveform' | 'plus' | 'plan' | 'search' | 'chevron'

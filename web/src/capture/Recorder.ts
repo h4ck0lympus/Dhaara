@@ -4,18 +4,18 @@ import { S } from '../strings';
 import { messageOf, toast } from '../ui/Toast';
 import { toastRejections } from './Attachments';
 
-export const RECORDER_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'] as const;   // app.js:425
+export const RECORDER_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'] as const;
 export const RECORD_BITS_PER_SECOND = 64_000;
 export const RECORD_TIMESLICE_MS = 1_000;
-export const RECORD_AUTO_STOP_BYTES = 30 * 1024 * 1024;   // app.js:428
+export const RECORD_AUTO_STOP_BYTES = 30 * 1024 * 1024;
 
 export const RECORDER_TEXT = {
-  idle: 'Audio stays local until you save.',   // app.js:212
-  added: 'Recording added. Save when ready.',   // app.js:435
-  unsupported: 'Recording requires a supported browser on localhost or HTTPS. You can still attach an audio file.',   // app.js:422
-  unavailable: (message: string) => `Microphone unavailable: ${message}`,   // app.js:440
-  failed: 'Recording failed. Stop and check your microphone.',   // app.js:437
-  limit: 'Recording stopped near the 32 MB limit. Save this part before continuing.',   // app.js:428
+  idle: 'Audio stays local until you save.',
+  added: 'Recording added. Save when ready.',
+  unsupported: 'Recording requires a supported browser on localhost or HTTPS. You can still attach an audio file.',
+  unavailable: (message: string) => `Microphone unavailable: ${message}`,
+  failed: 'Recording failed. Stop and check your microphone.',
+  limit: 'Recording stopped near the 32 MB limit. Save this part before continuing.',
 } as const;
 
 export type RecorderPhase = 'idle' | 'starting' | 'recording' | 'paused';
@@ -34,11 +34,11 @@ export function pickMimeType(isSupported: (type: string) => boolean): string | u
 }
 
 export function recordingExtension(type: string): 'ogg' | 'm4a' | 'webm' {
-  return type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'm4a' : 'webm';   // app.js:432
+  return type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'm4a' : 'webm';
 }
 
 export function recordingFileName(type: string, at: Date): string {
-  return `voice-${at.toISOString().replace(/[:.]/g, '-')}.${recordingExtension(type)}`;   // app.js:434
+  return `voice-${at.toISOString().replace(/[:.]/g, '-')}.${recordingExtension(type)}`;
 }
 
 export function formatElapsed(ms: number): string {
@@ -66,7 +66,7 @@ export function useRecorder(): RecorderState {
   const session = useRef<Session | null>(null);
   const starting = useRef(false);
   const mounted = useRef(true);
-  const staged = useRef<File | null>(null);   // a finished recording waiting for an in-flight save; never dropped
+  const staged = useRef<File | null>(null);
 
   useEffect(() => {
     if (phase !== 'recording') return;
@@ -86,7 +86,6 @@ export function useRecorder(): RecorderState {
       unsubscribe();
       mounted.current = false;
       if (staged.current) void flushStaged();
-      // Navigation away is blocked while recording; if Capture unmounts anyway, Stop still delivers the audio to the draft store.
       const current = session.current;
       if (current && current.recorder.state !== 'inactive') current.recorder.stop();
     };
@@ -107,13 +106,12 @@ export function useRecorder(): RecorderState {
     await flushStaged();
   }
 
-  // addFiles silently accepts nothing while a save is in flight, so keep the file; retried when the save ends (store subscription) and on start().
   async function flushStaged(): Promise<void> {
     const file = staged.current;
     if (!file) return;
     if (captureDraftStore.getSnapshot().saving) {
       setStatus(S.finishingLocalSave);
-      if (!mounted.current) {   // no hook subscription any more: wait for the save, then deliver
+      if (!mounted.current) {
         const off = captureDraftStore.subscribe(() => {
           if (captureDraftStore.getSnapshot().saving) return;
           off();
@@ -131,7 +129,7 @@ export function useRecorder(): RecorderState {
   async function start(): Promise<void> {
     if (starting.current || session.current) return;
     await flushStaged();
-    if (staged.current) return;   // still saving; the status says so
+    if (staged.current) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       toast(RECORDER_TEXT.unsupported, { tone: 'error' });
       return;
@@ -179,7 +177,7 @@ export function useRecorder(): RecorderState {
     recorder.onerror = () => {
       toast(RECORDER_TEXT.failed, { tone: 'error' });
       stopTracks(stream);
-      if (session.current === current) session.current = null;   // phase 'idle' also clears the elapsed timer
+      if (session.current === current) session.current = null;
       setElapsedMs(0);
       setPhase('idle');
       setStatus(RECORDER_TEXT.failed);
@@ -214,7 +212,7 @@ export function useRecorder(): RecorderState {
   }
 
   const shownStatus = phase === 'recording'
-    ? `${formatElapsed(elapsedMs)} · recording locally`   // app.js:439
+    ? `${formatElapsed(elapsedMs)} · recording locally`
     : phase === 'paused'
       ? `${formatElapsed(elapsedMs)} · paused`
       : status;

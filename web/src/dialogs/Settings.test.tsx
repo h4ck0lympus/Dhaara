@@ -130,7 +130,7 @@ describe('SettingsDialog', () => {
   it('a failing revoke shows its own error with the default (agent, no task) form state', async () => {
     tokenList = [{ id: 'tok9', name: 'Old agent', scope: 'agent', created_at: '2026-01-01T00:00:00Z' }];
     renderWithClient(<SettingsDialog onClose={() => {}} section="agents" />, seed(snapshot));
-    expect(screen.queryByRole('alert')).toBeNull();   // the task guidance is not an error
+    expect(screen.queryByRole('alert')).toBeNull();
     fireEvent.click(await screen.findByRole('button', { name: 'Revoke' }));
     expect((await screen.findByRole('alert')).textContent).toBe('Revoke failed');
     expect(screen.getByText('Choose at least one task for an agent token')).toBeTruthy();

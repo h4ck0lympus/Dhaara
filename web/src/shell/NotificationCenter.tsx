@@ -16,13 +16,13 @@ export function NotificationCenter() {
   const [now, setNow] = useState(Date.now);
   const [snoozed, setSnoozed] = useState<Record<string, number>>(() => { try { const value = JSON.parse(localStorage.getItem('dhaara-notification-snooze') || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; } catch { return {}; } });
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
-  function snooze(id: string) { const next = { ...Object.fromEntries(Object.entries(snoozed).filter(([, until]) => until > now)), [id]: Date.now() + 3_600_000 }; setSnoozed(next); try { localStorage.setItem('dhaara-notification-snooze', JSON.stringify(next)); } catch { /* session only */ } }
-  function toggleMute() { const until = mute > now ? 0 : Date.now() + 3_600_000; setMute(until); try { localStorage.setItem(MUTE_KEY, String(until)); } catch { /* preference unavailable */ } }
+  function snooze(id: string) { const next = { ...Object.fromEntries(Object.entries(snoozed).filter(([, until]) => until > now)), [id]: Date.now() + 3_600_000 }; setSnoozed(next); try { localStorage.setItem('dhaara-notification-snooze', JSON.stringify(next)); } catch {} }
+  function toggleMute() { const until = mute > now ? 0 : Date.now() + 3_600_000; setMute(until); try { localStorage.setItem(MUTE_KEY, String(until)); } catch {} }
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const items = (snapshot ? notificationItems(snapshot) : []).filter(item => !(snoozed[item.id] > now));
   const unread = items.filter(item => !read.includes(item.id)).length;
-  function mark(ids: string[]) { const next = [...new Set([...read, ...ids])].slice(-500); setRead(next); try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* session only */ } }
+  function mark(ids: string[]) { const next = [...new Set([...read, ...ids])].slice(-500); setRead(next); try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {} }
   useEffect(() => {
     if (!open) return;
     const click = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };

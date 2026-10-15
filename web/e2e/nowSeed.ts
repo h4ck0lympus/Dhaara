@@ -1,5 +1,3 @@
-// web/e2e/nowSeed.ts
-// Test-only seeds for Overview states (port of qa/now_ui_check.py:64-99).
 import { randomUUID } from 'node:crypto';
 import type { BrowserContext, Page } from '@playwright/test';
 import { TASK_EDIT_FIELDS } from '../src/domain/tasks';
@@ -16,7 +14,6 @@ export const KINDS = ['new', 'available', 'waiting', 'attention', 'complete', 'u
 export type Kind = (typeof KINDS)[number];
 
 export const task = (dhara: DharaServer, title: string, fields: Record<string, unknown> = {}) => dhara.api<SeedTask>('POST', '/api/tasks', { title, ...fields });
-// Simulates an edit from another device: PUT the task's current editable fields with `changes`, at its current version.
 export async function changeElsewhere(dhara: DharaServer, id: string, changes: Record<string, unknown>): Promise<void> {
   const fresh = await dhara.api<Record<string, unknown>>('GET', `/api/tasks/${id}`);
   await dhara.api('PUT', `/api/tasks/${id}`, { ...Object.fromEntries(TASK_EDIT_FIELDS.map(k => [k, fresh[k]])), ...changes, expected_version: fresh.version });
@@ -67,7 +64,6 @@ export async function seed(dhara: DharaServer, kind: Kind): Promise<void> {
 export const nowPage = (page: Page) => page.locator('.now-page');
 export const ready = (page: Page, mode: string) => expect(nowPage(page)).toHaveAttribute('data-now-state', mode);
 
-/** Seeds, opens Overview connected, and for 'disconnected' then drops the network (qa/now_ui_check.py:124-136). */
 export async function openKind(page: Page, context: BrowserContext, dhara: DharaServer, kind: Kind): Promise<void> {
   await seed(dhara, kind);
   await gotoApp(page, dhara);

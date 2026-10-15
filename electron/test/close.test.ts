@@ -9,7 +9,6 @@ vi.mock('electron', () => ({
 const { installCloseHandler } = await import('../src/close.js');
 const { CHECKPOINT_FAILED, CLOSE_TIMEOUT_MS, NOT_RESPONDING } = await import('../src/protocol.js');
 
-/** A loaded window whose executeJavaScript is controlled by the test. */
 function fakeWindow(script: () => Promise<unknown>) {
   const state = { crashed: false };
   const contents = Object.assign(new EventEmitter(), {
@@ -57,7 +56,7 @@ describe('close handler when the checkpoint request rejects', () => {
     let reject!: (error: Error) => void;
     const { close, onApproved, state } = fakeWindow(() => new Promise((_, fail) => { reject = fail; }));
     close();
-    state.crashed = true;   // the death is detected through isCrashed(); no render-process-gone event is needed
+    state.crashed = true;
     reject(new Error('Render frame was disposed before WebFrameMain could be accessed'));
     await flush();
     expect(onApproved).toHaveBeenCalledTimes(1);

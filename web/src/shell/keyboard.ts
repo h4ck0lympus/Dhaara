@@ -1,4 +1,3 @@
-// web/src/shell/keyboard.ts
 import { isDialogOpen } from './dialogs';
 import { isUnlockOpen } from './unlock';
 
@@ -16,7 +15,7 @@ export function installKeyboard(navigate: (to: string) => void): () => void {
       event.preventDefault();
       navigate('/overview');
       setTimeout(() => window.dispatchEvent(new CustomEvent('dhaara-overview-pane', { detail: 'notes' })), 50);
-      setTimeout(() => document.querySelector<HTMLInputElement>('#note-search')?.focus(), 100); // app.js:563
+      setTimeout(() => document.querySelector<HTMLInputElement>('#note-search')?.focus(), 100);
       return;
     }
     if (event.key === 'n' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey

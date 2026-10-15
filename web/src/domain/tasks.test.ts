@@ -1,4 +1,3 @@
-// web/src/domain/tasks.test.ts
 import { describe, expect, it } from 'vitest';
 import { makeRun, makeSnapshot, makeTask } from '../test/fixtures';
 import { dateLabel } from './format';
@@ -41,7 +40,6 @@ describe('filterTasks', () => {
     expect(TASK_FILTERS.map(f => f.label)).toEqual(['Open', 'Needs you', 'Running', 'Available now', 'Parked', 'Completed', 'All']);
   });
   it('open excludes parked and done, sorted high → low (app.js:258)', () => {
-    // Stable sort: mediums keep snapshot order.
     expect(ids('open')).toEqual(['high', 'running', 'asking', 'stale', 'low']);
   });
   it('needs-you uses the server attention list', () => expect(ids('needs-you')).toEqual(['asking']));

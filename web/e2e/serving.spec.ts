@@ -59,7 +59,6 @@ test('base app runs with no model and capture disabled by default', async () => 
   }
 });
 
-// A phone or tablet on the LAN: plain HTTP, a non-loopback Host and only the session cookie (spec §8 "Cookie-only access").
 test('a non-loopback Host with only a valid cookie reaches the shell and the API', async () => {
   const dhara = await startDhara({ env: { DHARA_ALLOWED_HOSTS: 'dhara.test' } });
   const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP dhara.test 127.0.0.1'] });
@@ -67,7 +66,7 @@ test('a non-loopback Host with only a valid cookie reaches the shell and the API
     const origin = `http://dhara.test:${dhara.port}`;
     const context = await browser.newContext();
     await context.addCookies([{ name: 'dhara_session', value: E2E_TOKEN, url: origin, httpOnly: true, sameSite: 'Strict' }]);
-    const assertClean = await guardContext(context); // this context is outside the auto fixtures
+    const assertClean = await guardContext(context);
     const page = await context.newPage();
     const sessionCalls: string[] = [];
     const stateStatuses: number[] = [];
@@ -79,7 +78,7 @@ test('a non-loopback Host with only a valid cookie reaches the shell and the API
     await page.goto(origin + '/');
     await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
     expect(await page.evaluate(() => ({ secure: window.isSecureContext, worker: 'serviceWorker' in navigator }))).toEqual({ secure: false, worker: false });
-    await expect.poll(() => stateStatuses[0]).toBe(200); // the app's own boot request used the cookie
+    await expect.poll(() => stateStatuses[0]).toBe(200);
     expect(stateStatuses).not.toContain(401);
     expect(sessionCalls).toEqual([]);
     assertClean();

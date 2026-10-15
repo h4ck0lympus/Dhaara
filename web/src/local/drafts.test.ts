@@ -200,7 +200,7 @@ describe('persist racing an in-flight save', () => {
     await store().setRaw('queue me');
     const queuedId = store().getSnapshot().draft.id;
     const saving = store().save();
-    const persisting = store().persist(); // enqueued behind the save's transaction
+    const persisting = store().persist();
     await Promise.all([saving, persisting]);
     const stored = (await m.db.kvGet('draft')) as { id: string };
     expect(stored.id).toBe(store().getSnapshot().draft.id);

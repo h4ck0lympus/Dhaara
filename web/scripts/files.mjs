@@ -1,4 +1,3 @@
-// Shared by the build-check scripts: every file under dir, as sorted posix paths relative to dir.
 import { readdirSync } from 'node:fs';
 import { sep } from 'node:path';
 

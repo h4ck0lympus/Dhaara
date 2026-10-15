@@ -1,5 +1,3 @@
-// web/src/ui/Dialog.tsx
-// Native <dialog>.showModal(): top layer, inert background, stacking and Tab containment come from the platform.
 import { useId, useLayoutEffect, useRef, type JSX, type MouseEvent, type ReactNode } from 'react';
 import { Icon } from './Icon';
 
@@ -19,8 +17,6 @@ export function Dialog({ title, onRequestClose, children, closeLabel = 'Close di
     if (!dialog.hasAttribute('open')) dialog.showModal();
     dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     const onCancel = (event: Event) => { event.preventDefault(); request.current(); };
-    // A stale close event queued by the StrictMode cleanup arrives after re-open: dialog.open skips it.
-    // Chromium may close on a repeated Escape without 'cancel'; React stays the only authority.
     const onClose = () => { if (mounted && !dialog.open) { dialog.showModal(); request.current(); } };
     dialog.addEventListener('cancel', onCancel);
     dialog.addEventListener('close', onClose);
@@ -37,7 +33,7 @@ export function Dialog({ title, onRequestClose, children, closeLabel = 'Close di
     if (event.target !== event.currentTarget) return;
     const box = event.currentTarget.getBoundingClientRect();
     const outside = event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom;
-    if (outside) request.current(); // backdrop click (app.js:547)
+    if (outside) request.current();
   }
 
   return (

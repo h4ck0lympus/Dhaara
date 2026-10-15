@@ -105,12 +105,10 @@ describe('parseArgs (main.rs:12-108)', () => {
     expect(cliError(() => parse([arg]))).toBe('Unknown argument; use --help. No token file is needed by the webview.');
   });
 
-  // Rust f64::from_str grammar (main.rs:38-42): no whitespace, hex or digit separators, which Number() would accept.
   it.each(['abc', '', ' ', ' 5', '5 ', '0x10', '1_0', '1e'])('rejects the non-numeric timeout %j', (value) => {
     expect(cliError(() => parse(['--startup-timeout', value]))).toBe('Invalid startup timeout');
   });
 
-  // Rust parses inf/infinity/nan, then the range check rejects them (main.rs:62-64).
   it.each(['0.05', '61', 'Infinity', 'inf', 'NaN', '-1', '0'])('rejects the out-of-range timeout %j', (value) => {
     expect(cliError(() => parse(['--startup-timeout', value]))).toBe('Use a startup timeout from 0.1 to 60 seconds');
   });

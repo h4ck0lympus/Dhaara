@@ -1,4 +1,3 @@
-// Fails the build when a file under dist/assets lacks a Vite content hash (spec §6.1). Usage: node scripts/check-hashes.mjs [distDir]
 import { basename, join } from 'node:path';
 import { listFiles } from './files.mjs';
 

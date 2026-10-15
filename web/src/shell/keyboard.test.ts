@@ -1,4 +1,3 @@
-// web/src/shell/keyboard.test.ts
 // @vitest-environment jsdom
 import { act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

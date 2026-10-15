@@ -20,7 +20,7 @@ describe('NoteHistoryDialog', () => {
       if (call.url === '/api/notes/n1/restore/1') {
         const expected = (call.body as { expected_version: number }).expected_version;
         if (expected === 3) return jsonResponse(200, makeNote('n1', { version: 4 }));
-        version = 3;   // another device saved meanwhile; flipped at the POST so no earlier or extra GET can see it
+        version = 3;
         return jsonResponse(409, { detail: 'This note changed' });
       }
       return undefined;

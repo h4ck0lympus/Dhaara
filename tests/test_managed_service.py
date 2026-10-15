@@ -32,7 +32,6 @@ linux = pytest.mark.skipif(sys.platform != 'linux', reason='Managed mode is Linu
 
 
 def test_stripped_env_matches_the_electron_owner_list():
-    # electron/src/env.ts strips the same names under both prefixes before spawning (spec §6.4.2, rename spec §4.1).
     ts = (ROOT / 'electron/src/env.ts').read_text()
     names = re.search(r'export const STRIPPED_NAMES = \[(.*?)\] as const', ts, re.S).group(1)
     assert set(re.findall(r"'(\w+)'", names)) == set(STRIPPED_NAMES)
@@ -53,7 +52,6 @@ def managed_env():
     return env
 
 
-# The service as the venv runs it and as the AppImage ships it (packaging spec §6); DHARA_SERVICE_CMD overrides the frozen command.
 FROZEN_DEFAULT = ROOT / 'release/out/service/dhara-service/dhara-service'
 SERVICE_CMDS = {'venv': [sys.executable, str(ROOT / 'run.py')],
                 'packaged': shlex.split(os.environ.get('DHARA_SERVICE_CMD', '')) or [str(FROZEN_DEFAULT)]}
@@ -68,7 +66,6 @@ def service_cmd(request):
 
 
 def launch(cmd, data, port, owner=None, host='127.0.0.1', cwd=None):
-    # Own session: on lease EOF Python signals its own process group, never pytest's.
     return subprocess.Popen(
         [*cmd, '--desktop-managed', '--host', host, '--port', str(port),
          '--data-dir', str(data), '--owner-pid', str(os.getpid() if owner is None else owner)],
@@ -123,7 +120,7 @@ def test_bind_listener_sets_reuseaddr_never_reuseport():
         assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 1
         assert sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0
         with socket.create_connection(sock.getsockname(), timeout=2):
-            pass  # listen() already ran
+            pass
     finally:
         sock.close()
 
@@ -142,7 +139,7 @@ def test_set_parent_death_signal_requests_sigterm():
     code = ('import ctypes; from dhara.desktop_service import set_parent_death_signal; set_parent_death_signal(); '
             'value = ctypes.c_int(); ctypes.CDLL(None).prctl(2, ctypes.byref(value), 0, 0, 0); print(value.value)')
     result = subprocess.run([sys.executable, '-c', code], cwd=ROOT, capture_output=True, text=True, check=True, timeout=30)
-    assert int(result.stdout) == signal.SIGTERM  # PR_GET_PDEATHSIG
+    assert int(result.stdout) == signal.SIGTERM
 
 
 @linux
@@ -183,12 +180,12 @@ def test_managed_exit_codes_never_write_the_workspace(tmp_path, service_cmd, cas
         process = launch(service_cmd, data, port, owner=owner, host=host, cwd=tmp_path)
         out, _ = process.communicate(lease, timeout=30)
         assert process.returncode == expected
-        assert out == b''  # no readiness line
+        assert out == b''
         if case == 'port':
             with pytest.raises(TimeoutError):
-                occupant.accept()  # the occupant is never contacted
+                occupant.accept()
         if expected == EXIT_LEASE:
-            assert list(root.iterdir()) == []  # nothing, not even the lock, before a valid lease
+            assert list(root.iterdir()) == []
         assert not (root / 'admin.token').exists()
         assert not (tmp_path / 'missing').exists()
     finally:
@@ -217,7 +214,6 @@ def test_managed_acknowledges_protocol_2_and_stops_on_lease_eof(tmp_path, servic
         assert identity == {'protocol': 2, 'instance': INSTANCE, 'pid': process.pid}
         assert (root / 'admin.token').exists()
         process.stdin.close()
-        # uvicorn re-raises the SIGTERM it captured after a graceful shutdown (uvicorn/server.py:335-339).
         assert process.wait(timeout=15) in (0, -signal.SIGTERM)
     finally:
         if process.poll() is None:

@@ -22,7 +22,7 @@ export function Nav(): JSX.Element {
   function toggle() {
     const next = !collapsed;
     setCollapsed(next);
-    try { localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0'); } catch { /* remembered for this page only */ }
+    try { localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0'); } catch {}
   }
   return (
     <aside className="sidebar" data-collapsed={collapsed ? 'true' : 'false'}>

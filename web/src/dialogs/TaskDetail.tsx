@@ -1,5 +1,4 @@
 import { readableTaskTitle } from '../domain/tasks';
-// web/src/dialogs/TaskDetail.tsx
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState, type FormEvent, type JSX } from 'react';
@@ -18,7 +17,7 @@ import { messageOf, toast, toastError } from '../ui/Toast';
 import { DISCARD_EDITS, TaskEditForm } from './TaskEdit';
 
 function SessionLink({ url }: { url: string }): JSX.Element | null {
-  if (!isSessionUrl(url)) return null; // app.js:27 — http(s) only
+  if (!isSessionUrl(url)) return null;
   return <a className="text-button" href={url} target="_blank" rel="noopener noreferrer">Open session ↗</a>;
 }
 
@@ -35,7 +34,7 @@ function TaskView({ task, snapTask, snapshot, onClose, onEdit }: {
   const [reminderError, setReminderError] = useState('');
   const tasks = snapshot?.tasks ?? [];
   const linkedNotes = (snapshot?.notes ?? []).filter(n => n.task_id === task.id);
-  const focusable = task.status !== 'done' && task.status !== 'parked'; // the server rejects focus on these
+  const focusable = task.status !== 'done' && task.status !== 'parked';
 
   async function focusThis() {
     if (!confirmFocusChange(snapshot?.focus ?? null, task.id)) return;
@@ -190,7 +189,6 @@ export function TaskDetailDialog({ id, onClose }: { id: string; onClose: () => v
   const editDirty = useRef(false);
   const snapshot = useSnapshot().data;
   const snapTask = snapshot?.tasks.find(t => t.id === id);
-  // A just-acknowledged task may be missing from a failed post-save refresh.
   const fetched = useQuery({ queryKey: ['task', id], queryFn: () => call('task', TaskSchema, { params: { id } }), enabled: !snapTask });
   const task = snapTask ?? fetched.data;
   if (!task) {

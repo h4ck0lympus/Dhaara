@@ -47,7 +47,6 @@ async function start(): Promise<void> {
   if (result.kind === 'locked') requestUnlock();
   onUnauthorized(requestUnlock);
   let router: ReturnType<typeof createAppRouter> | undefined;
-  // Both installed before createAppRouter so they run before the router's own popstate listener (rewrite first: legacy modal links).
   installLegacyHashRewrite(to => router!.history.replace(to));
   installModalLinks(() => router!.state.location, request => openModalLink(request, latestSnapshot(qc)));
   router = createAppRouter(qc);
@@ -57,8 +56,6 @@ async function start(): Promise<void> {
   registerServiceWorker();
 }
 
-// public/app.js:616 — never leave a blank page when startup itself throws. With `retry`, the user retries in place
-// (rename spec §4.4: the pre-rename database is moved before anything else touches local storage).
 function showStartupFailure(message: string, retry = false): void {
   const main = document.createElement('main');
   main.dataset.quiet = '';

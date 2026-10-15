@@ -1,4 +1,3 @@
-// web/src/screens/Plan.tsx
 import { useState, type JSX } from 'react';
 import { useSearch, useNavigate } from '@tanstack/react-router';
 import { TaskRow } from '../components/TaskRow';

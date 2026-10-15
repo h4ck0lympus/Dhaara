@@ -20,14 +20,13 @@ import { PageHeading } from '../ui/PageHeading';
 import { toast } from '../ui/Toast';
 import '../styles/capture-notes.css';
 
-const DRAFT_LABELS: Record<LocalSaveState, string> = {   // app.js:66
+const DRAFT_LABELS: Record<LocalSaveState, string> = {
   saved: S.draftSaved,
   error: S.draftError,
   pending: S.draftPending,
   memory: S.draftMemory,
 };
 
-// Flush deletes an outbox item only after a 2xx, so an absent item means the server acknowledged it.
 async function ackState(id: string): Promise<SavedCapture['state']> {
   const item = await outboxGet(id);
   if (item === undefined) return 'server';
@@ -72,7 +71,7 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
   async function addFiles(files: File[]) {
     if (!files.length) return;
     if (captureDraftStore.getSnapshot().saving) {
-      toast(S.finishingLocalSave);   // addFiles accepts nothing while a save is in flight
+      toast(S.finishingLocalSave);
       return;
     }
     toastRejections(await captureDraftStore.addFiles(files));
@@ -81,7 +80,7 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
   async function save() {
     if (captureDraftStore.getSnapshot().saving) return;
     if (recording) {
-      toast(S.stopRecordingBeforeSaving);   // app.js:401
+      toast(S.stopRecordingBeforeSaving);
       return;
     }
     const id = captureDraftStore.getSnapshot().draft.id;
@@ -91,13 +90,12 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
       return;
     }
     setSaved({ id, state: 'queued' });
-    toast(connection.get() ? S.captureSavedSending : S.captureSavedOffline);   // app.js:417
+    toast(connection.get() ? S.captureSavedSending : S.captureSavedOffline);
     await runFlush(queryClient);
     try {
       const state = await ackState(id);
       setSaved(current => (current?.id === id ? { id, state } : current));
     } catch {
-      // An unreadable queue keeps the queued wording; flush already reported it.
     }
   }
 
@@ -121,7 +119,7 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
     void addFiles(Array.from(event.dataTransfer.files));
   }
 
-  const tasks = (snapshot?.tasks ?? []).filter(task => task.status !== 'done');   // app.js:216
+  const tasks = (snapshot?.tasks ?? []).filter(task => task.status !== 'done');
   const linkedElsewhere = draft.task_id !== '' && !tasks.some(task => task.id === draft.task_id);
 
   return (
@@ -146,14 +144,12 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
             onPaste={onPaste}
           />
           <div className="visual-tray" role="group" aria-labelledby="visual-tray-label">
-            {/* app.js:213 */}
             <span className="eyebrow" id="visual-tray-label">Visuals &amp; recordings</span>
             <Attachments files={draft.files} onRemove={index => { void captureDraftStore.removeFile(index); }} />
             {draft.files.length === 0 && <p className="tray-hint">Paste or drop an image. Diagrams and audio stay with this note.</p>}
           </div>
           <div className="canvas-tools">
             <div className="tool-group">
-              {/* app.js:211, 435 */}
               <button type="button" className="quiet-button" onClick={() => void recorder.start()} disabled={recording}><Icon name="mic" />{recorder.status === RECORDER_TEXT.added ? 'Record another thought' : 'Record a thought'}</button>
               <button type="button" className="quiet-button" onClick={() => picker.current?.click()}><Icon name="image" />Image</button>
               <button type="button" className="quiet-button" onClick={() => openDialog({ kind: 'sketch' })}><Icon name="pen" />Sketch</button>
@@ -172,7 +168,6 @@ export function CaptureScreen({ embedded = false, onOpenNote }: { embedded?: boo
               ) : (
                 <button type="button" className="secondary" onClick={recorder.pause} disabled={recorder.phase !== 'recording'}><Icon name="pause" />Pause</button>
               )}
-              {/* app.js:438 */}
               <button type="button" className="secondary" onClick={recorder.stop} disabled={recorder.phase === 'starting'}><Icon name="stop" />Stop recording</button>
             </div>
           ) : (

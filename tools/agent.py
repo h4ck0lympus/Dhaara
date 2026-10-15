@@ -14,7 +14,7 @@ import subprocess
 import sys
 import time
 from uuid import uuid4
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tools/ scripts run from anywhere; dhara/ is beside them
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dhara.env import strip
 from client import Client
 
@@ -57,7 +57,6 @@ def main():
         seq+=1;outbox.add('/runs/'+run_id+'/events',{'event_id':uuid4().hex,'seq':seq,'kind':kind,'message':message});outbox.flush(client)
     send('started','Command started. Output stays in your terminal.')
     child_env=os.environ.copy()
-    # Do not hand this integration credential or an admin token to the wrapped command.
     strip(child_env,('TOKEN','ACCESS_TOKEN'))
     process=None
     try:

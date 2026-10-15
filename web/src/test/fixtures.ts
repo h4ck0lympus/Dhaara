@@ -1,4 +1,3 @@
-// Schema-valid unit-test factories (contract §4.7). Values mirror what dhara/store.py returns for a fresh workspace.
 import type { Note, NoteSummary, Snapshot, SnapshotRun, SnapshotTask } from '../api/schemas';
 
 const STAMP = '2026-10-08T12:00:00+00:00';

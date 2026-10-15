@@ -61,10 +61,10 @@ describe('ManagedService stop, cancel and crash (spec §6.4.6-6.4.7)', () => {
     process.kill(first.pid, 'SIGKILL');
     await until(() => crashes.length === 1);
     expect([crashes[0].code, crashes[0].message]).toEqual(['crashed', MESSAGES.crashed]);
-    await until(() => !pids.some(live));   // the grandchild is gone too (spec §6.4.7)
+    await until(() => !pids.some(live));
     await delay(300);
     expect(managed.state).toBe('crashed');
-    expect(readPids(pidfile)).toEqual(pids);   // nothing was spawned meanwhile
+    expect(readPids(pidfile)).toEqual(pids);
     const retries = [managed.start(), managed.start(), managed.start()];
     expect(new Set(retries).size).toBe(1);
     const second = await retries[0];

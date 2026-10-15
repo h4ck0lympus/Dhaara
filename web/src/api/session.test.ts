@@ -16,7 +16,6 @@ const requests = () => fetchMock.mock.calls.map(([url, init]) => `${init?.method
 describe('boot', () => {
   it('is unreachable when the server accepts the connection but never replies (10 s timeout)', async () => {
     vi.useFakeTimers();
-    // Native AbortSignal.timeout ignores fake timers; rebuild it on setTimeout so the 10 s is observable.
     const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation(ms => {
       const controller = new AbortController();
       setTimeout(() => controller.abort(new DOMException('timed out', 'TimeoutError')), ms);

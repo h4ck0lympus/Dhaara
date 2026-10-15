@@ -1,7 +1,5 @@
 import { QUIET_SLOTS } from './field';
 
-/* Shared by both passes (DRY): the camera ray to the ground plane and the height packing ranges.
-   Camera constants and math are ported from experiments/ui-ab/frontend/src/BackgroundField.tsx:17-27. */
 const SHARED = `
 const float H=4.2,P=.78,F=.62;
 const float HEIGHT_RANGE=5.,SLOPE_RANGE=8.,TAU=6.2831853;
@@ -13,7 +11,6 @@ vec3 groundAt(vec2 ndc,float aspect){
 }
 `;
 
-/** Full-screen triangle from gl_VertexID; no buffers. */
 export const HEIGHT_VERTEX = `#version 300 es
 void main(){
  vec2 corner=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));
@@ -21,7 +18,6 @@ void main(){
 }
 `;
 
-/** One texel per grid point: the 8,400 field() evaluations per frame (spec §7). Values are normalized so RGBA8 works too. */
 export const HEIGHT_FRAGMENT = `#version 300 es
 precision highp float;
 ${SHARED}
@@ -42,7 +38,6 @@ void main(){
 }
 `;
 
-/** Instanced: 2 vertices (base gl_VertexID 0, tip 1) per grid point, both fetching the same texel. */
 export const STROKE_VERTEX = `#version 300 es
 precision highp float;
 precision highp int;
@@ -71,7 +66,6 @@ void main(){
 }
 `;
 
-/** Quiet rects are CSS px; gl_FragCoord is backing px (scale = backing px per CSS px). */
 export const STROKE_FRAGMENT = `#version 300 es
 precision highp float;
 uniform vec4 quiet[${QUIET_SLOTS}];

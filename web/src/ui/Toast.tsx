@@ -5,12 +5,11 @@ import { Icon } from './Icon';
 export type ToastOptions = { action?: { label: string; onClick: () => void }; tone?: 'status' | 'error' };
 type Current = { id: number; message: string; options: ToastOptions };
 
-export const TOAST_MS = 5500; // public/app.js:15
+export const TOAST_MS = 5500;
 
 const store = createStore<Current | null>(null);
 let seq = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
-// Popover API is feature-detected: engines without it get a plain fixed layer.
 const hasPopover = () => typeof HTMLElement !== 'undefined' && typeof HTMLElement.prototype.showPopover === 'function';
 
 export function toast(message: string, options: ToastOptions = {}): void {
@@ -39,7 +38,6 @@ export function ToastHost(): JSX.Element {
   useEffect(() => {
     const el = layer.current;
     if (!popover || !el) return;
-    // Re-showing puts the toast above any modal dialog opened since (top-layer order).
     if (el.matches(':popover-open')) el.hidePopover();
     el.showPopover();
   }, [active, popover]);

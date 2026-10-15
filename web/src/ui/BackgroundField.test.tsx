@@ -49,7 +49,6 @@ describe('BackgroundField', () => {
   });
 });
 
-// A recording WebGL2 stand-in: constants are numbers, create*/get* succeed, everything else is a spy.
 function fakeGl() {
   const calls: Record<string, ReturnType<typeof vi.fn>> = {};
   const impl: Record<string, () => unknown> = {
@@ -150,7 +149,6 @@ describe('BackgroundField with a WebGL2 context', () => {
       const canvas = container.querySelector('canvas')!;
       act(() => { vi.advanceTimersByTime(61_000); });
       expect(canvas.dataset.state).toBe('paused');
-      // An element focus reaches the window listener only through capture; a window focus is covered by the blur/focus e2e test.
       const target = type === 'focus' ? container.appendChild(document.createElement('button')) : window;
       act(() => { target.dispatchEvent(new Event(type)); });
       expect(canvas.dataset.state).toBe('animated');
@@ -162,7 +160,6 @@ describe('BackgroundField with a WebGL2 context', () => {
     surface.setAttribute('data-quiet', '');
     let top = 0;
     surface.getBoundingClientRect = () => ({ left: 0, top: (top += 20), width: 100, height: 100, right: 100, bottom: top + 100, x: 0, y: top, toJSON() {} });
-    // jsdom has no layout, so the fixed canvas would measure 0 x 0 and clip the surface away.
     vi.spyOn(HTMLCanvasElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
     vi.spyOn(HTMLCanvasElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
     const { container } = render(<BackgroundField motion={false} />);
@@ -199,7 +196,6 @@ describe('BackgroundField with a WebGL2 context', () => {
     render(<BackgroundField motion />);
     const texImages = () => calls.texImage2D.mock.calls.length;
     const initial = texImages();
-    // Ticks arrive 300ms apart (slow GPU) while each draw itself is instant.
     for (let i = 0; i < 30; i++) { now += 300; act(() => { vi.advanceTimersByTime(300); }); }
     expect(texImages()).toBeGreaterThan(initial);
   });

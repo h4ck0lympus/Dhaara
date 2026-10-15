@@ -1,5 +1,3 @@
-// Server-state defaults (spec §4.3): never paused by OS "offline" reports, mutations never retried, queries retried at
-// most twice on network errors and 5xx.
 import { QueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 

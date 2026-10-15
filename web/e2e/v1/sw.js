@@ -1,4 +1,3 @@
-// Cache application assets only. Private API data and recordings never enter this cache.
 const CACHE='noema-shell-v1';
 const ASSETS=['/','/static/styles.css','/static/app.js','/static/icon.svg','/static/cat.png','/static/manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting()});

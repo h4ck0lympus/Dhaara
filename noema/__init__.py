@@ -13,4 +13,4 @@ import dhara
 warnings.warn("The 'noema' package was renamed 'dhara'; import dhara instead.", DeprecationWarning, stacklevel=2)
 __version__ = dhara.__version__
 for _module in pkgutil.iter_modules(dhara.__path__):
-    globals()[_module.name] = sys.modules[f'noema.{_module.name}'] = importlib.import_module(f'dhara.{_module.name}')  # bind as an attribute too: import noema.server; noema.server
+    globals()[_module.name] = sys.modules[f'noema.{_module.name}'] = importlib.import_module(f'dhara.{_module.name}')

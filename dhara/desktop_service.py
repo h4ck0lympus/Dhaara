@@ -15,7 +15,6 @@ EXIT_PORT = 11
 EXIT_LEASE = 12
 PR_SET_PDEATHSIG = 1
 LOCK_NAME = '.dhara-service.lock'
-# Managed development mode never enables optional models, remote access or another data dir.
 STRIPPED_NAMES = ('MODEL', 'SPEECH_MODEL', 'TOKEN', 'ACCESS_TOKEN', 'ALLOWED_HOSTS', 'ALLOW_REMOTE_MODEL', 'DATA_DIR')
 STRIPPED_ENV = tuple(prefix + name for prefix in PREFIXES for name in STRIPPED_NAMES)
 
@@ -51,7 +50,7 @@ def read_lease(stream):
         raise ValueError('Invalid desktop lease')
     try:
         config = json.loads(line)
-    except ValueError:  # includes UnicodeDecodeError
+    except ValueError:
         raise ValueError('Invalid desktop lease') from None
     instance = config.get('instance') if isinstance(config, dict) else None
     if (not isinstance(instance, str) or len(instance) != 64
@@ -63,7 +62,6 @@ def read_lease(stream):
 def bind_listener(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        # Rebind at once after a crash (TIME_WAIT); never SO_REUSEPORT, which would share a live port.
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((host, port))
         sock.listen(2048)
@@ -83,7 +81,7 @@ def managed(args):
         return EXIT_LEASE
     set_parent_death_signal()
     if os.getppid() != args.owner_pid:
-        return EXIT_LEASE  # the owner died before prctl took effect
+        return EXIT_LEASE
     if not args.data_dir or args.open or args.host != '127.0.0.1':
         return EXIT_LEASE
     root = Path(args.data_dir)
@@ -109,11 +107,9 @@ def managed(args):
     finished = threading.Event()
 
     def lease():
-        # Owner crash/SIGKILL or a deliberate stop closes the pipe.
         sys.stdin.buffer.read()
         if running['server'] is not None:
             running['server'].should_exit = True
-        # Signal only this dedicated group. Separately wrapped agents are not in it.
         os.killpg(os.getpgrp(), signal.SIGTERM)
         if not finished.wait(8):
             os.killpg(os.getpgrp(), signal.SIGKILL)

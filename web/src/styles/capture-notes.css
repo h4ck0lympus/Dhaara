@@ -1,4 +1,3 @@
-/* Capture, Notes, Note view and Settings (Phase 2b). Ported from experiments/ui-ab/frontend/src/style.css:151-201, 298-313. */
 .capture-screen, .notes-screen, .note-screen { max-width: 960px; }
 .subtle-line, .tray-hint, .record-status, .draft-meta { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 8px 0 0; }
 .field-error { color: var(--text); font-size: 13px; margin: 8px 0 0; }
@@ -49,7 +48,7 @@
 .note-navigation button[aria-pressed=true] { color: var(--text); background: var(--surface); font-weight: 600; }
 .note-navigation .count { margin-left: auto; font-size: 12px; }
 .list-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.notes-layout .pane-toggle { display: none; }   /* beats .quiet-button in ui.css */
+.notes-layout .pane-toggle { display: none; }
 .note-row { display: flex; flex-direction: column; gap: 4px; padding: 12px 4px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
 .note-row-title { font-size: 16px; }
 .note-row-meta { font-size: 13px; color: var(--muted); }
@@ -86,7 +85,6 @@
 .settings-form .full { grid-column: 1 / -1; }
 .token-value { display: block; margin-top: 8px; padding: 8px; overflow-wrap: anywhere; user-select: all; }
 
-/* Breakpoints match the Phase 2a shell (02-screens-core.md shell.css): 649.98 px and 999.98 px. */
 @media (min-width: 650px) and (max-width: 999.98px) and (orientation: landscape) {
   .notes-layout { grid-template-columns: 155px minmax(0, 1fr); gap: 20px; }
   .notes-layout .pane-toggle { display: inline-flex; }

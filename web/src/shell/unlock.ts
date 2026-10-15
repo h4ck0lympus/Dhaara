@@ -1,4 +1,3 @@
-// Unlock stacks above any open dialog and never closes it (spec §4.2).
 import type { QueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import { runFlush } from '../state/queries';

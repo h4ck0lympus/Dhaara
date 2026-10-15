@@ -1,4 +1,3 @@
-// web/src/dialogs/Unlock.tsx
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent, type JSX } from 'react';
 import { unlock } from '../api/session';
@@ -20,7 +19,7 @@ export function UnlockDialog({ onClose }: { onClose: () => void }): JSX.Element 
     setError('');
     try {
       await unlock(token);
-      await completeUnlock(qc); // closes this dialog
+      await completeUnlock(qc);
     } catch (err) {
       setError(messageOf(err));
       setBusy(false);

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { absolutePath, ensurePrivateDir, hasFinalComponent } from './paths.js';
 
-// The profile holds the session cookie: it is credential storage (spec §6.3).
 export const PROFILE_MESSAGES = {
   noHome: 'Cannot locate profile; supply --profile PATH',
   dedicated: 'Choose a dedicated profile directory',
@@ -10,7 +9,6 @@ export const PROFILE_MESSAGES = {
   protect: 'Cannot protect profile',
 } as const;
 
-/** $XDG_DATA_HOME when absolute, else ~/.local/share; the profile and the packaged default workspace both live under it. */
 export function dataHome(env: NodeJS.ProcessEnv): string {
   const xdg = env.XDG_DATA_HOME;
   const base = xdg && path.isAbsolute(xdg) ? xdg : env.HOME ? path.join(env.HOME, '.local/share') : null;
@@ -23,12 +21,10 @@ export function resolveProfile(option: string | null, env: NodeJS.ProcessEnv, cw
   return path.join(dataHome(env), 'dhara', 'electron');
 }
 
-/** The pre-rename default profile directory (rename spec §4.6); the dated follow-up deletes this and adoptLegacyProfile. */
 export function legacyProfile(env: NodeJS.ProcessEnv): string {
   return path.join(dataHome(env), 'noema', 'electron');   // rename-shim: old default location
 }
 
-/** Moves the old default profile to the new path once (same filesystem, atomic). If the rename fails, the old path stays in use and one line is logged. */
 export function adoptLegacyProfile(profile: string, legacy: string, log: (line: string) => void): string {
   if (fs.existsSync(profile) || !fs.existsSync(legacy)) return profile;
   try {

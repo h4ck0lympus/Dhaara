@@ -49,7 +49,6 @@ def build_plugin(folder, provider, inbox, python):
     shutil.copyfile(Path(__file__).with_name('agent_hook.py'), folder / 'hooks' / 'report.py')
     (folder / 'skills' / 'dhaara' / 'SKILL.md').write_text(SKILL)
     variable = 'CLAUDE_PLUGIN_ROOT' if provider == 'claude' else 'PLUGIN_ROOT'
-    # Plugin root is supplied by the host; the queue belongs to this installation.
     if os.name == 'nt':
         command = f'"{python}" "%{variable}%/hooks/report.py" --inbox "{inbox}" --provider {provider}'
     else:

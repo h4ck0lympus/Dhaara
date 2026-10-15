@@ -75,8 +75,6 @@ def _configure(store, provider, enabled, home=None, mode='hooks'):
     path = Path(previous['path']) if previous.get('path') else config_path(provider, home)
     config = read_config(path)
     hooks = config.setdefault('hooks', {})
-    # Remove only exact commands recorded by our installer; preserve every
-    # other hook and setting, including mixed groups and custom matchers.
     owned = set(previous.get('commands', []))
     for event, groups in list(hooks.items()):
         cleaned = []
@@ -111,8 +109,6 @@ def _configure(store, provider, enabled, home=None, mode='hooks'):
         events = [e for e in EVENTS if not (provider == 'claude' and e == 'Interrupt')
                   and not (provider == 'codex' and e == 'StopFailure')]
         for event in events if mode == 'hooks' else []:
-            # Short synchronous local writes preserve ordering across permission,
-            # tool and Stop events; there are no network waits.
             hooks.setdefault(event, []).append({'hooks': [{'type': 'command', 'command': command, 'timeout': 2}]})
         installed[provider] = {'commands': [command] if mode == 'hooks' else [], 'path': str(path),
                                'mode': mode, 'since': previous.get('since', time.time())}
@@ -169,10 +165,8 @@ def accept(store, event):
             task, run = old['task_id'], old['run_id']
         current = db.execute('SELECT * FROM runs WHERE id=?', (run,)).fetchone()
         if state == 'ended':
-            # Ending a session must not erase a result awaiting review.
             state = current['status'] if current and current['status'] in ('review', 'failed', 'cancelled') else 'cancelled'
         if current and current['status'] in ('review', 'failed', 'cancelled') and state == 'working':
-            # Archive the previous turn's report so it stops asking for review.
             db.execute("UPDATE runs SET status='cancelled' WHERE id=?", (run,))
             run = uuid4().hex
         messages = {'working': 'Agent activity reported by a lifecycle hook.',

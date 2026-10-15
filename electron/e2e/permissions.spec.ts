@@ -2,7 +2,6 @@ import { test, expect, type Page } from '@playwright/test';
 import { startDhara, type DharaServer } from '../../web/e2e/server.js';
 import { killAll, launchDhara, messageBoxes, stubMessageBox, waitConnected } from './fixtures.js';
 
-// Verbatim PERMISSION_PROMPTS (src/permissions.ts; main.rs:263-276).
 const MICROPHONE = 'Allow Dhara to use your microphone for a recording?';
 const NOTIFICATIONS = 'Allow Dhara to show notifications?';
 
@@ -30,7 +29,6 @@ test('audio-only media is prompted once per app session; video is always denied'
   expect(await getUserMedia(first.window, { audio: true, video: true })).toBe('NotAllowedError');
   expect(await messageBoxes(first.app)).toEqual([MICROPHONE]);
   await first.app.close();
-  // Decisions are not persisted: a restart prompts again.
   const second = await launchDhara(['--server', dhara.origin], { profile: first.profile });
   await waitConnected(second.window);
   await stubMessageBox(second.app, [1]);

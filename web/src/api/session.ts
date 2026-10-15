@@ -1,4 +1,3 @@
-// Boot order (spec §4.2): GET /api/state; only on a 401, loopback auto-login; only on a second 401, Unlock.
 import { S } from '../strings';
 import { ApiError, call } from './client';
 import { OkSchema, SnapshotSchema, type Snapshot } from './schemas';
@@ -17,7 +16,6 @@ function unreachable(error: unknown): BootResult {
   return { kind: 'unreachable', error: error instanceof ApiError ? error : new ApiError('network', S.networkError, null) };
 }
 
-// A hung server must not hold the shell blank: an abort counts as unreachable and the shell opens disconnected.
 const BOOT_TIMEOUT_MS = 10_000;
 
 export async function boot(): Promise<BootResult> {

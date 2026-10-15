@@ -59,7 +59,7 @@ def test_workspace_lock_uses_the_dhara_name_and_ignores_a_held_noema_lock(tmp_pa
     import fcntl
     from dhara.desktop_service import LOCK_NAME, workspace_lock
     old = os.open(tmp_path / '.noema-service.lock', os.O_RDWR | os.O_CREAT, 0o600)
-    fcntl.flock(old, fcntl.LOCK_EX | fcntl.LOCK_NB)   # a pre-rename shell still holding its lock must not block
+    fcntl.flock(old, fcntl.LOCK_EX | fcntl.LOCK_NB)
     held = workspace_lock(tmp_path)
     try:
         assert LOCK_NAME == '.dhara-service.lock'
@@ -86,7 +86,7 @@ def test_notebook_file_moves_on_a_clean_start_and_only_once(tmp_path):
     assert store.path == tmp_path / 'dhara.sqlite3' and not old.exists()
     with store.db() as c:
         assert c.execute('SELECT x FROM marker').fetchone()[0] == 'old'
-    assert Store(tmp_path).path == tmp_path / 'dhara.sqlite3'   # second start: no-op
+    assert Store(tmp_path).path == tmp_path / 'dhara.sqlite3'
 
 
 def test_notebook_file_stays_when_journal_side_files_exist(tmp_path, caplog):
@@ -101,8 +101,8 @@ def test_notebook_file_stays_when_journal_side_files_exist(tmp_path, caplog):
 
 def test_notebook_file_never_moves_over_an_existing_new_file(tmp_path, caplog):
     from dhara.store import Store
-    Store(tmp_path)                       # creates dhara.sqlite3
-    old = _old_notebook(tmp_path)         # a stray old file appears beside it
+    Store(tmp_path)
+    old = _old_notebook(tmp_path)
     with caplog.at_level('WARNING', logger='dhara.store'):
         store = Store(tmp_path)
     assert store.path == tmp_path / 'dhara.sqlite3' and old.exists()

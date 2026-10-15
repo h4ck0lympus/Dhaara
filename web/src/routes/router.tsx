@@ -14,20 +14,19 @@ import { toast } from '../ui/Toast';
 
 export function openModalLink(request: DialogRequest, snapshot: Snapshot | undefined): void {
   if (request.kind === 'task' && !snapshot?.tasks.some(t => t.id === request.id)) {
-    toast(S.taskUnavailable); // app.js:289 — truthful error, no fake action
+    toast(S.taskUnavailable);
     return;
   }
   openDialog(request);
 }
 
-// Cold start only: runtime modal links never reach the router (routes/legacy.ts installModalLinks).
 function TaskLinkScreen(): JSX.Element {
   const { id } = taskRoute.useParams();
   const snapshot = useSnapshot().data;
   const navigate = useNavigate();
   const handled = useRef(false);
   useEffect(() => {
-    if (handled.current || !snapshot) return; // checked against the first loaded snapshot (spec §4.5)
+    if (handled.current || !snapshot) return;
     handled.current = true;
     openModalLink({ kind: 'task', id }, snapshot);
     void navigate({ to: '/plan', replace: true });

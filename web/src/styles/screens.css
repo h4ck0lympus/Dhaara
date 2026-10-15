@@ -1,4 +1,3 @@
-/* web/src/styles/screens.css — Overview, Tasks and task dialogs. Compact rows, no oversized cards (handbook §10, §14). */
 .now-page, .plan-page { max-width: var(--reading); }
 .now-page { max-width: 1160px; }
 .overview-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(285px, 340px); gap: 28px; align-items: start; }
@@ -82,7 +81,6 @@
   .focus-line .quiet-button { margin-left: 0; }
 }
 
-/* Approved Overview: one open writing space and a bounded activity rail. */
 .overview-v2 .overview-columns { grid-template-columns: minmax(0, 1fr) clamp(300px, 24%, 400px); gap: clamp(24px, 4vw, 64px); align-items: start; }
 .overview-greeting { font-size: clamp(23px, 2.4vw, 32px); font-weight: 400; letter-spacing: -.6px; margin: 24px 0 0; }
 .overview-center { display: flex; flex-direction: column; min-height: 0; flex: 1; }
@@ -147,8 +145,6 @@
   .preview-row, .recent-notes > button, .settings-jump button { min-height: 44px; min-width: 44px; }
 }
 
-/* Overview follows the available window, including maximized and ultrawide sizes.
-   Editors remain in document flow, so long content grows instead of overlapping. */
 .workspace { display: flex; flex-direction: column; min-height: 100dvh; }
 .content:has(.overview-v2) { max-width: none; flex: 1; display: flex; flex-direction: column; padding-bottom: 28px; }
 .now-page.overview-v2 { max-width: none; width: 100%; flex: 1; display: flex; flex-direction: column; }

@@ -1,10 +1,9 @@
 import { shell, type WebContents } from 'electron';
 import { downloadAllowed, externalLinkAllowed, sameOrigin } from './origin.js';
 
-/** Spec §6.3 Navigation: same-origin only; everything else denied, plain web links to the system browser. */
 export function installNavigationGuards(contents: WebContents, origin: string): void {
   const sameOriginOnly = (event: { url: string; preventDefault(): void }) => {
-    if (!sameOrigin(origin, event.url)) event.preventDefault();   // parse errors are denied by sameOrigin
+    if (!sameOrigin(origin, event.url)) event.preventDefault();
   };
   contents.on('will-navigate', sameOriginOnly);
   contents.on('will-redirect', sameOriginOnly);

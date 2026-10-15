@@ -1,5 +1,3 @@
-// Queries and mutation hooks (spec §4.3, contract §4.6). Refetches update the cache only: screens copy server data into
-// form state when they open, so a refetch never replaces in-progress input.
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import { ApiError, call } from '../api/client';
@@ -56,7 +54,6 @@ type Ok = z.infer<typeof OkSchema>;
 type ContextRule = z.infer<typeof ContextRuleSchema>;
 type ReminderCreated = z.infer<typeof ReminderCreatedSchema>;
 
-// The Overview time budget is shared by every screen that reads the snapshot.
 let budget: number | null = null;
 const budgetListeners = new Set<() => void>();
 const subscribeBudget = (listener: () => void) => {
@@ -96,10 +93,10 @@ export function useSnapshot(): UseQueryResult<Snapshot, ApiError> {
         throw error;
       }
     },
-    refetchInterval: SNAPSHOT_INTERVAL_MS, // parity cadence: 15 s while visible
-    refetchIntervalInBackground: false, // no fetch while hidden
-    refetchOnWindowFocus: true, // TanStack's focus is document visibility: refetch on becoming visible
-    refetchOnReconnect: true, // the window 'online' event
+    refetchInterval: SNAPSHOT_INTERVAL_MS,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     placeholderData: keepPreviousData,
   });
   return query;
@@ -114,7 +111,6 @@ export async function readCachedSnapshot(): Promise<Snapshot | null> {
 export function installRefetchTriggers(qc: QueryClient): () => void {
   const serviceUp = () => void qc.refetchQueries({ queryKey: ['snapshot'] });
   window.addEventListener(SERVICE_UP, serviceUp);
-  // Flush trigger, once per QueryClient: each visible snapshot success (ticks, refetch on becoming visible and online).
   const unsubscribe = qc.getQueryCache().subscribe(event => {
     if (event.type === 'updated' && event.action.type === 'success' && event.query.queryKey[0] === 'snapshot' && document.visibilityState === 'visible') void runFlush(qc);
   });
@@ -137,7 +133,6 @@ export function useTokens(enabled: boolean): UseQueryResult<TokenSummary[], ApiE
   return useQuery<TokenSummary[], ApiError>({ queryKey: queryKeys.tokens, queryFn: () => call('tokens', TokenSummaryListSchema), enabled });
 }
 
-// Every mutation hook: no retry (QueryClient default), then invalidate the snapshot plus any extra keys.
 function useApiMutation<V, R>(mutationFn: (variables: V) => Promise<R>, extraKeys: (variables: V) => QueryKey[] = () => []): UseMutationResult<R, ApiError, V> {
   const qc = useQueryClient();
   return useMutation<R, ApiError, V>({
@@ -152,7 +147,6 @@ export function useSetFocus(): UseMutationResult<Focus, ApiError, { taskId: stri
   return useApiMutation((v: { taskId: string | null }) => call('focus', FocusSchema, { body: { task_id: v.taskId, pinned: true } }));
 }
 
-// Complete/reopen/priority re-read the task and PUT with the fresh version (app.js:382).
 export function usePatchTask(): UseMutationResult<Task, ApiError, { id: string; changes: Partial<TaskEditable> }> {
   return useApiMutation(async (v: { id: string; changes: Partial<TaskEditable> }) => {
     const fresh = await call('task', TaskSchema, { params: { id: v.id } });

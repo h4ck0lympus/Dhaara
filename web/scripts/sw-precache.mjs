@@ -1,4 +1,3 @@
-// Prepends the shell cache name and precache list to dist/sw.js (spec §6.2). Usage: node scripts/sw-precache.mjs [distDir]
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

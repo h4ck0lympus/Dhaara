@@ -5,7 +5,7 @@ import { Icon } from '../ui/Icon';
 import { toast } from '../ui/Toast';
 
 export function toastRejections(rejections: FileRejection[]): void {
-  for (const rejection of rejections) toast(rejection.message, { tone: 'error' });   // app.js:398: one toast per rejected file
+  for (const rejection of rejections) toast(rejection.message, { tone: 'error' });
 }
 
 type Preview = { blob: Blob; url: string };
@@ -23,7 +23,6 @@ export function Attachments({ files, onRemove }: { files: StoredFile[]; onRemove
   return (
     <ul className="attachment-list">
       {files.map((file, index) => {
-        // Match by Blob identity so a stale (already revoked) URL is never rendered.
         const url = previews.find(preview => preview.blob === file.blob)?.url;
         const audio = file.blob.type.startsWith('audio/');
         return (

@@ -42,7 +42,7 @@ export function TaskCaptureDialog({ onClose, embedded = false }: { onClose: () =
   }
 
   async function requestClose() {
-    if (inFlight.current || submitting) return; // app.js:297
+    if (inFlight.current || submitting) return;
     try {
       await taskDraftStore.persist();
       onClose();

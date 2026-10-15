@@ -22,7 +22,6 @@ def interpret(raw: str, local_day: date):
             fields[field] = match[1].strip()
 
     scheduling = re.search(r'\b(today|tomorrow|\d{4}-\d{2}-\d{2})\b', raw, re.I)
-    # A day alone is never a reminder time/deadline/availability instant.
     uncertain = re.search(r'\b(maybe|perhaps|possibly|probably|might|could|not sure|unconfirmed|if)\b', raw, re.I)
     consequential = re.search(r'\b(deadline|due|by|before|after|until|remind|reminder|available|not before)\b', raw, re.I)
     explanation = ''
@@ -32,7 +31,6 @@ def interpret(raw: str, local_day: date):
             value = matches[0].lower()
             try:
                 day = local_day + timedelta(days=1) if value == 'tomorrow' else local_day if value == 'today' else date.fromisoformat(value)
-                # ISO dates need an explicit planning marker, not a code/version/date reference.
                 relative_plan = value in ('today', 'tomorrow') and (
                     re.search(r'^(today|tomorrow)(?:[,:]|\s)', lines[0], re.I) or
                     re.search(r'\b(today|tomorrow)[.!?]*$', lines[0], re.I) or

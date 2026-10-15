@@ -32,8 +32,6 @@ test.describe('Notes list', () => {
     await gotoApp(page, dhara, '#/notes');
     const requests: string[] = [];
     page.on('request', request => { if (request.url().includes('/api/search')) requests.push(request.url()); });
-    // Freeze browser timers so host load cannot turn a 40 ms typing interval into
-    // a 300 ms pause. Exercise successive inputs and the debounce boundary.
     await page.clock.install({ time: 0 });
     await page.clock.pauseAt(1000);
     for (const text of ['z', 'ze', 'zeb', 'zebr', 'zebra']) {
@@ -53,7 +51,6 @@ test.describe('Notes list', () => {
   });
 
   test('Search falls back to title and folder matches on this device when the server search fails', async ({ page, dhara }) => {
-    // Both searches below must fail; a single-use fault would let the second one reach the real server.
     await failFetch(page, { path: /\/api\/search/, times: 10, fault: { status: 400, body: '{"detail":"Search failed"}', contentType: 'application/json' } });
     const note = await createNote(dhara, 'zebra pointer');
     await editNote(dhara, note, { title: 'Pointer note' });
@@ -105,7 +102,7 @@ test.describe('Notes list', () => {
     await expectPhoneFriendly(page, '.notes-screen');
   });
 
-  test('Portrait tablet collapses to the single phone column', async ({ page, dhara }) => {   // handbook-trace U12
+  test('Portrait tablet collapses to the single phone column', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'portrait reading');
     await page.setViewportSize({ width: 768, height: 1024 });
     await gotoApp(page, dhara, '#/notes');
@@ -129,7 +126,7 @@ test.describe('Note view', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
   }
 
-  test('Note edits create revision and retain raw text', async ({ page, dhara }) => {   // browser_check.py:128-132
+  test('Note edits create revision and retain raw text', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'LeetCode trick: two pointers. not sure about duplicates yet.');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     await editAndSave(page, 'Two pointers — personal insight', 'My edited note. Still unsure about duplicates.');
@@ -140,7 +137,7 @@ test.describe('Note view', () => {
     expect(full.body).toBe('My edited note. Still unsure about duplicates.');
   });
 
-  test('Ctrl+Z in the note editor undoes typing', async ({ page, dhara }) => {   // desktop scenario.js:130 (parity row 29)
+  test('Ctrl+Z in the note editor undoes typing', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'undo me');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     await page.getByRole('button', { name: 'Edit' }).click();
@@ -148,22 +145,21 @@ test.describe('Note view', () => {
     await page.keyboard.press('End');
     await page.keyboard.type(' and more words');
     await expect(noteField(page)).toHaveValue('undo me and more words');
-    // Chromium undoes synthetic key presses in small steps, so press until the typed text is gone.
     for (let step = 0; step < 15; step += 1) await page.keyboard.press('Control+z');
     await expect(noteField(page)).toHaveValue('undo me');
   });
 
-  test('Original tab shows untouched capture', async ({ page, dhara }) => {   // browser_check.py:133; handbook-trace R4
+  test('Original tab shows untouched capture', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'LeetCode trick: two pointers. not sure about duplicates yet.');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     await editAndSave(page, 'Two pointers — personal insight', 'My edited note.');
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(page.getByRole('button', { name: 'Original' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.original-block')).toHaveText('LeetCode trick: two pointers. not sure about duplicates yet.');
-    await expect(page.locator('.note-body')).toHaveCount(0);   // tabs, never side by side
+    await expect(page.locator('.note-body')).toHaveCount(0);
   });
 
-  test('Note renderer does not execute untrusted HTML', async ({ page, dhara }) => {   // browser_check.py:142-144
+  test('Note renderer does not execute untrusted HTML', async ({ page, dhara }) => {
     const hostile = '<img src=x onerror="window.pwned=1">\n<script>window.pwned=2</script>';
     const note = await createNote(dhara, hostile);
     seedSuggestion(dhara, note.id, { id: 'sugg-0001', title: 'Model title', body: '<img src=y onerror="window.pwned=3"> **bold**', folder: 'Inbox' });
@@ -178,7 +174,7 @@ test.describe('Note view', () => {
     await expect(page.locator('.note-screen img')).toHaveCount(0);
   });
 
-  test('Applying a suggestion keeps the edit history and says Nothing was overwritten', async ({ page, dhara }) => {   // handbook-trace R5
+  test('Applying a suggestion keeps the edit history and says Nothing was overwritten', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'heap slot raw thought');
     const edited = await editNote(dhara, note, { title: 'My heap note', body: 'my manual body' });
     seedSuggestion(dhara, note.id, { id: 'sugg-0002', title: 'Organized heap note', body: 'Clean body', folder: 'Security / CTFs' });
@@ -199,7 +195,7 @@ test.describe('Note view', () => {
     expect(history.find(revision => revision.version === 2)?.body).toBe('my manual body');
   });
 
-  test('Image attachment preview, capture save, note edit/save/reopen, immutable original', async ({ page, dhara }) => {   // experiments/ui-ab/scripts/verify.py:69
+  test('Image attachment preview, capture save, note edit/save/reopen, immutable original', async ({ page, dhara }) => {
     await gotoApp(page, dhara, '#/capture');
     const capture = page.getByLabel('Rough learning note');
     await capture.fill('A distinct learning note\nKeep the original intact.');
@@ -214,7 +210,7 @@ test.describe('Note view', () => {
     await page.getByRole('button', { name: 'Edit' }).click();
     await noteField(page).fill('Edited organized note');
     await page.getByRole('button', { name: 'Save changes' }).click();
-    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();   // edit closed: Original would otherwise hit the leave-edit confirm
+    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
     await page.getByRole('button', { name: 'Original' }).click();
     await expect(page.locator('.original-block')).toContainText('Keep the original intact.');
     await page.getByRole('button', { name: 'Note', exact: true }).click();
@@ -244,7 +240,7 @@ test.describe('Note view', () => {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export Markdown' }).click();
     const file = await download;
-    expect(file.suggestedFilename()).toBe(`${note.title.replace(/[^\w -]/g, '').slice(0, 70) || 'note'}.md`);   // app.js:514
+    expect(file.suggestedFilename()).toBe(`${note.title.replace(/[^\w -]/g, '').slice(0, 70) || 'note'}.md`);
     expect(readFileSync((await file.path())!, 'utf8')).toBe(`# ${note.title}\n\nFolder: ${note.folder}\n\n${note.body}\n`);
   });
 
@@ -258,7 +254,7 @@ test.describe('Note view', () => {
     await noteField(page).fill('My unsaved body');
     await editNote(dhara, note, { title: 'Changed elsewhere', body: 'Other device body' });
     await refetch(page);
-    await expect(page.getByLabel('Title')).toHaveValue('My unsaved title');   // spec §8 Refetch
+    await expect(page.getByLabel('Title')).toHaveValue('My unsaved title');
     await expect(noteField(page)).toHaveValue('My unsaved body');
     await page.getByRole('button', { name: 'Save changes' }).click();
     const conflict = page.locator('.note-form [role=alert]');
@@ -268,7 +264,7 @@ test.describe('Note view', () => {
     return { note, conflict };
   }
 
-  test('A conflicting save never overwrites; Keep editing stays stale and a later Save conflicts again', async ({ page, dhara }) => {   // spec §4.3 409
+  test('A conflicting save never overwrites; Keep editing stays stale and a later Save conflicts again', async ({ page, dhara }) => {
     const { note, conflict } = await conflictedEdit(page, dhara);
     await conflict.getByRole('button', { name: 'Keep editing' }).click();
     await expect(conflict).toHaveCount(0);
@@ -293,7 +289,7 @@ test.describe('Note view', () => {
     expect((await dhara.api<{ version: number }>('GET', `/api/notes/${note.id}`)).version).toBe(3);
   });
 
-  test('Leaving an unsaved note edit asks first; declining keeps the edit', async ({ page, dhara }) => {   // spec §4.5 guards
+  test('Leaving an unsaved note edit asks first; declining keeps the edit', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'guard me');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     expect(await beforeUnloadArmed(page)).toBe(false);
@@ -318,7 +314,7 @@ test.describe('Note view', () => {
     await expect(page.getByText('Note not found')).toBeVisible();
   });
 
-  test('Phone width gives the open note the full content area', async ({ page, dhara }) => {   // handbook-trace U12 (note takes the full content area); U24 touch targets
+  test('Phone width gives the open note the full content area', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'phone reading with a_very_long_identifier_0x4141414141414141414141414141');
     await page.setViewportSize({ width: 390, height: 844 });
     await gotoApp(page, dhara, `#/note/${note.id}`);
@@ -332,7 +328,7 @@ test.describe('Note history', () => {
   const historyDialog = (page: Page) => page.getByRole('dialog', { name: 'Note history' });
   const restoreButton = { name: 'Restore as a new revision' };
 
-  test('Original and History are tabs beside the note', async ({ page, dhara }) => {   // handbook-trace U19
+  test('Original and History are tabs beside the note', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'tab layout');
     await gotoApp(page, dhara, `#/note/${note.id}`);
     const tabs = page.getByRole('group', { name: 'Note views' });
@@ -347,7 +343,7 @@ test.describe('Note history', () => {
     await expect(page.locator('.original-block')).toBeVisible();
   });
 
-  test('History restore adds another revision', async ({ page, dhara }) => {   // browser_check.py:134-135
+  test('History restore adds another revision', async ({ page, dhara }) => {
     const note = await createNote(dhara, 'original raw words');
     await editNote(dhara, note, { title: 'Edited title', body: 'edited body' });
     await gotoApp(page, dhara, `#/note/${note.id}`);

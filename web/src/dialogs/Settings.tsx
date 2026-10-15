@@ -11,14 +11,14 @@ import { messageOf, toast } from '../ui/Toast';
 import '../styles/capture-notes.css';
 import { AgentConnections } from '../components/AgentConnections';
 
-export const DISPLAY_NAME_MAX = 60;   // models.py SettingsInput.display_name
-export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;   // models.py:134
-export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';   // dhara/store.py:369 Problem(400)
+export const DISPLAY_NAME_MAX = 60;
+export const COMPANION_SIZE_MIN = 24, COMPANION_SIZE_MAX = 72;
+export const AGENT_TASK_REQUIRED = 'Choose at least one task for an agent token';
 export const SETTINGS_TEXT = {
-  title: 'Settings',   // app.js:457
-  offline: 'Settings load from your server. Reconnect to change them.',   // new
-  nameSaved: 'Name saved.',   // new
-  tokenOnce: 'Copy this token now. It will not be displayed again.',   // app.js:470
+  title: 'Settings',
+  offline: 'Settings load from your server. Reconnect to change them.',
+  nameSaved: 'Name saved.',
+  tokenOnce: 'Copy this token now. It will not be displayed again.',
 } as const;
 
 function pick(source: Settings, changes: SettingsPatch): SettingsPatch {
@@ -49,7 +49,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
   const revokeToken = useRevokeToken();
   const tokens = useTokens(agentsOpen);
 
-  // Server data is copied into the form once; later refetches never touch what the user is editing.
   useEffect(() => {
     if (form !== null || !snapshot) return;
     setForm(snapshot.settings);
@@ -82,7 +81,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
   useEffect(() => {
     const input = sizeInput.current;
     if (!input) return;
-    // Commit on the native change event (release), as app.js:468 did, not on every drag step.
     const commit = () => {
       const value = Number(input.value);
       void patch({ companion_size: value }).then(ok => {
@@ -111,7 +109,7 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
         return;
       }
       if (!('Notification' in window)) {
-        toast(S.notificationsUnsupported);   // app.js:535
+        toast(S.notificationsUnsupported);
         return;
       }
       const permission = await Notification.requestPermission();
@@ -156,7 +154,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
         scope,
         task_ids: scope === 'agent' ? taskIds : [],
       });
-      // The secret is shown once from this dialog's state only; drop it from the mutation cache.
       const cache = queryClient.getMutationCache();
       cache.findAll({ predicate: mutation => mutation.state.data === result }).forEach(mutation => cache.remove(mutation));
       createToken.reset();
@@ -211,7 +208,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
             </select>
           </div>
           <div className="settings-row">
-            {/* app.js:459 */}
             <div>Companion size<p>Choose a comfortable size. Currently {form.companion_size} px.</p></div>
             <input
               ref={sizeInput}
@@ -252,7 +248,6 @@ export function SettingsDialog({ onClose, section }: { onClose: () => void; sect
             <div>Screen context<p>Off by default. The Sway helper reports window metadata only. No screenshot analysis is implemented in this build.</p></div>
             <input type="checkbox" aria-label="Enable window context" checked={form.observation_enabled} onChange={event => void patch({ observation_enabled: event.target.checked })} />
           </div>
-          {/* app.js:477: the status reflects the server snapshot, never the optimistic toggle. */}
           <p className="subtle-line" id="observation-status">{observationStatus(snapshot)}. Window metadata only; no screenshot observation is implemented.</p>
       </>}
       <details className="settings-section">

@@ -10,11 +10,9 @@ export const PNG_1PX = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 export type SeedDraft = { id: string; raw: string; task_id: string; files: { name: string; type: string; base64: string }[]; error?: string };
 export type LocalDbSnapshot = { draft: unknown; taskDraft: unknown; outbox: { id: string; raw: string; error?: string; fileCount: number }[] };
 
-// Collects CSP violations and uncaught page errors from every page of a context (spec §8: zero in every E2E run).
 export async function guardContext(context: BrowserContext): Promise<() => void> {
   const violations: string[] = [];
   const errors: string[] = [];
-  // exposeFunction/addInitScript on the context survive navigations, so every document of every page is covered.
   await context.exposeFunction('__dharaReportCsp', (violation: string) => {
     violations.push(violation);
   });
@@ -49,12 +47,9 @@ export const test = base.extend<{ dhara: DharaServer; guards: void }>({
 
 export async function gotoApp(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
   await page.goto(`${dhara.origin}/${hash}`);
-  await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });   // a cold service plus three busy siblings
+  await expect(page.getByText(S.connected, { exact: true })).toBeVisible({ timeout: 30_000 });
 }
 
-// The one place that opens the local database (the app's by default; LEGACY_DB_NAME from src/local/migrate.ts for a
-// pre-rename seed). Same upgrade as web/src/local/db.ts, so seeded records are exactly what the old UI stored. This
-// function is serialised into the page, so the default stays an inline literal.
 export function openLocalDb(name = 'dhara-local-v1'): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, 1);
@@ -67,8 +62,6 @@ export function openLocalDb(name = 'dhara-local-v1'): Promise<IDBDatabase> {
   });
 }
 
-// Runs `body(openLocalDb, arg)` in the page. Both functions are shipped as source text: Playwright cannot share
-// closures with the page, and a string expression avoids new Function, which the page CSP would block.
 function inLocalDb<A, R>(page: Page, body: (open: typeof openLocalDb, arg: A) => Promise<R>, arg: A): Promise<R> {
   return page.evaluate(`(${body})(${openLocalDb}, ${JSON.stringify(arg)})`) as Promise<R>;
 }
@@ -76,7 +69,7 @@ function inLocalDb<A, R>(page: Page, body: (open: typeof openLocalDb, arg: A) =>
 type Seed = { draft?: SeedDraft; taskDraft?: unknown; outbox?: SeedDraft[] };
 
 export async function seedLocalDb(page: Page, origin: string, seed: Seed, dbName = DB_NAME): Promise<void> {
-  await page.goto(origin + '/api/health'); // same origin, no app code competing for the database
+  await page.goto(origin + '/api/health');
   await inLocalDb(
     page,
     async (open, { seed, dbName }: { seed: Seed; dbName: string }) => {
@@ -147,7 +140,6 @@ export async function readLocalDb(page: Page): Promise<LocalDbSnapshot> {
   );
 }
 
-// Asserts Inter (400/500) and Display (regular/italic) are usable and were fetched as content-hashed .otf assets.
 export async function expectFontsLoaded(page: Page): Promise<void> {
   const fonts = ['16px Inter', '500 16px Inter', '16px Display', 'italic 16px Display'];
   const loaded = await page.evaluate(async (list) => {
@@ -162,14 +154,12 @@ export async function expectFontsLoaded(page: Page): Promise<void> {
   for (const path of fontPaths) expect(path).toMatch(/^\/assets\/.+-[A-Za-z0-9_-]{8}\.otf$/);
 }
 
-// Forces a snapshot refetch (the same trigger the service-up event gives the page) and waits for it to land.
 export async function refetch(page: Page): Promise<void> {
   const response = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/state' && r.ok());
   await page.evaluate(() => window.dispatchEvent(new Event('dhara:service-up')));
   await response;
 }
 
-// Takes the browser offline and waits for the app to show it.
 export async function goOffline(page: Page, context: BrowserContext): Promise<void> {
   await context.setOffline(true);
   await expect(page.locator('.offline-banner')).toBeVisible();

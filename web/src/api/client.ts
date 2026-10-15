@@ -1,4 +1,3 @@
-// The only fetch( in src/ (spec §4.2, contract §3.1). Same origin, request marker, body-shape error normalisation, zod-parsed responses.
 import { connection } from '../domain/connection';
 import { S } from '../strings';
 import type { z } from '../zod';
@@ -7,7 +6,6 @@ import { ENDPOINTS, endpointPath, type EndpointKey } from './endpoints';
 export type ApiErrorKind = 'network' | 'http' | 'parse';
 
 export class ApiError extends Error {
-  // status is null only for 'network'.
   constructor(
     readonly kind: ApiErrorKind,
     message: string,
@@ -27,7 +25,6 @@ export function normaliseError(status: number, bodyText: string): string {
   try {
     body = JSON.parse(bodyText);
   } catch {
-    // Not JSON: fall through to the status message.
   }
   const detail = typeof body === 'object' && body !== null ? (body as { detail?: unknown }).detail : undefined;
   if (typeof detail === 'string') return detail;
@@ -72,14 +69,13 @@ export async function api<T>(path: `/${string}`, schema: z.ZodType<T>, options: 
     const response = await fetch('/api' + path, { method: options.method ?? 'GET', headers, body, credentials: 'same-origin', signal: options.signal });
     status = response.status;
     ok = response.ok;
-    text = await response.text(); // the body is read once, as text
+    text = await response.text();
   } catch (error) {
     if (isAbort(error)) throw error;
     connection.report('network-error');
     throw new ApiError('network', S.networkError, null);
   }
   if (!ok) {
-    // /api/session answers a wrong token with 401; that is an inline field error, never a global Unlock.
     if (status === 401 && !path.startsWith('/session')) for (const listener of [...unauthorizedListeners]) listener();
     throw new ApiError('http', normaliseError(status, text), status);
   }

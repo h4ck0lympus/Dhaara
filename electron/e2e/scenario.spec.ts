@@ -4,7 +4,6 @@ import { admin, live } from '../test/proc.js';
 import { closeWindow, killAll, launchDhara, openCapture, outboxIds, readDraft, tempDir, waitConnected, windowCount } from './fixtures.js';
 import { appPage, managedSetup, ownedServices, servicePid, startupPage, type Managed } from './managed.js';
 
-// desktop/qa/scenario.js:20: a 1×1 PNG.
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3l0AAAAASUVORK5CYII=';
 const PNG_BYTES = [...Buffer.from(PNG, 'base64')];
 const DRAFT = 'Webview restart draft: original learning notes.';
@@ -13,7 +12,6 @@ const RETAINED = 'Synthetic retained draft after checkpoint failure';
 const OFFLINE_CAPTURE = 'Synthetic explicitly queued offline capture';
 const CRASH_DRAFT = 'Synthetic draft retained across backend crash';
 const TASK_DRAFT = 'Unfinished native task draft';
-// Verbatim from web/src/strings.ts (contract §5).
 const CLOSE_DRAFT_FAILED = 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.';
 const CAPTURE_SAVED_OFFLINE = 'Capture saved on this device. It will upload when connected.';
 
@@ -83,8 +81,8 @@ test('draft: text and a pasted image stay on this device; an edit made just befo
   }, PNG);
   await expect.poll(async () => (await readDraft(page))?.files.length).toBe(1);
   expect((await readDraft(page))!.files[0].bytes).toEqual(PNG_BYTES);
-  expect((await api<State>('/state')).notes).toEqual([]);   // nothing ingested before explicit Save
-  await editor.fill(DRAFT_FINAL);   // no debounce wait: the close checkpoint must persist this edit
+  expect((await api<State>('/state')).notes).toEqual([]);
+  await editor.fill(DRAFT_FINAL);
   await closeAndWait(app);
 });
 
@@ -123,7 +121,6 @@ test('checkpoint-failure: a declined close-anyway prompt keeps the editor and th
   const editor = await openCapture(page);
   await editor.fill(RETAINED);
   await expect.poll(async () => (await readDraft(page))?.raw).toBe(RETAINED);
-  // Explicit fault injection (scenario.js:145-151), not a claim of physical storage failure.
   await page.evaluate(() => {
     const w = window as typeof window & { __restore?: () => void; __confirms?: string[] };
     const transaction = IDBDatabase.prototype.transaction;
@@ -146,9 +143,9 @@ test('checkpoint-failure: a declined close-anyway prompt keeps the editor and th
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __confirms?: string[] }).__confirms)).toEqual([CLOSE_DRAFT_FAILED]);
   expect(await windowCount(app)).toBe(1);
   await expect(editor).toHaveValue(RETAINED);
-  expect((await api<State>('/state')).notes).toHaveLength(1);   // no duplicate capture
+  expect((await api<State>('/state')).notes).toHaveLength(1);
   await page.evaluate(() => (window as typeof window & { __restore?: () => void }).__restore!());
-  await closeAndWait(app);   // the real checkpoint now succeeds
+  await closeAndWait(app);
 });
 
 test('checkpoint-recover: the retained draft returns and is not ingested', async () => {
@@ -163,7 +160,7 @@ test('crash: service-down keeps the page; offline Save queues; repeated Retry gi
   const editor = await openCapture(page);
   await page.evaluate(() => { (window as typeof window & { __noReload?: number }).__noReload = 1; });
   const firstPid = await servicePid(m.origin);
-  process.kill(firstPid, 'SIGKILL');   // the exact owned child, never a process-name match
+  process.kill(firstPid, 'SIGKILL');
   const overlay = await startupPage(app);
   await expect(overlay.locator('#status')).toHaveText(MESSAGES.crashed);
   await expect(page.getByText('Offline · local drafts', { exact: true }).first()).toBeVisible();
@@ -172,25 +169,24 @@ test('crash: service-down keeps the page; offline Save queues; repeated Retry gi
   await expect(page.getByText(CAPTURE_SAVED_OFFLINE)).toBeVisible();
   await expect.poll(async () => (await outboxIds(page)).length).toBe(1);
   await expect.poll(async () => (await readDraft(page))?.raw).toBe('');
-  await editor.fill(CRASH_DRAFT);   // the editor stays usable while the backend is down
+  await editor.fill(CRASH_DRAFT);
   await expect.poll(async () => (await readDraft(page))?.raw).toBe(CRASH_DRAFT);
-  expect((await api<State>('/state').catch(() => null))).toBeNull();   // nothing restarted by itself
+  expect((await api<State>('/state').catch(() => null))).toBeNull();
   await overlay.locator('#retry').click();
-  // Bypass the disabled button: main itself must serialise these into the one attempt.
   await overlay.evaluate(() => {
     const startup = (window as unknown as { dharaStartup: { retry(): void } }).dharaStartup;
     for (let i = 0; i < 3; i += 1) startup.retry();
   });
   await waitConnected(page);
-  expect(await page.evaluate(() => (window as typeof window & { __noReload?: number }).__noReload)).toBe(1);   // service-up, no reload
+  expect(await page.evaluate(() => (window as typeof window & { __noReload?: number }).__noReload)).toBe(1);
   await expect(editor).toHaveValue(CRASH_DRAFT);
   const secondPid = await servicePid(m.origin);
   expect(secondPid).not.toBe(firstPid);
   expect(live(firstPid)).toBe(false);
-  expect(ownedServices(app.process().pid!)).toEqual([secondPid]);   // one spawn for four Retry requests
+  expect(ownedServices(app.process().pid!)).toEqual([secondPid]);
   await expect.poll(async () => (await outboxIds(page)).length).toBe(0);
   const notes = (await api<State>('/state')).notes;
-  expect(notes).toHaveLength(2);   // the queued capture uploaded once; the unsaved draft was never ingested
+  expect(notes).toHaveLength(2);
   const raws = await Promise.all(notes.map(async (note) => (await api<Note>(`/notes/${note.id}`)).raw));
   expect(raws).toContain(OFFLINE_CAPTURE);
   expect(raws).not.toContain(CRASH_DRAFT);
@@ -207,7 +203,7 @@ test('kill: SIGKILL of Electron closes the lease and the owned service stops', a
 test('task draft: an unfinished Add task input is checkpointed on close', async () => {
   const { app, page } = await open();
   const input = await openAddTask(page);
-  await input.fill(TASK_DRAFT);   // no wait: Close must finish the pending task checkpoint (scenario.js:72)
+  await input.fill(TASK_DRAFT);
   await closeAndWait(app);
 });
 
@@ -230,12 +226,10 @@ test('task-checkpoint-failure: a failed task checkpoint keeps the window, the se
     w.__restorePut = () => { IDBObjectStore.prototype.put = put; window.confirm = confirm; };
   });
   await closeWindow(app);
-  // The page now asks (like a capture failure) instead of toasting; declining keeps the window open.
   await expect.poll(() => page.evaluate(() => (window as typeof window & { __confirms?: string[] }).__confirms)).toEqual([CLOSE_DRAFT_FAILED]);
   expect(await windowCount(app)).toBe(1);
   expect(await taskDraftRaw(page)).toBe(TASK_DRAFT);
   expect((await api<State>('/state')).tasks.some((task) => task.original_input === TASK_DRAFT)).toBe(false);
-  // scenario.js:83 restores the store; a normal close then stops the service, so the next launch never races its lock.
   await page.evaluate(() => (window as typeof window & { __restorePut?: () => void }).__restorePut!());
   await closeAndWait(app);
 });

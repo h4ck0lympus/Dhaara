@@ -1,4 +1,3 @@
-// web/e2e/task-capture.spec.ts
 import { chromium, type Page } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -28,7 +27,6 @@ async function addWithKeyboard(page: Page, raw: string) {
   await rawInput(page).press('Control+Enter');
   await expect(addTaskDialog(page)).toHaveCount(0);
 }
-// qa/task_capture_check.py:160-162: only the task-draft key fails, so the rest of IndexedDB keeps working.
 async function breakTaskDraftStorage(page: Page) {
   await page.evaluate(() => {
     const w = window as unknown as { __put?: typeof IDBObjectStore.prototype.put };
@@ -305,7 +303,7 @@ test('Failed submission reports an inline error, retains wording and refuses uns
   const dialog = await submitWithBrokenDraftStorage(page, 'Preserve on failure, with more text');
   await expect(rawInput(page)).toHaveValue('Preserve on failure, with more text');
   const box = (await dialog.boundingBox())!;
-  await page.mouse.click(Math.max(2, box.x - 10), Math.max(2, box.y - 10)); // backdrop
+  await page.mouse.click(Math.max(2, box.x - 10), Math.max(2, box.y - 10));
   await dialog.getByRole('button', { name: 'Close dialog' }).click();
   await expect(addTaskDialog(page)).toBeVisible();
   await expect(rawInput(page)).toHaveValue('Preserve on failure, with more text');
@@ -387,7 +385,6 @@ test('Disconnected draft retry after reload uses durable capture identity', asyn
   await expect(addTaskDialog(page)).toHaveCount(0);
   const tasks = (await state(dhara)).tasks;
   expect(tasks).toHaveLength(1);
-  // The identity persisted before the first attempt is the one the server stored: replaying it returns this task.
   expect((await dhara.api<Task>('POST', '/api/task-captures', pending)).id).toBe(tasks[0].id);
   expect(await taskCount(dhara)).toBe(1);
 });
@@ -436,8 +433,6 @@ test('Confirmation Edit opens the saved task even when post-save snapshot failed
   await expect(page.getByRole('dialog', { name: 'Add task' })).toHaveCount(0);
 });
 
-// Parity rows task_capture_check.py:118,124,126; handbook trace R2.
-// qa/task_capture_check.py:104-112: a captured task with every field populated through the real API, seconds precision included.
 async function fullyPopulated(dhara: DharaServer) {
   const saved = await dhara.api<Task>('POST', '/api/task-captures', { capture_id: crypto.randomUUID(), raw: 'Review the cleanup path', local_day: '2026-10-10', details: {} });
   const dependency = await dhara.api<Task>('POST', '/api/tasks', { title: 'Fixture prerequisite' });

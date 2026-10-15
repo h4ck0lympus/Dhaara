@@ -6,7 +6,6 @@ import { listSourceFiles } from '../test/sourceFiles';
 import { ENDPOINTS, endpointPath, type Replay } from './endpoints';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
-// Spec §4.3 "Every other UI mutation is sent once per user action", verbatim (POST/DELETE pairs expanded).
 const SPEC_ONCE_PER_ACTION = [
   'POST /api/focus', 'PUT /api/tasks/{id}', 'PUT /api/notes/{id}', 'POST /api/notes/{id}/restore/{v}',
   'POST /api/notes/{id}/suggestions/{sid}/apply', 'POST /api/notes/{id}/organize', 'POST /api/notes/{id}/transcribe',

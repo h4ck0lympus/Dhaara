@@ -1,4 +1,3 @@
-// spec §8 "Refetch: an edit in progress survives a snapshot refetch."
 import { expect, gotoApp, refetch, test } from './fixtures';
 import { changeElsewhere, task } from './nowSeed';
 

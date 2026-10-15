@@ -1,5 +1,3 @@
-// The Capture draft (spec §4.4, contract §4.3): one external store shared by Capture, the Outbox dialog and the close
-// checkpoint. Writes are serialised; a version counter keeps a stale write from labelling newer input as saved.
 import { useSyncExternalStore } from 'react';
 import { S } from '../strings';
 import { toast } from '../ui/Toast';
@@ -32,13 +30,12 @@ function serialise<T>(operation: () => Promise<T>): Promise<T> {
   return next;
 }
 
-// app.js:69-74
 async function persist(): Promise<void> {
   clearTimeout(debounce);
   const version = ++writeVersion;
   update({ saveState: 'pending' });
   try {
-    await serialise(() => kvPut('draft', structuredClone(state.draft))) // cloned when the write runs, so a queued persist never writes a pre-save draft;
+    await serialise(() => kvPut('draft', structuredClone(state.draft)))
     if (version === writeVersion) update({ saveState: 'saved' });
   } catch {
     if (version === writeVersion) {
@@ -58,7 +55,6 @@ export const captureDraftStore = {
       listeners.delete(listener);
     };
   },
-  // app.js:590. A malformed stored draft is left in place until the next write; the editor starts empty.
   async load(): Promise<void> {
     try {
       const stored = await kvGet('draft');
@@ -68,7 +64,6 @@ export const captureDraftStore = {
       update({ saveState: 'error', recovered: true });
     }
   },
-  // app.js:390 — typing is debounced 350 ms and immediately marks the draft as not yet saved.
   setRaw(raw: string): void {
     writeVersion++;
     update({ draft: { ...state.draft, raw }, saveState: 'pending' });
@@ -79,7 +74,6 @@ export const captureDraftStore = {
     update({ draft: { ...state.draft, task_id: taskId } });
     await persist();
   },
-  // app.js:398. The caller toasts the rejections; nothing is accepted while a save is in flight.
   async addFiles(files: File[]): Promise<FileRejection[]> {
     if (state.saving) return [];
     const { accepted, rejections } = validateFiles(state.draft.files, files);
@@ -94,7 +88,6 @@ export const captureDraftStore = {
     await persist();
   },
   persist,
-  // app.js:400-418: one ['kv','outbox'] transaction; the in-memory draft is replaced only after commit.
   async save(): Promise<SaveCaptureResult> {
     if (state.saving) return { ok: false, message: S.finishingLocalSave };
     const draft = state.draft;
@@ -107,7 +100,7 @@ export const captureDraftStore = {
     try {
       await serialise(() =>
         transaction(['kv', 'outbox'], 'readwrite', (tx) => {
-          tx.objectStore('outbox').add(capture); // add, not put: a duplicate id fails the whole save
+          tx.objectStore('outbox').add(capture);
           tx.objectStore('kv').put(next, 'draft');
         }),
       );
@@ -118,13 +111,11 @@ export const captureDraftStore = {
       return { ok: false, message: S.couldNotSave(error instanceof Error ? error.message : String(error)) };
     }
   },
-  // app.js:542 "Open a copy in Capture": a new id, so the queued original stays independent.
   async replaceWith(item: OutboxItem): Promise<void> {
     const { error: _error, ...copy } = item;
     update({ draft: { ...copy, id: uid() } });
     await persist();
   },
-  // Local addition: outbox.ts marks the draft status when the capture queue cannot be read (app.js:135).
   markSaveError(): void {
     update({ saveState: 'error' });
   },

@@ -14,18 +14,18 @@ import { messageOf, toast } from '../ui/Toast';
 import '../styles/capture-notes.css';
 
 export const NOTE_TEXT = {
-  revisionSaved: 'Revision saved. The original is unchanged.',   // app.js:384
-  queued: 'Queued for local processing.',   // app.js:513
-  suggestion: 'An AI suggestion arrived after your edit. Nothing was overwritten.',   // app.js:254
-  emptyBody: 'Your visual or recording is saved below.',   // app.js:253
-  noTypedInput: '(No typed input)',   // app.js:253
-  transcriptHeading: 'VOICE TRANSCRIPT',   // app.js:253
-  unavailable: 'Note unavailable',   // app.js:279
-  blank: 'Title and folder cannot be blank.',   // new
+  revisionSaved: 'Revision saved. The original is unchanged.',
+  queued: 'Queued for local processing.',
+  suggestion: 'An AI suggestion arrived after your edit. Nothing was overwritten.',
+  emptyBody: 'Your visual or recording is saved below.',
+  noTypedInput: '(No typed input)',
+  transcriptHeading: 'VOICE TRANSCRIPT',
+  unavailable: 'Note unavailable',
+  blank: 'Title and folder cannot be blank.',
   reloadConfirm: 'Replace your draft with the latest saved version? Your unsaved edit will be discarded.',
 } as const;
 
-const TITLE_MAX = 240, BODY_MAX = 150_000;   // models.py NoteUpdate
+const TITLE_MAX = 240, BODY_MAX = 150_000;
 
 type EditForm = { title: string; folder: string; body: string; baseVersion: number };
 type FormError = { message: string; conflict: boolean };
@@ -41,7 +41,7 @@ export function downloadText(filename: string, text: string): void {
   link.href = url;
   link.download = filename;
   link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);   // app.js:386
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function NoteViewScreen() {
@@ -51,7 +51,6 @@ export function NoteViewScreen() {
 
 export function EmbeddedNote({ id, onBack }: { id: string; onBack?: () => void }) {
   const note = useNote(id);
-  // Keep showing loaded data when a background refetch fails, so an open edit is never unmounted.
   if (note.data) return <NotePage key={id} onBack={onBack} note={note.data} refetch={async () => (await note.refetch()).data} />;
   if (note.isError) {
     return (
@@ -94,7 +93,7 @@ function NotePage({ note, refetch, onBack }: { note: Note; refetch: () => Promis
   }
 
   function show(next: 'note' | 'original') {
-    if (edit && !window.confirm(S.leaveNoteEdit)) return;   // app.js:485
+    if (edit && !window.confirm(S.leaveNoteEdit)) return;
     closeEdit();
     setView(next);
   }
@@ -124,11 +123,10 @@ function NotePage({ note, refetch, onBack }: { note: Note; refetch: () => Promis
     } catch (error) {
       const failure = errorOf(error);
       setFormError(failure);
-      if (failure.conflict) void refetch();   // so the newer revision can be shown beside the draft
+      if (failure.conflict) void refetch();
     }
   }
 
-  // Never replaces another device's revision silently: the user sees it (.latest-version) and confirms.
   async function reloadLatest() {
     if (!window.confirm(NOTE_TEXT.reloadConfirm)) return;
     const fresh = await refetch();
@@ -190,7 +188,6 @@ function NotePage({ note, refetch, onBack }: { note: Note; refetch: () => Promis
           <div className="segmented" role="group" aria-label="Note views">
             <button type="button" aria-pressed={view === 'note'} disabled={update.isPending} onClick={() => show('note')}>Note</button>
             <button type="button" aria-pressed={view === 'original'} disabled={update.isPending} onClick={() => show('original')}>Original</button>
-            {/* app.js:252: History is the third tab; it opens over the note, so an open edit stays intact. */}
             <button type="button" onClick={() => openDialog({ kind: 'note-history', noteId: note.id })}>History</button>
           </div>
         </div>

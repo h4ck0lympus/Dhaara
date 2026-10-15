@@ -1,5 +1,3 @@
-// The Add task draft (spec §4.4 "Task capture", contract §4.3): persisted before any HTTP call and replayed with the same
-// capture_id only when the user retries. Port of public/app.js:305-366.
 import { useSyncExternalStore } from 'react';
 import { ApiError, call } from '../api/client';
 import { TaskSchema, type Task, type TaskEditable } from '../api/schemas';
@@ -27,7 +25,6 @@ function setDraft(draft: TaskDraft): void {
   update({ draft });
 }
 
-// app.js:308-312: serialised; throws so callers can keep the dialog open.
 function persist(): Promise<void> {
   const snapshot = structuredClone(state.draft);
   update({ saveState: 'pending' });
@@ -45,7 +42,6 @@ function persist(): Promise<void> {
 async function submitOnce(now: Date): Promise<TaskSubmitResult> {
   let pending = state.draft.pending;
   if (pending === null) {
-    // local_day is fixed at the first submit and replayed unchanged, even across midnight.
     pending = { capture_id: state.draft.id, raw: state.draft.raw, local_day: localDay(now), details: state.draft.fields };
     setDraft({ ...state.draft, pending });
     try {
@@ -59,7 +55,7 @@ async function submitOnce(now: Date): Promise<TaskSubmitResult> {
     const task = await call('taskCapture', TaskSchema, { body: pending });
     if (!task.id || task.original_input !== pending.raw) return { ok: false, frozen: true, message: S.ackUnverified };
     setDraft(emptyTaskDraft());
-    await persist().catch(() => {}); // the task is durably acknowledged; a failed local reset is safe to retry by capture ID
+    await persist().catch(() => {});
     return { ok: true, task, toast: task.interpretation.explanation?.startsWith('Scheduling wording') ? S.taskAddedDateKept : S.taskAdded };
   } catch (error) {
     if (error instanceof ApiError && error.kind === 'http' && error.status !== null && error.status < 500 && error.status !== 409) {
@@ -67,7 +63,6 @@ async function submitOnce(now: Date): Promise<TaskSubmitResult> {
       await persist().catch(() => {});
       return { ok: false, frozen: false, message: S.notConfirmed + error.message };
     }
-    // 409, 5xx, network, or an unverifiable 2xx: stay frozen; Retry replays the same pending payload.
     return { ok: false, frozen: true, message: S.notConfirmed + (error instanceof ApiError && error.kind === 'http' ? error.message : S.checkServiceRetry) };
   }
 }
@@ -82,7 +77,6 @@ export const taskDraftStore = {
       listeners.delete(listener);
     };
   },
-  // app.js:591
   async load(): Promise<void> {
     try {
       const stored = await kvGet('task-draft');
@@ -92,7 +86,6 @@ export const taskDraftStore = {
       update({ saveState: 'error', recovered: true });
     }
   },
-  // app.js:328-333: every input is persisted.
   setRaw(raw: string): void {
     setDraft({ ...state.draft, raw });
     persist().catch(() => {});
@@ -105,7 +98,6 @@ export const taskDraftStore = {
     persist().catch(() => {});
   },
   persist,
-  // Single-flight: a second call while one is in flight gets the same result.
   submit(now: Date = new Date()): Promise<TaskSubmitResult> {
     if (inFlight) return inFlight;
     update({ submitting: true });
@@ -115,7 +107,6 @@ export const taskDraftStore = {
     });
     return inFlight;
   },
-  // app.js:306
   statusLabel(): string {
     const { saveState, draft } = state;
     if (saveState === 'saved') return draft.pending ? S.taskDraftUnconfirmed : S.taskDraftSaved;

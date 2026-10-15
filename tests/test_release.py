@@ -11,7 +11,6 @@ PYPROJECT = tomllib.loads((ROOT / 'pyproject.toml').read_text())
 
 
 def test_versions_match_between_pyproject_and_electron():
-    # build.sh refuses to build on a mismatch (spec §3 step 6); this keeps the two manifests equal between builds.
     assert json.loads((ROOT / 'electron/package.json').read_text())['version'] == PYPROJECT['project']['version']
 
 

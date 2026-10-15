@@ -5,8 +5,8 @@ import { note } from './nowSeed';
 import type { DharaServer } from './server';
 
 export const MB = 1024 * 1024;
-export const PNG = Buffer.from(PNG_1PX, 'base64');   // native_storage_check.py:24
-export const WAV = Buffer.concat([Buffer.from('RIFF'), Buffer.from([36, 0, 0, 0]), Buffer.from('WAVEfmt '), Buffer.alloc(28)]);   // detect_mime, server.py:44
+export const PNG = Buffer.from(PNG_1PX, 'base64');
+export const WAV = Buffer.concat([Buffer.from('RIFF'), Buffer.from([36, 0, 0, 0]), Buffer.from('WAVEfmt '), Buffer.alloc(28)]);
 
 export async function persistentBrowser(browserType: BrowserType, dir: string, errors: string[]): Promise<BrowserContext> {
   const context = await browserType.launchPersistentContext(dir, { viewport: { width: 1440, height: 1000 } });
@@ -83,7 +83,6 @@ export type CreatedNote = { id: string; title: string; folder: string; body: str
 
 export const createNote = (dhara: DharaServer, raw: string, files: { name: string; type: string; bytes: Buffer }[] = []) => note(dhara, raw, files) as Promise<CreatedNote>;
 
-// Test-only: inserts a worker-style AI suggestion straight into the disposable database.
 export function seedSuggestion(dhara: DharaServer, noteId: string, s: { id: string; title: string; body: string; folder: string }): void {
   runSql(dhara.dataDir, 'INSERT INTO suggestions VALUES(?,?,?,?,?,?)', [s.id, noteId, s.title, s.body, s.folder, new Date().toISOString()]);
 }

@@ -1,4 +1,3 @@
-// web/src/shell/notifications.ts
 import type { Snapshot } from '../api/schemas';
 import iconUrl from '../assets/icon.svg';
 import { readableTaskTitle } from '../domain/tasks';
@@ -6,7 +5,7 @@ import { openDialog } from './dialogs';
 import { S } from '../strings';
 
 
-const notified = new Set<string>(); // per page session (app.js:9)
+const notified = new Set<string>();
 
 export const NOTIFICATIONS_KEY = 'dhara-notifications';
 const LEGACY_NOTIFICATIONS_KEY = 'noema-notifications';   // rename-shim: read until Settings writes the new key
@@ -28,7 +27,6 @@ export function notifyDueReminders(snapshot: Snapshot): void {
       const notification = new Notification(S.notificationTitle, { body: task ? readableTaskTitle(task) : S.notificationFallback, tag: reminder.id, icon: iconUrl });
       notification.onclick = () => { window.focus(); openDialog({ kind: 'task', id: reminder.task_id }); notification.close(); };
     } catch {
-      // Some engines forbid page-context notifications; Needs you still lists the reminder.
     }
   }
 }
@@ -47,7 +45,7 @@ export function notificationItems(snapshot: Snapshot) {
 
 export function notifyAgentUpdates(snapshot: Snapshot): void {
   let delivered: string[] = [];
-  try { const saved = JSON.parse(localStorage.getItem('dhaara-agent-notified') || '[]'); if (Array.isArray(saved)) delivered = saved.filter(id => typeof id === 'string').slice(-500); } catch { /* session deduplication remains available */ }
+  try { const saved = JSON.parse(localStorage.getItem('dhaara-agent-notified') || '[]'); if (Array.isArray(saved)) delivered = saved.filter(id => typeof id === 'string').slice(-500); } catch {}
   for (const item of notificationItems(snapshot).filter(i => i.id.startsWith('run:'))) {
     if (notified.has(item.id) || delivered.includes(item.id)) continue;
     notified.add(item.id);
@@ -56,7 +54,7 @@ export function notifyAgentUpdates(snapshot: Snapshot): void {
       const notification = new Notification(item.label, { body: item.title, tag: item.id, icon: iconUrl });
       notification.onclick = () => { window.focus(); openDialog({ kind: 'task', id: item.taskId }); notification.close(); };
       delivered = [...delivered, item.id].slice(-500);
-      try { localStorage.setItem('dhaara-agent-notified', JSON.stringify(delivered)); } catch { /* session only */ }
-    } catch { /* The in-app feed remains available. */ }
+      try { localStorage.setItem('dhaara-agent-notified', JSON.stringify(delivered)); } catch {}
+    } catch {}
   }
 }

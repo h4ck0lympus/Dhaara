@@ -6,7 +6,6 @@ import { CLOSE_TIMEOUT_MS, NOT_RESPONDING } from '../src/protocol.js';
 import { startDhara, type DharaServer } from '../../web/e2e/server.js';
 import { ELECTRON_BIN, MAIN, closeWindow, killAll, launchDhara, messageBoxes, openCapture, readDraft, stubMessageBox, tempDir, waitConnected, windowCount } from './fixtures.js';
 
-// Verbatim from web/src/strings.ts (contract §5): S.closeSaveInFlight and S.closeDraftFailed.
 const CLOSE_SAVE_IN_FLIGHT = 'A capture save is still finishing. Try closing again shortly.';
 const CLOSE_DRAFT_FAILED = 'Local draft saving failed. Close anyway and risk losing this draft? Cancel to keep it open and retry.';
 
@@ -36,7 +35,7 @@ const confirms = (page: Page) => page.evaluate(() => (window as typeof window & 
 test('the checkpoint persists a draft typed just before closing (scenario.js draft stage)', async () => {
   const first = await openApp();
   const editor = await openCapture(first.window);
-  await editor.fill('Typed right before close.');   // inside the 350 ms debounce
+  await editor.fill('Typed right before close.');
   const closed = first.app.waitForEvent('close');
   await closeWindow(first.app);
   await closed;
@@ -51,7 +50,6 @@ test('a capture save in flight keeps the window open with a toast and no not-res
   const editor = await openCapture(window);
   await editor.fill('Save in flight');
   await expect.poll(async () => (await readDraft(window))?.raw).toBe('Save in flight');
-  // A second connection holds a readwrite transaction on 'outbox', so Save's ['kv','outbox'] transaction waits.
   await window.evaluate(() => new Promise<void>((resolve, reject) => {
     const w = window as typeof window & { __holdOutbox?: boolean };
     w.__holdOutbox = true;
@@ -70,12 +68,11 @@ test('a capture save in flight keeps the window open with a toast and no not-res
   await window.getByRole('button', { name: 'Save note' }).click();
   await closeWindow(app);
   await expect(window.getByText(CLOSE_SAVE_IN_FLIGHT)).toBeVisible();
-  // The page answered (by refusing): the renderer is responsive, so no native dialog may follow.
   await window.waitForTimeout(CLOSE_TIMEOUT_MS + 1_000);
   expect(await messageBoxes(app)).toEqual([]);
   expect(await windowCount(app)).toBe(1);
   await window.evaluate(() => { (window as typeof window & { __holdOutbox?: boolean }).__holdOutbox = false; });
-  await expect.poll(async () => (await readDraft(window))?.raw).toBe('');   // the save committed
+  await expect.poll(async () => (await readDraft(window))?.raw).toBe('');
   const closed = app.waitForEvent('close');
   await closeWindow(app);
   await closed;
@@ -105,19 +102,18 @@ test('a failed draft write asks before closing and keeps the window when decline
 
 test('a hung renderer gets Force close / Keep open after 10 s', async () => {
   const { app, window } = await openApp();
-  await stubMessageBox(app, [1, 0]);   // first Keep open, then Force close
-  // Hang the renderer for 30 s; the request script cannot run, so executeJavaScript never settles.
+  await stubMessageBox(app, [1, 0]);
   await window.evaluate(() => {
     setTimeout(() => {
       const end = Date.now() + 30_000;
-      while (Date.now() < end) { /* an unresponsive renderer */ }
+      while (Date.now() < end) {}
     }, 0);
   });
   await closeWindow(app);
   await expect.poll(() => messageBoxes(app), { timeout: 20_000 }).toEqual([NOT_RESPONDING]);
-  expect(await windowCount(app)).toBe(1);   // Keep open
+  expect(await windowCount(app)).toBe(1);
   const closed = app.waitForEvent('close');
-  await closeWindow(app);   // still hung: 10 s later the second prompt answers Force close
+  await closeWindow(app);
   await closed;
 });
 
@@ -127,12 +123,12 @@ test('Keep open stays open after the hung renderer recovers', async () => {
   await window.evaluate(() => {
     setTimeout(() => {
       const end = Date.now() + 14_000;
-      while (Date.now() < end) { /* hangs past the 10 s prompt, then recovers */ }
+      while (Date.now() < end) {}
     }, 0);
   });
   await closeWindow(app);
   await expect.poll(() => messageBoxes(app), { timeout: 20_000 }).toEqual([NOT_RESPONDING]);
-  await window.waitForTimeout(9_000);   // the loop has ended and the queued checkpoint request has run
+  await window.waitForTimeout(9_000);
   expect(await windowCount(app)).toBe(1);
   await expect(window.getByText('Server connected', { exact: true }).first()).toBeVisible();
 });
@@ -163,7 +159,6 @@ test('a failed task-draft write asks before closing and keeps the window when de
 
 test('closing before the page finished loading closes at once without a checkpoint', async () => {
   const sockets: net.Socket[] = [];
-  // Commits a document but never finishes it: the page is still loading, so launch can attach yet did-finish-load never fires.
   const silent = net.createServer((socket) => {
     sockets.push(socket);
     socket.on('error', () => undefined);
@@ -172,7 +167,6 @@ test('closing before the page finished loading closes at once without a checkpoi
   await new Promise<void>((resolve) => silent.listen(0, '127.0.0.1', resolve));
   try {
     const { port } = silent.address() as net.AddressInfo;
-    // No firstWindow() (it needs a committed page): launch directly and watch the window from the main process.
     const profile = tempDir('dhara-electron-profile-');
     const app = await _electron.launch({
       executablePath: ELECTRON_BIN,
@@ -183,13 +177,13 @@ test('closing before the page finished loading closes at once without a checkpoi
     try {
       await stubMessageBox(app, []);
       await expect.poll(() => windowCount(app)).toBe(1);
-      await expect.poll(() => sockets.length).toBeGreaterThan(0);   // the load is in flight
+      await expect.poll(() => sockets.length).toBeGreaterThan(0);
       const closed = app.waitForEvent('close');
       const started = Date.now();
       await closeWindow(app);
       await closed;
-      expect(Date.now() - started).toBeLessThan(5_000);   // no checkpoint request and no 10 s wait
-      const idb = path.join(profile, 'IndexedDB');   // storage untouched: the page never opened a database
+      expect(Date.now() - started).toBeLessThan(5_000);
+      const idb = path.join(profile, 'IndexedDB');
       expect(fs.existsSync(idb) ? fs.readdirSync(idb).filter((name) => name.includes('127.0.0.1')) : []).toEqual([]);
     } finally {
       if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');

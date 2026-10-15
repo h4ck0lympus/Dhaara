@@ -4,7 +4,6 @@ import type { StoredFile } from './db';
 import { ACCEPT_ATTR, MAX_FILE_BYTES, MAX_TOTAL_BYTES, validateFiles } from './limits';
 
 const MB = 1024 * 1024;
-// validateFiles reads only name, type and size, so large files need no real bytes.
 const file = (name: string, type: string, size = 10) => ({ name, type, size }) as unknown as File;
 const stored = (size: number): StoredFile => ({ name: 'kept.png', blob: { size } as Blob });
 

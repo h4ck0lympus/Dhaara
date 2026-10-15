@@ -53,7 +53,7 @@ describe('flushOutbox', () => {
   it('sends in IndexedDB key order with the v1 multipart payload and deletes each item only after a 2xx', async () => {
     const png = new Blob(['png-bytes'], { type: 'image/png' });
     await m.db.outboxPut(item(3));
-    await m.db.outboxPut(item(1, { task_id: 'task-1', files: [{ name: 'heap.png', blob: png }] })); // v1 shape: no error key
+    await m.db.outboxPut(item(1, { task_id: 'task-1', files: [{ name: 'heap.png', blob: png }] }));
     await m.db.outboxPut(item(2, { error: '' }));
     fetchMock.mockImplementation(async () => created());
     expect(await m.outbox.flushOutbox()).toEqual({ sent: 3, stop: 'done' });
@@ -67,7 +67,7 @@ describe('flushOutbox', () => {
     expect([attachment.name, attachment.type, await attachment.text()]).toEqual(['heap.png', 'image/png', 'png-bytes']);
     expect(fetchMock.mock.calls[0][0]).toBe('/api/captures');
     expect(await ids()).toEqual([]);
-    expect(m.toast).not.toHaveBeenCalled(); // three items: no single "Saved to" claim
+    expect(m.toast).not.toHaveBeenCalled();
   });
 
   it('says "Saved to {folder}" only after the server acknowledged the only queued item', async () => {
@@ -120,7 +120,7 @@ describe('flushOutbox', () => {
 
   it('replays a lost acknowledgement with the same capture_id', async () => {
     await m.db.outboxPut(item(1));
-    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch')); // the server may have stored it
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     expect(await m.outbox.flushOutbox()).toEqual({ sent: 0, stop: 'network' });
     expect(await ids()).toEqual([ID(1)]);
     m.connection.report('state-success');
@@ -158,7 +158,7 @@ describe('outbox actions and count', () => {
     expect(listener).toHaveBeenCalled();
     fetchMock.mockResolvedValueOnce(created()).mockResolvedValueOnce(failed(503, 'down'));
     await m.outbox.retryItem(ID(1));
-    expect(payloads().map((p) => p.capture_id)).toEqual([ID(1), ID(2)]); // retry flushes the whole queue in key order
+    expect(payloads().map((p) => p.capture_id)).toEqual([ID(1), ID(2)]);
     expect(await ids()).toEqual([ID(2)]);
     await m.outbox.discardItem(ID(2));
     await vi.waitFor(() => expect(m.outbox.outboxCount()).toBe(0));

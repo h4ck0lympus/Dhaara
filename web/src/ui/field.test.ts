@@ -161,7 +161,6 @@ describe('stepQuality', () => {
     expect(state).toEqual({ quality: QUALITY_STEPS.length - 1, slow: SLOW_DRAWS_TO_STEP + 1 });
   });
 
-  // Drives stepQuality with the measured gap between timer ticks, as the render loop does.
   function runTicks(periodMs: number, ticks: number) {
     vi.useFakeTimers();
     let state = { quality: 0, slow: 0 };

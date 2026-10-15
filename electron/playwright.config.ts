@@ -6,8 +6,8 @@ export default defineConfig({
   retries: 0,
   timeout: 120_000,
   expect: { timeout: 15_000 },
-  outputDir: 'dist/test-results',   // dist/ is already gitignored (contract §10)
+  outputDir: 'dist/test-results',
   reporter: 'list',
-  globalSetup: './e2e/sway.ts',     // private headless Sway: the suite never touches the owner's session
+  globalSetup: './e2e/sway.ts',
   use: { trace: 'retain-on-failure' },
 });

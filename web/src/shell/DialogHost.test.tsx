@@ -15,7 +15,6 @@ vi.mock('../dialogs/TaskCapture', () => ({ TaskCaptureDialog: stub }));
 import { DialogHost } from './DialogHost';
 import { closeDialog, openDialog, type DialogRequest } from './dialogs';
 
-// Record<kind, ...> makes this table exhaustive at compile time.
 const requests: Record<DialogRequest['kind'], DialogRequest> = {
   task: { kind: 'task', id: 't1' },
   'task-capture': { kind: 'task-capture' },

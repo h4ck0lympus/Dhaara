@@ -1,4 +1,3 @@
-// Compact notebook copy. The October 13 brief supersedes decorative slogans.
 export const COPY = {
   tagline: 'Your work, at a glance.',
   capture: { title: 'Capture', subtitle: 'Write, record, or sketch. Organize later.' },

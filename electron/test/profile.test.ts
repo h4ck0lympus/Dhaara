@@ -81,7 +81,7 @@ describe('adoptLegacyProfile (rename spec §4.6)', () => {
     expect(fs.existsSync(legacy)).toBe(false);
     expect(fs.statSync(profile).mode & 0o777).toBe(0o700);
     expect(log).not.toHaveBeenCalled();
-    expect(adoptLegacyProfile(profile, legacy, log)).toBe(profile);   // next launch: nothing to move
+    expect(adoptLegacyProfile(profile, legacy, log)).toBe(profile);
   });
 
   it('never moves over an existing new profile', () => {

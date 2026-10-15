@@ -13,7 +13,6 @@ def observation_status(summary, connected=True):
 
 
 def visual_settings(settings, local_mode=None, local_size=None):
-    # A server-side privacy/visibility choice takes precedence over local Cat/Dot.
     mode = 'hidden' if settings.get('companion') == 'hidden' else (
         local_mode or settings.get('companion', 'cat'))
     if mode not in ('cat', 'dot', 'hidden'):

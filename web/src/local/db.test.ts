@@ -53,7 +53,7 @@ describe('openDb', () => {
       request.onblocked = () => reject(new Error('blocked: the old connection did not close'));
     });
     upgraded.close();
-    await expect(db.openDb()).rejects.toMatchObject({ code: 'open-failed' }); // version 1 < 2: a fresh open, not the closed one
+    await expect(db.openDb()).rejects.toMatchObject({ code: 'open-failed' });
     expect(() => first.transaction('kv')).toThrow();
   });
 });

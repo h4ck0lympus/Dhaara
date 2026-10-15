@@ -17,10 +17,10 @@ export function NoteHistoryDialog({ onClose, noteId }: { onClose: () => void; no
     try {
       await restore.mutateAsync({ id: noteId, version, expectedVersion: currentVersion });
       onClose();
-      toast('Restored as a new revision.');   // app.js:511
+      toast('Restored as a new revision.');
     } catch (caught) {
       setError(messageOf(caught));
-      void note.refetch();   // a 409 means currentVersion is stale; mirrors NoteView
+      void note.refetch();
     }
   }
 

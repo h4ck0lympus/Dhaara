@@ -46,7 +46,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const identity = await (await fetch(`http://127.0.0.1:${port}/api/desktop-instance`)).json() as Record<string, unknown>;
     expect(identity.pid).toBe(pid);
     expect(Object.keys(identity).sort()).toEqual(['instance', 'pid', 'protocol']);
-    expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toContain('Dhara');   // existing browser workflow
+    expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toContain('Dhara');
     const task = await admin(ws, port, '/tasks', { method: 'POST', body: { title: 'Synthetic task', priority: 'low' } });
     const dependent = await admin(ws, port, '/tasks', { method: 'POST', body: { title: 'Synthetic dependent', dependencies: [task.id] } });
     await admin(ws, port, '/focus', { method: 'POST', body: { task_id: task.id, pinned: true } });
@@ -103,7 +103,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const port = await freePort();
     const owner = service({ port, workspace: workspace() });
     const first = await owner.start();
-    const agent = new http.Agent({ keepAlive: true });   // a live connection leaves TIME_WAIT/FIN_WAIT on the port
+    const agent = new http.Agent({ keepAlive: true });
     await new Promise<void>((resolve, reject) => {
       http.get({ host: '127.0.0.1', port, path: '/api/health', agent }, (response) => {
         response.resume();
@@ -115,7 +115,7 @@ describe('managed service parity (ported from tests/test_managed_service.py)', (
     const [error] = await crashed;
     expect(error.message).toBe(MESSAGES.crashed);
     await delay(300);
-    expect(owner.state).toBe('crashed');   // no automatic restart loop
+    expect(owner.state).toBe('crashed');
     const second = await owner.start();
     expect(second.pid).not.toBe(first.pid);
     expect(((await (await fetch(`http://127.0.0.1:${port}/api/desktop-instance`)).json()) as { pid: number }).pid).toBe(second.pid);

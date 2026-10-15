@@ -50,7 +50,7 @@ def test_desktop_refuses_a_missing_shell_before_starting_the_service(tmp_path):
 
 def test_interrupting_the_service_closes_the_shell(tmp_path):
     pidfile = tmp_path / 'pid'
-    shell = fake_shell(tmp_path, f'echo $$ > "{pidfile}"\nexec sleep 60\n')   # exec: the recorded pid is the window stand-in
+    shell = fake_shell(tmp_path, f'echo $$ > "{pidfile}"\nexec sleep 60\n')
     port = free_port()
     proc = subprocess.Popen(run_py('--desktop', '--shell', str(shell), '--port', str(port), '--data-dir', str(tmp_path / 'ws')),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

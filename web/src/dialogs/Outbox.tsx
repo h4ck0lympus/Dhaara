@@ -29,8 +29,8 @@ export function OutboxDialog({ onClose }: { onClose: () => void }): JSX.Element 
 
   async function openCopy(item: OutboxItem) {
     const { draft, saving } = captureDraftStore.getSnapshot();
-    if (saving) { toast(S.finishingLocalSave); return; }   // a save in flight would be overwritten by the copy
-    if ((draft.raw || draft.files.length) && !window.confirm(S.confirmReplaceDraft)) return;   // app.js:541
+    if (saving) { toast(S.finishingLocalSave); return; }
+    if ((draft.raw || draft.files.length) && !window.confirm(S.confirmReplaceDraft)) return;
     await captureDraftStore.replaceWith(item);
     onClose();
     await navigate({ to: '/capture' });
@@ -38,7 +38,7 @@ export function OutboxDialog({ onClose }: { onClose: () => void }): JSX.Element 
   }
 
   function discard(id: string) {
-    if (window.confirm(S.confirmDiscard)) void run(() => discardItem(id));   // app.js:544
+    if (window.confirm(S.confirmDiscard)) void run(() => discardItem(id));
   }
 
   return (

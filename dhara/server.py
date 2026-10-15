@@ -32,7 +32,7 @@ def has_request_marker(request):
 
 class HashedAssets(StaticFiles):
     """Vite output under dist/assets is content-hashed, so a URL never changes content."""
-    async def check_config(self): pass  # dist may be built after start; a missing directory is a plain 404, not a 500
+    async def check_config(self): pass
     async def get_response(self,path,scope):
         response=await super().get_response(path,scope)
         response.headers['Cache-Control']='public, max-age=31536000, immutable'
@@ -141,8 +141,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/agent-connections/{provider}')
     def configure_agent(provider: str, data: AgentConnectionInput, request: Request):
-        # Installation changes this computer's agent configuration. Never let a
-        # remote browser mistake it for configuration of its own computer.
         if not request.client or request.client.host not in ('127.0.0.1', '::1', 'testclient'):
             raise Problem(403, 'Connect agents from dhaara on this computer.')
         from .agent_connections import configure
@@ -183,7 +181,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         supplied=str(body.get('token',''))
         peer=request.client.host if request.client else ''
         host=urlsplit('//'+request.headers.get('host','')).hostname
-        # No implicit login through a reverse proxy or forwarded request.
         local=peer in ('127.0.0.1','::1','testclient') and host in ('127.0.0.1','localhost','::1','testserver') and not any(x in request.headers for x in ('forwarded','x-forwarded-for','x-forwarded-host'))
         if not (local and not supplied) and not secrets.compare_digest(supplied.encode(),admin.encode()): raise Problem(401,'Invalid access token')
         response=JSONResponse({'ok':True})
@@ -252,7 +249,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         except Exception:
             if committed: raise
             for f in staged: (store.blobs/f['path']).unlink(missing_ok=True)
-            # May have failed mid-stream before appending the file.
             if 'destination' in locals() and destination.exists() and not any(f['path']==destination.name for f in staged): destination.unlink(missing_ok=True)
             raise
         finally:
@@ -331,7 +327,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     @app.get('/api/agent/tasks/{task_id}')
     def agent_task(task_id,request:Request):
         task_scope(request,task_id)
-        # No unrelated notes, titles, task lists or dependencies' private details.
         task=store.task(task_id)
         return {k:task[k] for k in ('id','title','project','detail','next_action','status','session_url')}
 
@@ -372,7 +367,6 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.get('/api/export')
     def export():
-        # SQLite backup is separate from portable export. Never include credentials.
         payload=store.export_data(); stream=io.BytesIO()
         with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED) as archive:
             archive.writestr('dhara.json',json.dumps(payload,ensure_ascii=False,indent=2))

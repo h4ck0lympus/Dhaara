@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
-// Sandboxed preloads cannot import ./protocol.js; test/preload.test.ts keeps these equal to protocol.ts.
 const IPC_STARTUP_RETRY = 'dhara:startup-retry';
 const IPC_STARTUP_CANCEL = 'dhara:startup-cancel';
 const IPC_STARTUP_STATUS = 'dhara:startup-status';

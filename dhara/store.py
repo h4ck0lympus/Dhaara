@@ -123,7 +123,7 @@ class Store:
             log.warning('%s has journal side files (unclean close); opening it under the old name until the next clean start', old.name)
             return old
         try:
-            old.rename(new)  # same directory: atomic
+            old.rename(new)
         except OSError as exc:
             log.warning('could not rename %s to %s (%s); opening the old file', old.name, new.name, exc)
             return old
@@ -194,7 +194,6 @@ class Store:
                 if previous:
                     if previous['fingerprint'] != capture['fingerprint']:
                         raise Problem(409, 'Task capture ID already exists with different input')
-                    # A retry reads current state; it must never repeat interpretation over edits.
                     row = c.execute('SELECT * FROM tasks WHERE id=?', (previous['task_id'],)).fetchone()
                     return self.task_row({**dict(row), 'original_input': previous['raw'], 'interpretation': previous['interpretation']})
             all_tasks = {r['id']: json.loads(r['dependencies']) for r in c.execute('SELECT id,dependencies FROM tasks')}
@@ -409,7 +408,7 @@ class Store:
             item = dict(row); item['task_ids'] = json.loads(item['task_ids']); return item
 
     def settings(self, updates=None):
-        result = {**DEFAULT_SETTINGS, **self.meta('settings')}  # rows written before a setting existed get its default
+        result = {**DEFAULT_SETTINGS, **self.meta('settings')}
         if updates:
             result.update({k:v for k,v in updates.items() if v is not None})
             self.set_meta('settings', result)
@@ -507,7 +506,6 @@ class Store:
 
     def export_data(self):
         with self.db() as c:
-            # Deliberately exclude credentials, observed window titles and local blob paths.
             return {table:[dict(r) for r in c.execute(f'SELECT {columns} FROM {table}')]
                     for table,columns in {'tasks':'*','notes':'id,raw,transcript,title,body,folder,project,task_id,mode,version,created_at,updated_at',
                     'task_captures':'*','attachments':'id,note_id,name,mime,size,offset_seconds','revisions':'*','reminders':'*','runs':'*','events':'*','suggestions':'*'}.items()}

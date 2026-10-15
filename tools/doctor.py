@@ -6,7 +6,7 @@ import platform
 import shutil
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # tools/ scripts run from anywhere; dhara/ is beside them
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dhara.env import env
 print('Dhara diagnostics')
 print('Python:',sys.version.split()[0], '| OS:',platform.system(),platform.release())

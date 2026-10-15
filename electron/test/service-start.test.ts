@@ -31,7 +31,7 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
 
   it('spawns [python, ...args] when the entry point is empty, as for a frozen service (packaging spec §4)', async () => {
     const dir = tempDir();
-    const frozen = path.join(dir, 'dhara-service');   // a stand-in for the PyInstaller binary: its own entry point
+    const frozen = path.join(dir, 'dhara-service');
     fs.writeFileSync(frozen, `#!/bin/sh\nexec ${JSON.stringify(PYTHON)} ${JSON.stringify(FAKE)} "$@"\n`, { mode: 0o755 });
     const envfile = path.join(dir, 'env.json');
     const port = await freePort();
@@ -79,7 +79,6 @@ describe('ManagedService.start (spec §6.4.2-6.4.4)', () => {
     const pidfile = path.join(tempDir(), 'pids.json');
     const { managed } = await fakeService('early-exit', { DHARA_FAKE_PIDFILE: pidfile });
     const error = await rejection(managed.start());
-    // The lease line normally fits in the pipe buffer before Python exits; both wordings are correct guidance.
     expect([['early-exit', MESSAGES.earlyExit], ['startup-exit', MESSAGES.startupExit]]).toContainEqual([error.code, error.message]);
     expect(readPids(pidfile).some(live)).toBe(false);
   });

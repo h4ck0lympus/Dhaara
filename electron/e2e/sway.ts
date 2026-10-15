@@ -5,7 +5,6 @@ import { tempDir, until } from '../test/proc.js';
 
 const CONFIG = 'xwayland disable\noutput * bg #101110 solid_color\noutput HEADLESS-1 mode 1440x960 position 0 0\ndefault_border none\n';
 
-/** Mirrors qa/sway_check.py: own XDG_RUNTIME_DIR, headless wlroots, no Xwayland. Workers inherit the env set here. */
 export default async function startPrivateSway(): Promise<() => Promise<void>> {
   const dir = tempDir('dhara-e2e-sway-');
   const runtime = path.join(dir, 'runtime');
@@ -22,7 +21,7 @@ export default async function startPrivateSway(): Promise<() => Promise<void>> {
   }, 20_000);
   Object.assign(process.env, { XDG_RUNTIME_DIR: runtime, WAYLAND_DISPLAY: sockets()[0], SWAYSOCK: path.join(runtime, fs.readdirSync(runtime).find((name) => name.startsWith('sway-ipc.'))!) });
   delete process.env.DISPLAY;
-  delete process.env.DBUS_SESSION_BUS_ADDRESS;   // a future real Notification must not reach the owner's desktop
+  delete process.env.DBUS_SESSION_BUS_ADDRESS;
   return async () => {
     sway.kill('SIGTERM');
     fs.rmSync(dir, { recursive: true, force: true });

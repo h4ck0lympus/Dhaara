@@ -1,4 +1,3 @@
-// Port of tests/now_state.test.cjs (22 cases). Pure view-state tests, not service validation.
 import { describe, expect, it } from 'vitest';
 import type { Focus, Snapshot } from '../api/schemas';
 import { makeNoteSummary, makeRun, makeSnapshot, makeTask } from '../test/fixtures';
@@ -119,7 +118,6 @@ describe('nowState (verbatim port of the legacy Now-state cases)', () => {
     expect(observationStatus(makeSnapshot({ settings: settings(true), context: context(true) }))).toMatch(/no recent observer report/);
   });
 
-  // Phase A source characterization, not a physical UI acceptance result.
   it('actionable pin is continued when no competing available item exists', () => {
     const pin = makeTask('pin');
     const s = makeSnapshot({ tasks: [pin], focus: focus(pin.id, true) });

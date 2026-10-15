@@ -37,7 +37,6 @@ class Observer:
             self.candidate=None;self.previous=None;return summary
         data=focused_context(sway_json('get_tree'))
         if not data:return summary
-        # Opening Dhara itself should not replace the work context being resumed.
         if data['app'].lower().startswith('dhara') or data['title'].startswith('Dhara'):return summary
         signature=json.dumps(data,sort_keys=True)
         if signature!=self.candidate:self.candidate=signature;return summary

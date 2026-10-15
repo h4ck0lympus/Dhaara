@@ -1,4 +1,3 @@
-/** Pure helpers for the terrain background (spec §7). No DOM or WebGL access, so Vitest covers them in Node. */
 export type FieldState = 'animated' | 'static' | 'paused' | 'unsupported';
 export type FieldInputs = {
   supported: boolean;
@@ -23,10 +22,8 @@ export function fieldState(inputs: FieldInputs): FieldState {
 }
 
 export type GridSize = { columns: number; rows: number };
-// A tick later than 2.4x the target interval counts as slow; 20 net slow ticks step quality down.
 export const SLOW_DRAW_MS = 2.4 * FRAME_INTERVAL_MS, SLOW_DRAWS_TO_STEP = 20;
 
-/** One instance per grid point: [u, v, seed], row order (experiments field.ts:27-37 without the duplicated base/tip vertex). */
 export function buildInstances(columns: number, rows: number): Float32Array {
   if (!Number.isInteger(columns) || !Number.isInteger(rows) || columns < 2 || rows < 2) {
     throw new RangeError('Field grid needs at least 2x2 points');
@@ -52,7 +49,6 @@ export function gridSize(step: number): GridSize {
   };
 }
 
-/** intervalMs = measured time since the previous tick started; it includes GPU back-pressure, unlike CPU submit time. */
 export function stepQuality(state: { quality: number; slow: number }, intervalMs: number): { quality: number; slow: number } {
   const slow = intervalMs > SLOW_DRAW_MS
     ? Math.min(state.slow + 1, SLOW_DRAWS_TO_STEP + 1)
@@ -77,7 +73,6 @@ function fract(value: number): number {
   return value - Math.floor(value);
 }
 
-/** Visible content rectangles packed for the shader, largest first, clipped to the viewport. Unused slots are zero. (experiments field.ts:40-53, unchanged) */
 export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHeight: number): Float32Array {
   const packed = new Float32Array(QUIET_SLOTS * 4);
   const area = (rect: Rect) => rect.width * rect.height;
@@ -89,7 +84,6 @@ export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHei
     })
     .filter((rect) => Number.isFinite(rect.width + rect.height) && rect.width > 1 && rect.height > 1)
     .sort((a, b) => area(b) - area(a));
-  // Too many disjoint surfaces: the two smallest become their bounding box (more quiet, never less) instead of one being dropped.
   while (visible.length > QUIET_SLOTS) {
     const [a, b] = visible.splice(-2);
     const left = Math.min(a.left, b.left), top = Math.min(a.top, b.top);
@@ -100,7 +94,6 @@ export function packQuietRects(rects: Rect[], viewportWidth: number, viewportHei
   return packed;
 }
 
-/** Nested surfaces (a heading inside the main column) would use up QUIET_SLOTS and push a disjoint dialog out. */
 export function removeContained(rects: Rect[]): Rect[] {
   return rects.filter((rect, i) =>
     !rects.some((other, j) => j !== i && contains(other, rect) && (j < i || !contains(rect, other))),

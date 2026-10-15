@@ -41,7 +41,6 @@ export function fakeEnv(mode: string, extra: Record<string, string> = {}): NodeJ
   return { ...process.env, DHARA_FAKE_MODE: mode, ...extra };
 }
 
-/** Creates services that are always cancelled (and their groups cleaned) after each test. */
 export function serviceFactory(): (config: Partial<ManagedConfig> & Pick<ManagedConfig, 'port' | 'workspace'>) => ManagedService {
   const services: ManagedService[] = [];
   afterEach(async () => {

@@ -7,19 +7,14 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Paths that keep the old name: the shims and the migration code
-# with their tests and the historical v1 service-worker fixture.
 ALLOWED_PATHS = (
     'noema/', 'dhara/env.py', 'electron/src/env.ts', 'electron/test/env.test.ts',
     'web/src/local/migrate.ts', 'web/src/local/migrate.test.ts', 'web/e2e/v1/sw.js',
     'tests/test_shims.py', 'tests/test_rename_gate.py',
 )
-# Substrings that are right as they are: archive paths, the README's history line,
-# and the repository directory plus the cutover backup beside it: paths on the owner's disk, out of scope (spec §1).
 KEEP_TOKENS = ('Noema-Handbook', 'Noema-Documentation', 'formerly Noema', '/code/noema',
                '/tmp/noema-', 'share/noema/webview', 'share/noema-dev',
-               'noema-desktop', 'compileall -q noema', 'noema/server.py', 'files -0 noema', 'package `noema`')  # historical scratch paths, real pre-rename directories and recorded pre-rename commands stay as recorded
-# A line that keeps an old name on purpose says why: rename-shim (removed by the dated follow-up) or rename-keep (permanent).
+               'noema-desktop', 'compileall -q noema', 'noema/server.py', 'files -0 noema', 'package `noema`')
 MARKERS = ('rename-shim:', 'rename-keep:')
 COMPAT_HEADING = re.compile(r'^## .*Compatibility with Noema')
 OLD = re.compile('noema', re.IGNORECASE)
@@ -37,7 +32,7 @@ def tracked_text_files():
         try:
             yield name, (ROOT / name).read_text(encoding='utf-8')
         except UnicodeDecodeError:
-            continue  # fonts, images
+            continue
 
 
 def excused(name, line, in_compat):
@@ -73,7 +68,6 @@ def test_no_noema_env_read_outside_the_helper():
 
 
 def test_marker_lines_are_listed_for_the_follow_up():
-    # One grep finds every compat line; the dated follow-up removes exactly these and the allowed shim files.
     listing = subprocess.run(['git', 'grep', '-n', 'rename-shim:'], cwd=ROOT, capture_output=True, text=True, check=True).stdout
     for expected in ('dhara/server.py', 'dhara/store.py', 'web/public/sw.js', 'electron/src/profile.ts', 'web/src/shell/notifications.ts', 'web/e2e/server.ts'):
         assert expected in listing

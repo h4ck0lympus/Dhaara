@@ -1,4 +1,3 @@
-// Ports of desktop/src/lib.rs:31-56. Node's WHATWG URL parser matches the Rust url crate used there.
 
 function parse(value: string): URL | null {
   try {

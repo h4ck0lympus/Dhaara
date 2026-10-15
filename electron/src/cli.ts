@@ -4,8 +4,8 @@ import { managedPort } from './lifecycle.js';
 import { absolutePath } from './paths.js';
 
 export type CliOptions = {
-  server: string;            // validated origin
-  profile: string | null;    // raw; resolveProfile() makes it absolute
+  server: string;
+  profile: string | null;
   manageService: boolean;
   dataDir: string | null;
   python: string;
@@ -18,7 +18,6 @@ export class CliError extends Error {}
 export const DEFAULT_SERVER = 'http://127.0.0.1:8765';
 const LOOPBACK_ONLY = 'Use a literal loopback HTTP URL, e.g. http://127.0.0.1:8765';
 const UNKNOWN = 'Unknown argument; use --help. No token file is needed by the webview.';
-// What Rust f64::from_str accepts (main.rs:38-42); inf/nan parse but fail the range check later.
 const RUST_F64 = /^[+-]?(?:(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|inf|infinity|nan)$/i;
 const VALUE_FLAGS: Record<string, string> = {
   '--server': '--server needs a URL',
@@ -40,13 +39,11 @@ export const HELP_TEXT = [
   'Browser and old webview drafts are NOT migrated into this separate Electron profile.',
 ].join('\n');
 
-/** The packaged shell manages its bundled service by default (parseArgs), so its help says so. */
 export function helpText(packaged: PackagedFacts | null): string {
   if (packaged === null) return HELP_TEXT;
   return HELP_TEXT.replace('Default: external service; start Python separately.', `Default: managed service on ${path.join(packaged.dataHome, 'dhara', 'workspace')}; --server <url> connects to an external service.`);
 }
 
-/** Arguments after the app path: Chromium/Node switches placed before it are never Dhara's. */
 export function userArgv(argv: readonly string[], defaultApp: boolean): string[] {
   if (!defaultApp) return argv.slice(1);
   const appPath = argv.findIndex((arg, index) => index > 0 && !arg.startsWith('-'));
@@ -55,8 +52,8 @@ export function userArgv(argv: readonly string[], defaultApp: boolean): string[]
 
 function isLoopbackLiteral(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '');
-  if (net.isIPv4(host)) return host.split('.')[0] === '127';   // Rust Ipv4Addr::is_loopback: 127/8
-  return net.isIPv6(host) && host === '::1';                  // WHATWG already compressed the address
+  if (net.isIPv4(host)) return host.split('.')[0] === '127';
+  return net.isIPv6(host) && host === '::1';
 }
 
 export function validateServer(value: string): string {
@@ -66,12 +63,10 @@ export function validateServer(value: string): string {
   } catch {
     throw new CliError('Invalid service URL');
   }
-  // href === origin + '/' rules out credentials, any path and even an empty query or fragment (lib.rs:18-25).
   if (url.protocol !== 'http:' || !isLoopbackLiteral(url.hostname) || url.href !== `${url.origin}/`) throw new CliError(LOOPBACK_ONLY);
   return url.origin;
 }
 
-/** What an AppImage knows (packaging spec §4): where the bundled service lives and where the default workspace goes. */
 export type PackagedFacts = { resourcesPath: string; dataHome: string };
 
 export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string, env: NodeJS.ProcessEnv, packaged: PackagedFacts | null = null): CliOptions | 'help' {
@@ -94,7 +89,6 @@ export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string
   const server = validateServer(values.get('--server') ?? DEFAULT_SERVER);
   const seconds = Number(values.get('--startup-timeout') ?? '15');
   if (!Number.isFinite(seconds) || seconds < 0.1 || seconds > 60) throw new CliError('Use a startup timeout from 0.1 to 60 seconds');
-  // Packaged build (packaging spec §4): managed mode on a private workspace unless --server or --manage-service was given.
   const packagedDefaults = packaged !== null && !values.has('--server') && !manageService ? packaged : null;
   if (packagedDefaults !== null) manageService = true;
   const dataDir = values.get('--data-dir') ?? (packagedDefaults === null ? undefined : path.join(packagedDefaults.dataHome, 'dhara', 'workspace'));
@@ -111,7 +105,6 @@ export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string
     profile: values.get('--profile') ?? null,
     manageService,
     dataDir: dataDir === undefined ? null : absolutePath(dataDir, cwd),
-    // An AppImage has no venv: the bundled service is its own entry point whenever the shell is packaged.
     python: absolutePath(values.get('--python') ?? (packaged === null ? path.join(repoRoot, '.venv/bin/python') : path.join(packaged.resourcesPath, 'service/dhara-service/dhara-service')), cwd),
     entryPoint: absolutePath(values.get('--entry-point') ?? (packaged === null ? path.join(repoRoot, 'run.py') : ''), cwd),
     startupTimeoutMs: Math.round(seconds * 1000),

@@ -5,20 +5,17 @@ import type { DharaServer } from './server';
 const FIELD = 'canvas.background-field';
 
 test.use({ viewport: { width: 1440, height: 900 } });
-// Pixel/geometry checks require a stationary field. Animation cases opt in below;
-// the product's default-on preference is checked by serving and Settings tests.
 test.beforeEach(async ({ dhara }) => {
   await dhara.api('PATCH', '/api/settings', { motion: false });
 });
 
-/** gotoApp loads origin + '/' + hash, so a '?e2e=1' prefix turns the seam on. Fonts are awaited so a late layout shift cannot redraw a static frame mid-test. */
 async function openField(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
   await gotoApp(page, dhara, `?e2e=1${hash}`);
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
 }
 
 async function enableMotion(dhara: DharaServer): Promise<void> {
-  await dhara.api('PATCH', '/api/settings', { motion: true });   // the helper takes the full path
+  await dhara.api('PATCH', '/api/settings', { motion: true });
 }
 
 function frames(page: Page): Promise<number> {
@@ -47,7 +44,6 @@ test.describe('terrain state machine', () => {
     expect(await frames(page)).toBe(before);
   });
 
-  // Upper bound only: SwiftShader back-pressure slows ticks; the 12 fps cadence is pinned by the scheduler unit test.
   test('motion on animates through setTimeout without exceeding 12 fps', async ({ page, dhara }) => {
     await enableMotion(dhara);
     await openField(page, dhara);
@@ -59,7 +55,6 @@ test.describe('terrain state machine', () => {
     expect(drawn).toBeLessThanOrEqual(26);
   });
 
-  // Parity-map row 41 (experiments/ui-ab/scripts/verify.py:41), title verbatim.
   test('Terrain animates, stays static with reduced motion, pauses when hidden, and does not capture input', async ({ page, dhara }) => {
     await enableMotion(dhara);
     await openField(page, dhara);
@@ -81,12 +76,10 @@ test.describe('terrain state machine', () => {
     await setHidden(page, false);
     await expectState(page, 'animated');
     expect(await page.locator(FIELD).evaluate((canvas) => getComputedStyle(canvas).pointerEvents)).toBe('none');
-    // Hit testing skips the canvas everywhere, including the corner where no app surface covers it.
     expect(await page.evaluate(() => [[2, 2], [innerWidth / 2, innerHeight / 2], [innerWidth - 2, innerHeight - 2]]
       .every(([x, y]) => !document.elementFromPoint(x, y)?.matches('canvas.background-field')))).toBe(true);
   });
 
-  // Parity-map row 114 (qa/now_ui_check.py:260) and handbook-trace U25, title verbatim.
   test('Reduced motion stops the actual animation timer', async ({ page, dhara }) => {
     await enableMotion(dhara);
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -99,7 +92,6 @@ test.describe('terrain state machine', () => {
     await expectState(page, 'animated');
   });
 
-  // Parity-map row 115 (qa/now_ui_check.py:266), title verbatim.
   test('Injected hidden-document event stops animation', async ({ page, dhara }) => {
     await enableMotion(dhara);
     await openField(page, dhara);
@@ -132,9 +124,6 @@ test.describe('terrain state machine', () => {
     await page.clock.install();
     await openField(page, dhara);
     await expectState(page, 'animated');
-    // Freeze the fake clock first: it otherwise keeps ticking in real time, and under load the latency between the
-    // move, the jump and the read ate the one-second margin before the 60 s pause. Then restart the window from the move.
-    // pauseAt refuses a time already behind the ticking clock, so pause two seconds ahead of the page's own now.
     await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 2_000);
     await page.mouse.move(10, 10);
     await page.clock.fastForward(59_000);
@@ -212,7 +201,6 @@ function litIn(page: Page, box: Box, step = 6): Promise<{ total: number; lit: nu
   }, { box, step });
 }
 
-// step 2 CSS px = every backing pixel at DPR 1 (0.5× store), so a 1-px stroke under a quiet surface cannot slip between samples.
 function quietPixels(page: Page, step = 2): Promise<{ total: number; lit: number }> {
   return page.evaluate(async (step) => {
     const field = window.__dharaField!;
@@ -239,7 +227,6 @@ async function stripQuiet(page: Page): Promise<void> {
 
 const ROUTES = ['#/overview', '#/capture', '#/notes', '#/plan', '#/settings'] as const;
 
-/** Alpha 0 under every [data-quiet] surface on every route, over two animated frames per route. */
 async function expectQuietEverywhere(page: Page, dhara: DharaServer, viewport: { width: number; height: number }): Promise<void> {
   await page.setViewportSize(viewport);
   await enableMotion(dhara);
@@ -258,7 +245,6 @@ async function expectQuietEverywhere(page: Page, dhara: DharaServer, viewport: {
 }
 
 test.describe('terrain pixels', () => {
-  // Parity-map row 113 (qa/now_ui_check.py:252) and handbook-trace U25, title verbatim.
   test('Dot field never paints over the reading surface', async ({ page, dhara }) => {
     await expectQuietEverywhere(page, dhara, { width: 1440, height: 900 });
   });
@@ -267,9 +253,6 @@ test.describe('terrain pixels', () => {
     await expectQuietEverywhere(page, dhara, { width: 390, height: 844 });
   });
 
-  // A standalone <dialog data-quiet> (the shape contract §6.2 gives every app dialog), mounted and unmounted the way
-  // React does it. The app's Settings route is not used here: it re-mounts the Now screen on open, which would put
-  // data-quiet back on the main column and hide whether the dialog itself was measured.
   test('opening and closing a dialog updates the quiet rects', async ({ page, dhara }) => {
     await openField(page, dhara);
     await expectState(page, 'static');
@@ -371,7 +354,6 @@ test.describe('terrain pixels', () => {
     const without = await page.screenshot({ clip, animations: 'disabled' });
     expect(withField.equals(without)).toBe(false);
   });
-  // Real composited layout, no DOM stripping: the shell must not mark the whole content area quiet.
   test('the terrain shows outside the reading surfaces and not under them in the real layout', async ({ page, dhara }) => {
     await openField(page, dhara);
     await expectState(page, 'static');
@@ -404,7 +386,6 @@ test.describe('terrain layout fidelity', () => {
     await expect.poll(async () => (await quietPixels(page)).lit).toBe(0);
   });
 
-  // A dedicated browser: Playwright hides scrollbars by default, and launchOptions cannot be set per describe.
   test.describe('with a classic scrollbar', () => {
     test('no strokes under the right edge of the reading column', async ({ dhara }) => {
       const browser = await chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
@@ -429,9 +410,6 @@ async function checkScrollbarEdge(page: Page, dhara: DharaServer): Promise<void>
   });
   expect(await page.evaluate(() => innerWidth - document.documentElement.clientWidth), 'a classic scrollbar is present').toBeGreaterThan(0);
   await expect.poll(async () => (await quietPixels(page)).total).toBeGreaterThan(0);
-  // The strokes sit under the quiet rects only if the backing store maps 1:1 onto the CSS box: a store sized from
-  // innerWidth (scrollbar included) is squeezed into the narrower box and shifts every rect. A screenshot strip is too
-  // faint to see the shift (strokes next to a quiet rect are near alpha 0), so assert the mapping itself.
   const ratios = await page.locator(FIELD).evaluate((canvas) => {
     const c = canvas as HTMLCanvasElement;
     return { x: c.width / c.clientWidth, y: c.height / c.clientHeight };

@@ -1,6 +1,3 @@
-// web/src/domain/nowState.ts
-// Verbatim port of public/app.js:148-183 (NOW_STATE_START..NOW_STATE_END). Strings unchanged.
-// Pure presentation of the server snapshot: never mutates it, never invents work.
 import type { Focus, Snapshot, SnapshotRun, SnapshotTask } from '../api/schemas';
 
 export type NowMode = 'disconnected' | 'new' | 'notes-only' | 'unknown' | 'attention' | 'complete' | 'available' | 'waiting' | 'filtered' | 'idle';

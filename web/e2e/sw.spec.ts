@@ -90,8 +90,8 @@ test('offline cold boot serves every route, every precached file and loaded font
     const page = await cold.newPage();
     await page.goto(dhara.origin + '/');
     await shellVisible(page);
-    await expectFontsLoaded(page); // before the fetch loop below, which adds its own resource entries
-    const assets = urls.filter((url) => url.startsWith('/assets/')); // every precached JS, CSS and font file
+    await expectFontsLoaded(page);
+    const assets = urls.filter((url) => url.startsWith('/assets/'));
     const statuses = await page.evaluate(async (list) => Promise.all(list.map(async (url) => (await fetch(url)).status)), assets);
     expect(statuses).toEqual(assets.map(() => 200));
     const api = await page.evaluate(async () => {
@@ -102,7 +102,7 @@ test('offline cold boot serves every route, every precached file and loaded font
         return 'network-error';
       }
     });
-    expect(api).toBe('network-error'); // /api/ is never answered from the cache
+    expect(api).toBe('network-error');
     coldClean();
   } finally {
     await cold.close();
@@ -116,7 +116,7 @@ test('a 5xx navigation falls back to the cached shell', async ({ page }) => {
     await page.goto(dhara.origin + '/');
     await waitForController(page);
     rmSync(join(dist, 'index.html'));
-    expect(await page.evaluate(async () => (await fetch('/')).status)).toBe(503); // non-navigation fetches pass through
+    expect(await page.evaluate(async () => (await fetch('/')).status)).toBe(503);
     const response = await page.reload();
     expect(response?.status()).toBe(200);
     await shellVisible(page);
@@ -163,7 +163,7 @@ test('takes over a page controlled by the v1 service worker and deletes noema-sh
     await page.goto(`http://127.0.0.1:${port}/`);
     await waitForController(page);
     await expect.poll(() => page.evaluate(() => caches.keys())).toContain('noema-shell-v1');   // rename-shim: the v1 worker's cache name
-    await page.evaluate(() => caches.open('dhara-shell-stale'));   // an older build of the renamed worker is purged too
+    await page.evaluate(() => caches.open('dhara-shell-stale'));
     await closeV1();
     v1Open = false;
 

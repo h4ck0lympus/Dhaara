@@ -36,7 +36,7 @@ afterEach(() => {
   uninstall = () => {};
   delete window.ipc;
   vi.restoreAllMocks();
-  vi.resetAllMocks();   // also drops per-test persist implementations
+  vi.resetAllMocks();
 });
 
 describe('installCheckpointClose', () => {

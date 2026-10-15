@@ -76,7 +76,7 @@ class Companion:
         self.button = Gtk.Button()
         self.button.get_style_context().add_class('kitten-bubble')
         for edge in ('top', 'bottom', 'start', 'end'):
-            getattr(self.button, 'set_margin_' + edge)(4)  # Space for the shadow, not an input overlay.
+            getattr(self.button, 'set_margin_' + edge)(4)
         self.button.set_can_focus(False)
         self.button.get_accessible().set_name('Dhara companion controls')
         self.window.add(self.button)
@@ -131,14 +131,13 @@ class Companion:
         if self.popover:
             self.popover.destroy()
         pop = Gtk.Popover.new(self.button)
-        pop.set_modal(False)  # No grab, desktop dimming, or keyboard focus request.
+        pop.set_modal(False)
         pop.set_position(Gtk.PositionType.TOP)
         pop.get_style_context().add_class('kitten-panel')
         self.popover = pop
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.set_border_width(10)
-        box.set_size_request(240, -1)  # Readable short actions without a narrow, needlessly scrolling column.
-        # Constrain unusually long text/menus to the intended output at HiDPI.
+        box.set_size_request(240, -1)
         monitor = self.layer.get_monitor(self.window) or self.window.get_display().get_monitor_at_window(
             self.window.get_window())
         scroll = Gtk.ScrolledWindow()
@@ -282,13 +281,11 @@ class Companion:
         if self.status_label:
             self.status_label.set_text(status)
             self.helper_label.set_text(self.helper_status() + ' · no screenshots')
-        # show_all on the toplevel also resurrects a dismissed popover.
         self.button.get_child().show()
         self.button.show()
         self.window.show()
         if self.popup_open and self.popover and self.popover.get_visible() and (
                 visual_changed or placement_changed or (next_changed and not self.controls_open)):
-            # Refresh stale actions and reconstrain open controls on output/scale changes.
             self.show_popover(controls=self.controls_open)
         return False
 

@@ -1,4 +1,3 @@
-// web/src/components/TaskFields.tsx
 import { useId, type JSX } from 'react';
 import type { Priority, SnapshotTask, TaskEditable, TaskStatus } from '../api/schemas';
 import { fromLocal, localDateInput } from '../domain/format';

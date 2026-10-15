@@ -9,10 +9,10 @@ import { FOLDER_MAX } from '../local/limits';
 export type SavedCapture = { id: string; state: 'queued' | 'rejected' | 'server' };
 
 export const STORAGE_LABELS = {
-  device: S.draftSaved,                                       // 'Draft on this device · not uploaded' (app.js:66)
-  queued: 'Queued on this device · not on your server yet',   // new (handbook §20)
-  rejected: 'Not accepted by your server · kept on this device',   // new
-  server: 'Saved on your server',                             // new
+  device: S.draftSaved,
+  queued: 'Queued on this device · not on your server yet',
+  rejected: 'Not accepted by your server · kept on this device',
+  server: 'Saved on your server',
 } as const;
 
 

@@ -55,7 +55,6 @@ class TaskCapture(Input):
     capture_id: str = Field(min_length=8, max_length=80, pattern=r'^[a-zA-Z0-9_-]+$')
     raw: str = Field(min_length=1, max_length=16000)
     local_day: date
-    # Only explicitly chosen details, never window-context or model guesses.
     details: TaskCaptureDetails | None = None
 
     @field_validator('raw')
@@ -137,7 +136,6 @@ class SettingsInput(Input):
     @field_validator('display_name', mode='before')
     @classmethod
     def strip_display_name(cls, value):
-        # Strip before the length check; non-strings fall through to the str check and are rejected, never coerced.
         return value.strip() if isinstance(value, str) else value
 
 

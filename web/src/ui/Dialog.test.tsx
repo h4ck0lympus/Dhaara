@@ -1,4 +1,3 @@
-// web/src/ui/Dialog.test.tsx
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { StrictMode, useState } from 'react';
@@ -66,7 +65,6 @@ describe('Dialog', () => {
 
   it('does not close itself on open under StrictMode (stale queued close event)', async () => {
     const nativeClose = HTMLDialogElement.prototype.close;
-    // Real browsers queue the close event as a task; model that so it lands after the re-mount.
     HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
       if (!this.hasAttribute('open')) return;
       this.removeAttribute('open');

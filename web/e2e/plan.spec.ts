@@ -1,4 +1,3 @@
-// web/e2e/plan.spec.ts
 import type { Page } from '@playwright/test';
 import { expect, gotoApp, test } from './fixtures';
 import { agentRun, changeElsewhere, serverState, task } from './nowSeed';
@@ -116,7 +115,6 @@ test('a long unbroken title never scrolls the page sideways at 390 px', async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-// web/e2e/plan.spec.ts — append
 test('Task detail shows the next action and source before the activity log', async ({ page, dhara }) => {
   const t = await task(dhara, 'Review the proposed fix', { next_action: 'Check cleanup first.', detail: 'The slot may still point at the chunk.' });
   await agentRun(dhara, t, 'needs_input');
@@ -264,7 +262,7 @@ test('Missing task has truthful error, no fake action', async ({ page, dhara }) 
   await page.evaluate(() => { location.hash = '#task/missing-synthetic-task'; });
   await expect(page.locator('.toast-layer')).toHaveText(/Task unavailable\./);
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.goto('about:blank'); // force a cold start, not a same-document hash change
+  await page.goto('about:blank');
   await page.goto(`${dhara.origin}/#/task/missing-synthetic-task`);
   await expect(page.locator('.toast-layer')).toHaveText(/Task unavailable\./);
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -290,7 +288,6 @@ test('a 409 conflict shows Reopen and never overwrites', async ({ page, dhara })
   expect((await getTask(dhara, t.id)).title).toBe('Merged by hand');
 });
 
-// The Python helper opens /#task/<id> in a running tab (spec §4.5). A link must never unmount the screen underneath.
 const openLink = (page: Page, hash: string) => page.evaluate(h => { location.hash = h; }, hash);
 const captureEditor = (page: Page) => page.getByLabel('Rough learning note');
 

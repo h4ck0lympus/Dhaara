@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 beforeEach(() => {
-  globalThis.indexedDB = new IDBFactory() as unknown as typeof globalThis.indexedDB; // fake-indexeddb's class is structurally, not nominally, the DOM type
+  globalThis.indexedDB = new IDBFactory() as unknown as typeof globalThis.indexedDB;
 });
 
 function openV1(): Promise<IDBDatabase> {
@@ -43,7 +43,7 @@ describe('Vitest IndexedDB environment (contract §9)', () => {
 
   it('aborts a transaction whose outbox.add reuses an id', async () => {
     const db = await openV1();
-    expect(await addOutbox(db, ['same-id'])).toBe('complete'); // proves the previous test's record is gone
+    expect(await addOutbox(db, ['same-id'])).toBe('complete');
     expect(await addOutbox(db, ['other-id', 'same-id'])).toBe('abort:ConstraintError');
     db.close();
   });

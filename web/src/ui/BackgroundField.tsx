@@ -27,9 +27,9 @@ const CONTEXT_OPTIONS: WebGLContextAttributes = {
   preserveDrawingBuffer: false,
   powerPreference: 'low-power',
 };
-const STATIC_TIME = 21.5;     // experiments BackgroundField.tsx:6
-const TIME_PER_MS = 0.00011;  // experiments BackgroundField.tsx:123
-const MAX_STEP_MS = 100;      // experiments BackgroundField.tsx:123: a resume never jumps the terrain
+const STATIC_TIME = 21.5;
+const TIME_PER_MS = 0.00011;
+const MAX_STEP_MS = 100;
 const ACTIVITY_EVENTS = ['pointermove', 'keydown', 'wheel', 'touchstart', 'focus'] as const;
 const LISTEN = { capture: true, passive: true } as const;
 
@@ -123,7 +123,7 @@ function allocateGrid(gl: WebGL2RenderingContext, r: Resources, grid: GridSize):
   gl.bindBuffer(gl.ARRAY_BUFFER, r.instances);
   gl.bufferData(gl.ARRAY_BUFFER, buildInstances(grid.columns, grid.rows), gl.STATIC_DRAW);
   if (r.float && heightTarget(gl, r, grid, true)) return true;
-  r.float = false; // RGBA16F missing or not renderable here: packed RGBA8 (spec §7)
+  r.float = false;
   return heightTarget(gl, r, grid, false);
 }
 
@@ -151,7 +151,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
         return;
       }
       reads.push({ x, y, resolve, reject });
-      // Animated frames answer on their next tick; otherwise one draw answers every read queued in this task.
       if (!frameTimer && !seamTimer) seamTimer = window.setTimeout(() => { seamTimer = 0; draw(); }, 0);
     });
   }
@@ -260,13 +259,13 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   function tick(): void {
     frameTimer = 0;
     const now = performance.now();
-    if (fieldState(inputs) !== 'animated') return; // hidden or paused: never draw decorative motion (handbook §21)
+    if (fieldState(inputs) !== 'animated') return;
     const interval = last ? now - last : 0;
     if (last) time += Math.min(now - last, MAX_STEP_MS) * TIME_PER_MS;
     last = now;
     draw();
     const before = quality.quality;
-    if (interval) quality = stepQuality(quality, interval); // measured tick interval, so GPU back-pressure counts
+    if (interval) quality = stepQuality(quality, interval);
     if (quality.quality !== before) regrid();
     if (fieldState(inputs) === 'animated') frameTimer = window.setTimeout(tick, FRAME_INTERVAL_MS);
   }
@@ -279,7 +278,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
     return changed;
   }
 
-  // force: the canvas content is stale (resize, un-hide), so a still state must redraw even though it did not change.
   function apply(force = false): void {
     const state: FieldState = fieldState(inputs);
     const entered = state !== shown;
@@ -293,9 +291,9 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
       return;
     }
     if (state === 'static') time = STATIC_TIME;
-    measureQuiet(); // a resize can move quiet surfaces without resizing them, which the ResizeObserver misses
+    measureQuiet();
     if (state === 'animated') tick();
-    else if (!inputs.documentHidden && (entered || force)) draw(); // one still frame on entering static/paused; it also answers pending seam reads
+    else if (!inputs.documentHidden && (entered || force)) draw();
   }
 
   function onQuietChange(): void {
@@ -303,7 +301,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
     if (measureQuiet() && (shown === 'static' || shown === 'paused')) draw();
   }
 
-  // Scroll and live-drag resize fire at display rate; one pending timer per kind keeps a still state to the animated frame budget.
   function onScroll(): void {
     if (!scrollTimer) scrollTimer = window.setTimeout(() => { scrollTimer = 0; onQuietChange(); }, FRAME_INTERVAL_MS);
   }
@@ -312,7 +309,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   }
 
   function resize(): void {
-    // The canvas is fixed to the layout viewport, which excludes a classic scrollbar that window.innerWidth includes.
     cssWidth = Math.max(1, canvas.clientWidth);
     cssHeight = Math.max(1, canvas.clientHeight);
     const backing = backingSize(cssWidth, cssHeight, window.devicePixelRatio);
@@ -369,7 +365,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   function observeQuiet(): void {
     resizeObserver.disconnect();
     document.querySelectorAll(QUIET_SELECTOR).forEach((element) => resizeObserver.observe(element));
-    // Collapsing the sidebar moves every quiet surface without resizing it; the content host's width does change.
     resizeObserver.observe(document.querySelector('main') ?? document.body);
   }
   const mutationObserver = new MutationObserver(() => {
@@ -420,7 +415,6 @@ function startField(canvas: HTMLCanvasElement, motion: boolean): Controller {
   };
 }
 
-/** Monochrome stroke terrain. Decorative only: it never takes input, and it stays calm under every [data-quiet] surface. */
 export function BackgroundField({ motion }: { motion: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<Controller | null>(null);
@@ -433,7 +427,6 @@ export function BackgroundField({ motion }: { motion: boolean }) {
       controller.stop();
       controllerRef.current = null;
     };
-    // The context is created once per mount; motion changes go through setMotion below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {

@@ -1,4 +1,3 @@
-// web/e2e/shell.spec.ts
 import { COPY } from '../src/copy';
 import { failFetch } from './faults';
 import { expect, gotoApp, seedLocalDb, test } from './fixtures';
@@ -36,7 +35,6 @@ test('n opens Capture only outside fields; Ctrl+K opens Notes', async ({ page, d
   await expect(page).toHaveURL(/#\/overview$/);
   await expect(page.getByLabel('Rough learning note')).toBeVisible();
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Overview' }).click();
-  // Test-only probe field: typing in any field must not navigate.
   await page.evaluate(() => { const probe = document.createElement('input'); probe.id = 'probe'; probe.setAttribute('aria-label', 'Probe'); document.body.append(probe); });
   await page.locator('#probe').focus();
   await page.keyboard.press('n');
@@ -89,7 +87,6 @@ test('Every control is keyboard reachable with a visible focus ring', async ({ p
     await page.keyboard.press('Tab');
     const focused = await readFocused();
     if (!focused) continue;
-    // The :focus-visible outline can land a frame after focus moves under load: wait for it on the control that holds focus.
     await expect.poll(async () => (await readFocused())?.ring ?? false, { message: `visible focus ring on ${focused.name}` }).toBe(true);
     seen.add(focused.name);
   }
@@ -106,7 +103,6 @@ test('Open desktop panel becomes a modal on resize; narrow dialog traps Tab and 
   expect(await dialog.evaluate(d => d.matches(':modal'))).toBe(true);
   for (let i = 0; i < 14; i += 1) {
     await page.keyboard.press('Tab');
-    // The background is inert: focus is inside the dialog or nowhere (headless has no browser chrome), never behind it.
     expect(await dialog.evaluate(d => document.activeElement === document.body || d.contains(document.activeElement))).toBe(true);
   }
   await page.keyboard.press('Escape');

@@ -28,7 +28,7 @@ if mode == 'pdeathsig':
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
     from dhara.desktop_service import set_parent_death_signal
     set_parent_death_signal()
-    write_pids(os.getpid())  # only after prctl, so a test never kills the owner too early
+    write_pids(os.getpid())
     time.sleep(60)
     sys.exit(0)
 write_pids(os.getpid())
@@ -38,14 +38,14 @@ line = sys.stdin.buffer.readline(2049)
 if mode in ('locked', 'port', 'lease'):
     sys.exit({'locked': 10, 'port': 11, 'lease': 12}[mode])
 if mode == 'hang':
-    time.sleep(60)  # ignores the lease entirely: the owner must escalate to signals
+    time.sleep(60)
     sys.exit(0)
 instance = json.loads(line)['instance']
 
 
 def watch_lease():
     sys.stdin.buffer.read()
-    os._exit(0)  # like the real service, stop on lease EOF; descendants are the owner's to clean
+    os._exit(0)
 
 
 threading.Thread(target=watch_lease, daemon=True).start()
@@ -84,7 +84,7 @@ class Identity(http.server.BaseHTTPRequestHandler):
 server = http.server.HTTPServer(('127.0.0.1', port), Identity)
 if mode == 'die-after-ack':
     print(json.dumps(ack), flush=True)
-    time.sleep(0.3)  # the listener accepts into its backlog but never answers: the identity read ends only when this process dies
+    time.sleep(0.3)
     os._exit(3)
 if mode == 'long-ack':
     sys.stdout.write('x' * 5000)

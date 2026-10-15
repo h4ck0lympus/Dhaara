@@ -38,7 +38,6 @@ test('Tablet layout has no horizontal overflow', async ({ page, dhara }) => {
   }
 });
 
-// Trace U10/U12 titles belong to Phase 2b (capture.spec.ts, notes.spec.ts); these two cover the shell part.
 test('Phone width moves the navigation to a bottom bar and gives content the full width', async ({ page, dhara }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await gotoApp(page, dhara);
@@ -50,7 +49,7 @@ test('Phone width moves the navigation to a bottom bar and gives content the ful
   await page.getByRole('button', { name: 'Capture a thought…', exact: true }).click();
   const content = (await page.locator('main.content').boundingBox())!;
   expect(Math.round(content.x)).toBe(0);
-  expect(Math.round(content.width)).toBe(390); // no sidebar column beside the writing area
+  expect(Math.round(content.width)).toBe(390);
   expect(await noHorizontalOverflow(page)).toBe(true);
 });
 
@@ -60,7 +59,7 @@ test('Portrait tablet uses the phone bottom bar; landscape tablet keeps the side
   let bar = await sidebarBox(page);
   expect(Math.round(bar.y + bar.height)).toBe(1180);
   expect(Math.round(bar.width)).toBe(820);
-  await page.setViewportSize({ width: 900, height: 700 }); // tablet landscape keeps the sidebar
+  await page.setViewportSize({ width: 900, height: 700 });
   bar = await sidebarBox(page);
   expect(Math.round(bar.x)).toBe(0);
   expect(Math.round(bar.height)).toBe(700);
@@ -87,7 +86,7 @@ test('Phone touch targets are at least 44×44 px', async ({ page, context, dhara
   await page.setViewportSize({ width: 390, height: 844 });
   await openKind(page, context, dhara, 'available');
   expect(await smallTargets(page)).toEqual([]);
-  await seed(dhara, 'attention'); // run awaiting review: Review result link
+  await seed(dhara, 'attention');
   await seed(dhara, 'waiting');
   await seed(dhara, 'complete');
   await agentRun(dhara, await task(dhara, 'Running agent task'));

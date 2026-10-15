@@ -72,7 +72,6 @@ class Worker:
                 self.store.tick()
                 self.process_one()
             except Exception:
-                # Errors are saved on the job; avoid logging private capture text.
                 pass
             self.stop_event.wait(3)
 
@@ -115,7 +114,6 @@ class Worker:
             if job['kind']=='transcribe':
                 transcript=self.transcribe(note['id'])
                 with self.store.db() as c:
-                    # Preserve the first transcript and all typed input, even on retries.
                     row=c.execute('SELECT * FROM notes WHERE id=?',(note['id'],)).fetchone()
                     if not row['transcript']:
                         c.execute('UPDATE notes SET transcript=? WHERE id=?',(transcript,note['id']))

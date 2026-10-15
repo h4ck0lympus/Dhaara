@@ -2,7 +2,6 @@ import type { JSX, ReactNode } from 'react';
 
 const HEADINGS = ['h1', 'h2', 'h3'] as const;
 
-// app.js:236 — `code` and **bold** only. shortcut: markers nested inside each other render as text; upgrade if notes need nesting.
 function inline(text: string): ReactNode[] {
   const parts: ReactNode[] = [];
   const pattern = /`([^`]+)`|\*\*([^*]+)\*\*/g;

@@ -6,7 +6,6 @@ import { failFetch, loseAck } from './faults';
 import { expect, gotoApp, PNG_1PX, putOutboxItem, readLocalDb, seedLocalDb, test, type SeedDraft } from './fixtures';
 import { E2E_TOKEN, type DharaServer } from './server';
 
-// public/app.js wrote these shapes; v1 outbox items carry no `error` key until a rejection.
 const QUEUED: SeedDraft = { id: '6f1c2b8e-3d4a-4c5b-9e6f-7a8b9c0d1e2f', raw: 'Queued by the old UI', task_id: '', files: [{ name: 'heap.png', type: 'image/png', base64: PNG_1PX }] };
 
 type NoteRow = { id: string; folder: string; processing: string };
@@ -31,7 +30,7 @@ test('Upgrade: a v1 outbox item and drafts upload exactly once with the original
   await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
   expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
   const local = await readLocalDb(page);
-  expect(local.draft).toEqual({ ...draft, files: [] }); // drafts stay on the device; Save is the only notebook boundary
+  expect(local.draft).toEqual({ ...draft, files: [] });
   expect(local.taskDraft).toEqual(taskDraft);
 });
 
@@ -45,11 +44,11 @@ test('Upgrade from the pre-rename build: a queued capture in the old database is
   expect((await readLocalDb(page)).draft).toEqual({ ...draft, files: [] });
   await page.reload();
   await expect(page.locator('#root [data-quiet]').first()).toBeVisible();
-  expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);   // uploaded exactly once, original capture_id
+  expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
 });
 
 test('Reconnect flushes queued capture to real server', async ({ page, dhara }) => {
-  await openApp(page, dhara); // first boot creates the stores and installs the service worker, so the shell opens while the server is down
+  await openApp(page, dhara);
   await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller));
   await dhara.kill();
   await page.reload();
@@ -84,12 +83,12 @@ test('Reconnect delivers one original note and exact attachment bytes', async ({
 });
 
 test('Lost server acknowledgment retains queued capture ID', async ({ page, dhara }) => {
-  await loseAck(page, '/api/captures', 100); // every acknowledgement on this page is lost, however often the app retries
+  await loseAck(page, '/api/captures', 100);
   await seedLocalDb(page, dhara.origin, { outbox: [QUEUED] });
   await openApp(page, dhara);
-  await expect.poll(async () => (await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]); // the server stored it
-  expect(await outboxIds(page)).toEqual([QUEUED.id]); // the page never saw the acknowledgement, so the item stays queued
-  expect((await notes(dhara)).length).toBe(1); // replays with the same capture_id never duplicate the note
+  await expect.poll(async () => (await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
+  expect(await outboxIds(page)).toEqual([QUEUED.id]);
+  expect((await notes(dhara)).length).toBe(1);
 });
 
 test('Browser/server restart retries lost acknowledgment without duplicate notes', async ({ page, dhara }) => {
@@ -99,7 +98,7 @@ test('Browser/server restart retries lost acknowledgment without duplicate notes
   await expect.poll(async () => (await notes(dhara)).length).toBe(1);
   expect(await outboxIds(page)).toEqual([QUEUED.id]);
   await dhara.restart();
-  const fresh = await page.context().newPage(); // loseAck is per page: this page sees real acknowledgements
+  const fresh = await page.context().newPage();
   await openApp(fresh, dhara);
   await expect.poll(() => outboxIds(fresh)).toEqual([]);
   expect((await notes(dhara)).map((note) => note.id)).toEqual([QUEUED.id]);
@@ -110,7 +109,6 @@ const outboxDialog = (page: Page) => page.getByRole('dialog', { name: S.outboxTi
 
 test.describe('Outbox dialog', () => {
   test('Outbox lists queued captures; Open a copy asks before replacing a draft; Discard asks first', async ({ page, dhara }) => {
-    // Every upload attempt in this test fails, so queued-0001 stays queued through every flush trigger.
     await failFetch(page, { path: /\/api\/captures$/, method: 'POST', times: 100, fault: { status: 503, body: '{"detail":"Service busy"}', contentType: 'application/json' } });
     await seedLocalDb(page, dhara.origin, {
       draft: { id: 'draft-0001', raw: 'Unsaved current draft', task_id: '', files: [] },

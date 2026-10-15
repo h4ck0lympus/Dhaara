@@ -12,12 +12,9 @@ import { IPC_STARTUP_CANCEL, IPC_STARTUP_RETRY, IPC_STARTUP_STATUS, SERVICE_DOWN
 const DIST = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(DIST, '../..');
 const STARTUP_PAGE = path.resolve(DIST, '../static/startup.html');
-// spec §6.3 webPreferences; never --no-sandbox.
 const SANDBOXED = { sandbox: true, contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged } as const;
 
-// A bare launch on a Wayland session without Xwayland must still open a window (tests pass --ozone-platform=wayland explicitly).
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-// The default menu's Ctrl+R/F5 reload would land a crashed page on a Chromium error page that Retry can never recover.
 Menu.setApplicationMenu(null);
 
 const OVERLAY_STRIP_HEIGHT = 96;
@@ -33,12 +30,10 @@ function exitWith(code: 0 | 2, message: string): never {
 
 function readOptions(): { options: CliOptions; profile: string } {
   try {
-    // Packaged (the AppImage): managed by default on a workspace under the data home, with the bundled service (packaging spec §4).
     const packaged = app.isPackaged ? { resourcesPath: process.resourcesPath, dataHome: dataHome(process.env) } : null;
     const options = parseArgs(userArgv(process.argv, process.defaultApp === true), process.cwd(), REPO_ROOT, process.env, packaged);
     if (options === 'help') exitWith(0, helpText(packaged));
     const resolved = resolveProfile(options.profile, process.env, process.cwd());
-    // An explicit --profile is never moved; the default location adopts the pre-rename one once (rename spec §4.6), before setPath and the lock.
     const profile = options.profile === null ? adoptLegacyProfile(resolved, legacyProfile(process.env), (line) => process.stderr.write(`${line}\n`)) : resolved;   // rename-shim: adopts the pre-rename profile directory once
     prepareProfile(profile);
     return { options, profile };
@@ -53,8 +48,8 @@ function createWindow(origin: string, onApproved: () => void): BrowserWindow {
     width: 1200,
     height: 800,
     minWidth: 380,
-    minHeight: 540,               // main.rs:160-164
-    backgroundColor: '#101110',   // main.rs:173
+    minHeight: 540,
+    backgroundColor: '#101110',
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(DIST, 'preload.cjs'), webviewTag: false, ...SANDBOXED },
   });
@@ -62,7 +57,6 @@ function createWindow(origin: string, onApproved: () => void): BrowserWindow {
   installPermissions(session.defaultSession, origin, async (kind) => (await dialog.showMessageBox(win, {
     type: 'question', message: PERMISSION_PROMPTS[kind], buttons: ['Allow', 'Deny'], defaultId: 1, cancelId: 1,
   })).response === 0);
-  // onApproved calls win.destroy(), so beforeunload cannot cancel the close silently (spec §6.3).
   installCloseHandler(win, origin, onApproved);
   return win;
 }
@@ -71,7 +65,6 @@ function dispatchPageEvent(win: BrowserWindow, name: string): void {
   if (!win.isDestroyed()) void win.webContents.executeJavaScript(`window.dispatchEvent(new Event('${name}'))`).catch(() => undefined);
 }
 
-/** The local startup/crash page (spec §6.4.6): a full-window curtain at startup, a bottom strip once a page is loaded so it stays usable. */
 function fitOverlay(win: BrowserWindow, view: WebContentsView, mode: StartupStatus['mode']): void {
   const { width, height } = win.getContentBounds();
   const strip = mode === 'overlay' ? Math.min(OVERLAY_STRIP_HEIGHT, height) : height;
@@ -126,13 +119,12 @@ function runManaged(options: CliOptions, dataDir: string): void {
   const onCrashed = (error: LifecycleError) => {
     if (state !== 'loaded' || win === null) return;
     state = 'crashed';
-    dispatchPageEvent(win, SERVICE_DOWN);   // not 'offline': the page keeps its drafts and stays loaded
+    dispatchPageEvent(win, SERVICE_DOWN);
     show({ text: error.message, busy: false, mode: 'overlay' });
   };
 
   const ownService = (): ManagedService => {
     if (service !== null) return service;
-    // Throws LifecycleError('workspace', …) with the service.rs wording; the overlay shows it with Retry.
     const created = new ManagedService({
       python: options.python,
       entryPoint: options.entryPoint,
@@ -146,7 +138,6 @@ function runManaged(options: CliOptions, dataDir: string): void {
     return created;
   };
 
-  /** Serialised: a Retry during an attempt joins it; ManagedService never spawns while its group is alive. */
   const retry = (): Promise<void> => {
     attempt ??= (async () => {
       show({ text: STARTUP_TEXT.starting, busy: true, mode: mode() });
@@ -154,8 +145,8 @@ function runManaged(options: CliOptions, dataDir: string): void {
         await ownService().start();
         if (state === 'stopping' || win === null || win.isDestroyed()) return;
         hide();
-        if (state === 'starting') void win.loadURL(origin).catch(() => undefined);   // identity verified: only now is the origin loaded
-        else dispatchPageEvent(win, SERVICE_UP);   // no reload
+        if (state === 'starting') void win.loadURL(origin).catch(() => undefined);
+        else dispatchPageEvent(win, SERVICE_UP);
         state = 'loaded';
       } catch (error) {
         if (state !== 'stopping') show({ text: error instanceof Error ? error.message : String(error), busy: false, mode: mode() });
@@ -167,7 +158,7 @@ function runManaged(options: CliOptions, dataDir: string): void {
   };
 
   const stopAndQuit = async () => {
-    await service?.cancel();   // aborts a start in progress; otherwise stdin → 5 s → TERM → 1 s → KILL (spec §6.4.6)
+    await service?.cancel();
     if (win !== null && !win.isDestroyed()) win.destroy();
     app.quit();
   };
@@ -185,10 +176,10 @@ function runManaged(options: CliOptions, dataDir: string): void {
     if (!fromOverlay(event)) return;
     if (state === 'starting') {
       state = 'stopping';
-      show({ text: STARTUP_TEXT.cancelling, busy: true, mode: 'startup' });   // no page has loaded: no checkpoint
+      show({ text: STARTUP_TEXT.cancelling, busy: true, mode: 'startup' });
       void stopAndQuit();
     } else if (state === 'crashed') {
-      win?.close();   // Quit runs the checkpoint first
+      win?.close();
     }
   });
 
@@ -196,16 +187,15 @@ function runManaged(options: CliOptions, dataDir: string): void {
     const created = createWindow(origin, onApproved);
     win = created;
     mainWindow = created;
-    // A never-navigated window is reported as crashed by the CDP debugger (Playwright then drops it); give it a real, inert document.
     void created.loadURL('about:blank').catch(() => undefined);
     void retry();
   });
 }
 
 const { options, profile } = readOptions();
-app.setPath('userData', profile);   // before the lock: Chromium's ProcessSingleton lives in userData (spec §6.3)
+app.setPath('userData', profile);
 if (!app.requestSingleInstanceLock()) {
-  app.exit(0);   // the first instance receives 'second-instance'; this one exits 0 without using its arguments
+  app.exit(0);
 } else {
   app.on('second-instance', () => {
     if (mainWindow === null || mainWindow.isDestroyed()) return;
@@ -213,7 +203,6 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow.show();
     mainWindow.focus();
   });
-  // Quitting is explicit: after the window is destroyed an owned service may still be stopping.
   app.on('window-all-closed', () => undefined);
   if (options.manageService && options.dataDir !== null) runManaged(options, options.dataDir);
   else runExternal(options);

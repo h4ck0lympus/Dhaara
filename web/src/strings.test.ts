@@ -102,7 +102,7 @@ describe('S', () => {
     expect(S.outboxCount(0)).toBe('0 captures on this device');
     expect(S.outboxCount(1)).toBe('1 capture on this device');
     expect(S.outboxCount(2)).toBe('2 captures on this device');
-    expect(S.attachmentsCount(1)).toBe('1 attachments'); // app.js:482 never singularises
+    expect(S.attachmentsCount(1)).toBe('1 attachments');
     expect(S.fileTooLarge('heap.png')).toBe('heap.png exceeds 32 MB.');
     expect(S.couldNotSave('QuotaExceededError')).toBe('Could not save the capture: QuotaExceededError');
     expect(S.savedTo('Inbox', '')).toBe('Saved to Inbox. Original preserved.');

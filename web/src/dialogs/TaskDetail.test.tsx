@@ -1,4 +1,3 @@
-// web/src/dialogs/TaskDetail.test.tsx
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -95,7 +94,7 @@ describe('TaskDetailDialog', () => {
     const { onClose } = show(makeSnapshot({ tasks: [makeTask('t'), makeTask('pin')], focus: focus('pin', true) }));
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
     fireEvent.click(screen.getByRole('button', { name: 'Focus on this' }));
-    expect(m('focus')).not.toHaveBeenCalled(); // the hook mock exists from the first render
+    expect(m('focus')).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Focus on this' }));
     await waitFor(() => expect(h.navigate).toHaveBeenCalledWith({ to: '/overview' }));
     expect(m('focus')).toHaveBeenCalledWith({ taskId: 't' });
@@ -151,7 +150,6 @@ describe('TaskDetailDialog', () => {
   });
 
   it('shows a rejected reminder inline', async () => {
-    // Set before the first render: the hook mock captures h.mutations.create when the component renders.
     h.mutations.create = vi.fn(async () => { throw new Error('Include a timezone offset'); });
     show(makeSnapshot({ tasks: [makeTask('t')] }));
     fireEvent.change(screen.getByLabelText('Reminder time'), { target: { value: '2026-10-11T09:30' } });

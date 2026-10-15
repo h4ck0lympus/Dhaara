@@ -16,8 +16,8 @@ test('starts the owned service, loads only the verified origin, and stops the se
   const page = await appPage(app, m.origin);
   await waitConnected(page);
   const pid = await servicePid(m.origin);
-  expect(ownedServices(app.process().pid!)).toEqual([pid]);   // Electron main owns exactly this one service
-  expect(fs.statSync(m.dataDir).mode & 0o777).toBe(0o700);    // created 0700 (spec §6.4.1)
+  expect(ownedServices(app.process().pid!)).toEqual([pid]);
+  expect(fs.statSync(m.dataDir).mode & 0o777).toBe(0o700);
   const closed = app.waitForEvent('close');
   await closeWindow(app);
   await closed;
@@ -38,7 +38,6 @@ test('an occupied port shows the occupied message with Retry, never contacts the
   await expect(startup.locator('#retry')).toBeEnabled();
   await expect(startup.locator('#cancel')).toHaveText('Cancel / Quit');
   expect(await mainUrl(app)).not.toMatch(/^http/);
-  // startup: a full-window curtain (polled: Sway may still be resizing the new window)
   await expect.poll(async () => {
     const { content, views } = await overlayBounds(app);
     return views.some((view) => view.x === 0 && view.y === 0 && view.width === content.width && view.height === content.height);
@@ -63,7 +62,7 @@ test('Cancel during startup stops the service and quits without a checkpoint', a
   const [pid] = readPids(pidfile);
   const exited = new Promise<number | null>((resolve) => app.process().once('exit', (code) => resolve(code)));
   await startup.locator('#cancel').click();
-  await expect(startup.locator('#status')).toHaveText(STARTUP_TEXT.cancelling);   // the 'hang' fake ignores the lease: ~5 s grace
+  await expect(startup.locator('#status')).toHaveText(STARTUP_TEXT.cancelling);
   expect(await exited).toBe(0);
   expect(live(pid)).toBe(false);
 });
@@ -94,8 +93,7 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
   await expect(overlay.locator('#status')).toHaveText(MESSAGES.crashed);
   await expect(overlay.locator('#retry')).toBeEnabled();
   await expect(overlay.locator('#cancel')).toHaveText('Quit');
-  await expect(page.getByText('Offline · local drafts', { exact: true }).first()).toBeVisible();   // service-down, not a reload
-  // Crashed: only a bottom strip, so the still-loaded page (editor, offline status) stays visible and usable above it.
+  await expect(page.getByText('Offline · local drafts', { exact: true }).first()).toBeVisible();
   await expect.poll(async () => {
     const { content, views } = await overlayBounds(first.app);
     return views.some((view) => view.x === 0 && view.width === content.width && view.height <= 120 && view.y + view.height === content.height);
@@ -104,7 +102,7 @@ test('a crash shows the overlay over the loaded page; Quit runs the checkpoint f
   const box = await editor.boundingBox();
   expect(box!.y + box!.height).toBeLessThanOrEqual(Math.min(...views.map((view) => view.y)));
   await editor.click();
-  await editor.fill('Typed after the crash, right before Quit.');   // inside the debounce: only the checkpoint saves it
+  await editor.fill('Typed after the crash, right before Quit.');
   const closed = first.app.waitForEvent('close');
   await overlay.locator('#cancel').click();
   await closed;
@@ -120,7 +118,7 @@ test('SIGTERM runs the close checkpoint and stops the owned service', async () =
   const page = await appPage(first.app, m.origin);
   await waitConnected(page);
   const editor = await openCapture(page);
-  await editor.fill('Typed right before SIGTERM.');   // inside the debounce: only the checkpoint saves it
+  await editor.fill('Typed right before SIGTERM.');
   const pid = await servicePid(m.origin);
   const child = first.app.process();
   const exited = new Promise((resolve) => child.once('exit', resolve));
@@ -147,7 +145,6 @@ test('command-line errors exit 2 before any window or directory exists; --help e
     [['--startup-timeout', 'soon'], {}, 'Dhara: Invalid startup timeout'],
     [['--data-dir', dataDir], {}, 'Dhara: --data-dir requires explicit --manage-service; external mode never owns a service'],
     [['--manage-service'], {}, 'Dhara: Managed mode requires an explicit --data-dir; no implicit real notebook'],
-    // The test port is ignored without DHARA_ELECTRON_TEST=1.
     [['--manage-service', '--data-dir', dataDir, '--server', 'http://127.0.0.1:9100'], { DHARA_ELECTRON_TEST_PORT: '9100' }, 'Dhara: Managed mode uses http://127.0.0.1:8765 only'],
   ];
   for (const [args, env, message] of cases) {

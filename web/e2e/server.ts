@@ -11,7 +11,6 @@ export const REPO = fileURLToPath(new URL('../../', import.meta.url));
 export const WEB_DIST = join(REPO, 'web', 'dist');
 export const PYTHON = join(REPO, '.venv', 'bin', 'python');
 const STARTUP_MS = 15_000;
-// run.py always serves web/dist; an injected dist goes through create_app(dist_dir=…) directly.
 const SERVE_DIST = [
   'import sys, uvicorn',
   'from dhara.server import create_app',
@@ -43,8 +42,6 @@ export function getFreePort(): Promise<number> {
 }
 
 function childEnv(extra: Record<string, string>): NodeJS.ProcessEnv {
-  // Inherited DHARA_* (models, tokens, data dir, allowed hosts) must never leak into a test service, and neither may the
-  // pre-rename names, which the service still reads as a fallback.
   const env: NodeJS.ProcessEnv = {};
   for (const [key, value] of Object.entries(process.env)) if (!/^(DHARA|NOEMA)_/.test(key)) env[key] = value;   // rename-shim: both prefixes
   return { ...env, DHARA_ACCESS_TOKEN: E2E_TOKEN, ...extra };
@@ -54,8 +51,6 @@ export async function startDhara(options: StartOptions = {}): Promise<DharaServe
   if (!existsSync(join(options.distDir ?? WEB_DIST, 'index.html'))) throw new Error('Run npm --prefix web run build first');
   const ownsDataDir = options.dataDir === undefined;
   const dataDir = options.dataDir ?? mkdtempSync(join(tmpdir(), 'dhara-e2e-'));
-  // Port 0 lets the service bind a free port itself and report it: a port probed here and bound later could be
-  // taken by a sibling worker's service meanwhile, and /api/health would then answer from that sibling.
   let port = options.port ?? 0;
   const args = () =>
     options.distDir === undefined
@@ -65,23 +60,21 @@ export async function startDhara(options: StartOptions = {}): Promise<DharaServe
 
   async function launch(): Promise<void> {
     let stderr = '';
-    let bound = 0;   // the port this process reports it is listening on; health is trusted only after that
+    let bound = 0;
     const proc = spawn(PYTHON, args(), { cwd: REPO, env: childEnv(options.env ?? {}), stdio: ['ignore', 'ignore', 'pipe'] });
     child = proc;
     proc.stderr?.on('data', (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-4000);
       bound ||= Number(/Uvicorn running on http:\/\/127\.0\.0\.1:(\d+)/.exec(stderr)?.[1] ?? 0);
     });
-    // Startup is elapsed time; wall-clock corrections must not expire it early.
     const deadline = performance.now() + STARTUP_MS;
     while (performance.now() < deadline) {
       if (proc.exitCode !== null || proc.signalCode !== null) throw new Error(`Dhara exited during startup (${proc.exitCode ?? proc.signalCode}):\n${stderr}`);
       if (bound) {
-        port = bound;   // a restart binds the same port, so the page origin and its browser storage stay the same
+        port = bound;
         try {
           if ((await fetch(`http://127.0.0.1:${port}/api/health`)).ok) return;
         } catch {
-          // not answering yet
         }
       }
       await new Promise((resolve) => setTimeout(resolve, 100));

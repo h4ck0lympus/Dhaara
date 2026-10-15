@@ -5,7 +5,6 @@ import { S } from '../strings';
 import { toast } from '../ui/Toast';
 import { persistDrafts } from './persistDrafts';
 
-// Page side of the desktop close contract (app.js:598-614, spec §6.3). Ordinary browsers have no bridge and ignore the request.
 export function installCheckpointClose(): () => void {
   const ipc = window.ipc;
   if (typeof ipc?.postMessage !== 'function') return () => {};
@@ -20,7 +19,6 @@ export function installCheckpointClose(): () => void {
         return;
       }
       if ((isGuardActive('recording') || isGuardActive('note-edit')) && !window.confirm(S.closeConfirm)) return;
-      // A task-draft write failure (persistDrafts only writes a non-empty one) asks like a capture one; other errors still toast.
       let taskDraftFailed = false;
       await persistDrafts().catch(() => { taskDraftFailed = true; });
       const { draft, saveState } = captureDraftStore.getSnapshot();
@@ -36,7 +34,7 @@ export function installCheckpointClose(): () => void {
 
   const listener = () => { void checkpoint(); };
   window.addEventListener(CHECKPOINT_CLOSE, listener);
-  window.__dharaCheckpointCloseReady = true;   // only after the listener exists (spec §6.3)
+  window.__dharaCheckpointCloseReady = true;
   return () => {
     window.removeEventListener(CHECKPOINT_CLOSE, listener);
     delete window.__dharaCheckpointCloseReady;

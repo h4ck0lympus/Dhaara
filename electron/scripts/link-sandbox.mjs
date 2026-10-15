@@ -1,5 +1,3 @@
-// Linux: Chromium's setuid sandbox helper must be root-owned 4755; Dhara never uses --no-sandbox (spec §6.3).
-// Port of experiments/ui-ab/scripts/launch.py:20-31: reuse an installed root-owned helper if one exists.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

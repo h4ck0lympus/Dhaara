@@ -4,7 +4,6 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { tempDir } from './proc.js';
 
-// Plain CommonJS, loaded the way the bundled Electron loads it in Node mode (no Vite transform, no TypeScript).
 const require = createRequire(import.meta.url);
 type Stat = { uid: number; mode: number };
 type Facts = { stat(file: string): Stat | null; userns(): boolean; uid: number };
@@ -75,7 +74,7 @@ describe('release/launch.cjs decide (packaging spec §5)', () => {
       'If your home directory is mounted nosuid, install that file as /opt/google/chrome/chrome-sandbox instead.',
     ].join('\n') });
     expect(fs.statSync(path.join(home, 'dhara')).mode & 0o777).toBe(0o700);
-    expect(fs.readFileSync(target, 'utf8')).toBe('helper bytes');   // user-owned and not setuid: rule 3 ignores it until the line above has run
+    expect(fs.readFileSync(target, 'utf8')).toBe('helper bytes');
     expect(fs.statSync(target).mode & 0o777).toBe(0o755);
   });
 

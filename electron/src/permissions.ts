@@ -3,7 +3,6 @@ import { sameOrigin } from './origin.js';
 
 export type PermissionKind = 'media-audio' | 'notifications';
 
-// Wording from desktop/src/main.rs:263-276.
 export const PERMISSION_PROMPTS: Record<PermissionKind, string> = {
   'media-audio': 'Allow Dhara to use your microphone for a recording?',
   notifications: 'Allow Dhara to show notifications?',
@@ -22,7 +21,6 @@ export function classifyPermission(
   return permission === 'notifications' ? 'notifications' : null;
 }
 
-/** Decisions live in memory for this app session only; a restart prompts again (spec §6.3, §10). */
 export function installPermissions(session: Session, origin: string, prompt: (kind: PermissionKind) => Promise<boolean>): void {
   const decisions = new Map<PermissionKind, boolean>();
   const pending = new Map<PermissionKind, Promise<boolean>>();

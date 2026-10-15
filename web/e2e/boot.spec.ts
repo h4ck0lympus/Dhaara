@@ -1,4 +1,3 @@
-// web/e2e/boot.spec.ts
 import { chromium } from '@playwright/test';
 import { COPY } from '../src/copy';
 import { expect, gotoApp, test } from './fixtures';
@@ -42,7 +41,6 @@ test('legacy hashes are rewritten on every hashchange', async ({ page, dhara }) 
 test('a non-loopback host shows Unlock; a wrong token stays inline; the cookie alone skips Unlock later', async () => {
   const server = await startDhara({ env: { DHARA_ALLOWED_HOSTS: 'dhara.test' } });
   const origin = `http://dhara.test:${server.port}`;
-  // Plain HTTP, not a secure context: IndexedDB works and `uid()` has its fallback (01-foundation.md Task 14).
   const browser = await chromium.launch({ args: ['--host-resolver-rules=MAP dhara.test 127.0.0.1'] });
   try {
     const page = await browser.newPage();
@@ -67,7 +65,6 @@ test('a non-loopback host shows Unlock; a wrong token stays inline; the cookie a
 });
 
 test('a startup failure shows the fallback instead of a blank page (app.js:616)', async ({ page, dhara }) => {
-  // Fault injection only: the legacy rewrite is start()'s first DOM call.
   await page.addInitScript(() => { history.replaceState = () => { throw new Error('Injected startup failure'); }; });
   await page.goto(dhara.origin + '/#plan');
   await expect(page.getByText('Could not open the workspace. Check the server and reload.')).toBeVisible();
@@ -76,7 +73,7 @@ test('a startup failure shows the fallback instead of a blank page (app.js:616)'
 test('a lazily loaded route opens offline from the service-worker cache', async ({ page, dhara, context }) => {
   await gotoApp(page, dhara);
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload(); // controlled by the worker now
+  await page.reload();
   await expect(page.locator('#connection-label')).toHaveText('Server connected');
   await context.setOffline(true);
   await page.evaluate(() => { location.hash = '#/note/x'; });

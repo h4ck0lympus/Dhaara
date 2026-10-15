@@ -1,4 +1,3 @@
-// `connected` is true only after the most recent GET /api/state succeeded (spec §4.3).
 import { useSyncExternalStore } from 'react';
 import { SERVICE_DOWN } from '../events';
 
@@ -33,7 +32,6 @@ export function useConnected(): boolean {
   return useSyncExternalStore(connection.subscribe, connection.get, connection.get);
 }
 
-// 'online' deliberately does not set connected: only a successful state fetch does.
 export function installConnectionListeners(win: Window = window): () => void {
   const offline = () => connection.report('offline');
   const serviceDown = () => connection.report('service-down');

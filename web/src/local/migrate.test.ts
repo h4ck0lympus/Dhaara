@@ -24,7 +24,6 @@ const QUEUED = { id: '6f1c2b8e-3d4a-4c5b-9e6f-7a8b9c0d1e2f', raw: 'queued by the
 const DRAFT = { id: 'draft-0001', raw: 'still typing', task_id: 't1', files: [] };
 const TASK_DRAFT = { id: 'task-draft-0001', raw: 'Review cleanup', fields: { project: 'CTF' }, pending: null };
 
-// The same upgrade as public/app.js and db.ts: version 1, kv (out-of-line keys) and outbox (keyPath id).
 function open(name: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(name, 1);
@@ -105,14 +104,14 @@ describe('migrateLocalDb (rename spec §4.4)', () => {
     const legacy = await dump(LEGACY);
     expect(Object.keys(legacy.kv)).toEqual(['draft']);
     expect(raws(legacy.outbox)).toEqual([QUEUED.raw]);
-    expect(await dump(db.DB_NAME)).toEqual({ kv: {}, outbox: [] });   // the aborted transaction wrote nothing
+    expect(await dump(db.DB_NAME)).toEqual({ kv: {}, outbox: [] });
   });
 
   it('completes a half-done earlier run without duplicating or overwriting', async () => {
     await seedLegacy({ kv: { draft: DRAFT, snapshot: { tasks: ['old'] } }, outbox: [QUEUED, { ...QUEUED, id: 'second', raw: 'second' }] });
-    await db.kvPut('draft', { ...DRAFT, raw: 'typed after the rename' });   // the new database already has this key
+    await db.kvPut('draft', { ...DRAFT, raw: 'typed after the rename' });
     await db.outboxPut({ ...QUEUED, raw: 'already copied' });
-    expect(await migrate.migrateLocalDb()).toBe(2);   // snapshot and 'second'
+    expect(await migrate.migrateLocalDb()).toBe(2);
     const moved = await dump(db.DB_NAME);
     expect((moved.kv.draft as typeof DRAFT).raw).toBe('typed after the rename');
     expect(moved.kv.snapshot).toEqual({ tasks: ['old'] });
@@ -122,11 +121,11 @@ describe('migrateLocalDb (rename spec §4.4)', () => {
 
   it('reports "Close other tabs" when another connection blocks the delete, and keeps the copied data', async () => {
     await seedLegacy({ outbox: [QUEUED] });
-    const other = await open(LEGACY);   // another tab still holds the old database
-    other.onversionchange = () => undefined;   // and ignores the request to close
+    const other = await open(LEGACY);
+    other.onversionchange = () => undefined;
     await expect(migrate.migrateLocalDb()).rejects.toMatchObject({ name: 'LocalStoreError', code: 'blocked', message: S.closeOtherTabs });
     expect((await dump(db.DB_NAME)).outbox).toHaveLength(1);
-    other.close();   // the pending delete now completes
+    other.close();
     await vi.waitFor(async () => expect(await names()).toEqual([db.DB_NAME]));
     expect(await migrate.migrateLocalDb()).toBe(0);
   });

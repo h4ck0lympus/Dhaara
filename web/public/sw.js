@@ -1,4 +1,3 @@
-// CACHE and PRECACHE are prepended at build time by scripts/sw-precache.mjs. Private API data never enters this cache.
 /* global CACHE, PRECACHE */
 const STALE_PREFIXES = ['dhara-shell-', 'noema-shell-'];   // rename-shim: pre-rename caches are purged for one release
 self.addEventListener('install', (event) => {
@@ -31,7 +30,6 @@ async function asset(request) {
     try {
       await cache.put(request, response.clone());
     } catch {
-      // Quota or storage failure: the network response is still good.
     }
   }
   return response;
@@ -43,7 +41,6 @@ async function navigate(request) {
     response = await fetch(request);
     if (response.status < 500) return response;
   } catch {
-    // Server unreachable: fall through to the cached shell.
   }
   const shell = await caches.match('/', { cacheName: CACHE });
   return shell ?? response ?? Response.error();

@@ -1,5 +1,3 @@
-// web/e2e/db.ts
-// Test-only: edits the disposable server's SQLite file, like qa/now_ui_check.py:96-99. Never production data.
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { PYTHON } from './server';

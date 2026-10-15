@@ -13,16 +13,15 @@ export const ELECTRON_BIN = electronPath as unknown as string;
 
 import { live, tempDir, until } from '../test/proc.js';
 
-export { tempDir };   // one temp-dir helper for unit and e2e tests (Task 7)
+export { tempDir };
 
 const launched: ElectronApplication[] = [];
 
-/** True while a live process holds the profile's Chromium singleton lock, or any process still runs with it as --user-data-dir. */
 function profileBusy(profile: string): boolean {
   try {
     const holder = Number(fs.readlinkSync(path.join(profile, 'SingletonLock')).split('-').pop());
     if (holder && live(holder)) return true;
-  } catch { /* no lock */ }
+  } catch {}
   return fs.readdirSync('/proc').some((entry) => {
     if (!/^\d+$/.test(entry) || !live(Number(entry))) return false;
     try {
@@ -33,14 +32,11 @@ function profileBusy(profile: string): boolean {
   });
 }
 
-/** Always a throwaway --profile unless one is passed back in to test a restart; a reused profile waits for its previous instance to be fully gone. */
 export async function launchDhara(args: string[], options: { env?: Record<string, string>; profile?: string } = {}): Promise<{ app: ElectronApplication; window: Page; profile: string }> {
   if (!fs.existsSync(MAIN)) throw new Error('Run npm --prefix electron run build first');
   const profile = options.profile ?? tempDir('dhara-electron-profile-');
   if (options.profile) await until(() => !profileBusy(profile), 30_000);
   const env = Object.fromEntries(Object.entries({ ...process.env, ...options.env }).filter((entry): entry is [string, string] => entry[1] !== undefined));
-  // Chromium switches go before the app path; Dhara's own arguments follow it (cli.ts userArgv).
-  // chromiumSandbox: Playwright otherwise adds --no-sandbox (spec §6.3: never); needs scripts/link-sandbox.mjs.
   const app = await _electron.launch({
     executablePath: ELECTRON_BIN,
     chromiumSandbox: true,
@@ -48,12 +44,11 @@ export async function launchDhara(args: string[], options: { env?: Record<string
     env,
   });
   launched.push(app);
-  app.on('close', () => { const at = launched.indexOf(app); if (at >= 0) launched.splice(at, 1); });   // a closed app has no process() to kill
+  app.on('close', () => { const at = launched.indexOf(app); if (at >= 0) launched.splice(at, 1); });
   const window = await app.firstWindow();
   return { app, window, profile };
 }
 
-/** After each test: any app still running is killed; an owned service then stops through its lease. */
 export async function killAll(): Promise<void> {
   for (const app of launched.splice(0)) {
     const child = app.process();
@@ -86,7 +81,6 @@ export function openedExternal(app: ElectronApplication): Promise<string[]> {
   return app.evaluate(() => (globalThis as typeof globalThis & { __opened?: string[] }).__opened ?? []);
 }
 
-/** Replaces dialog.showMessageBox in the main process; answers are consumed in order (spec §6.3: tests stub it). */
 export async function stubMessageBox(app: ElectronApplication, responses: number[]): Promise<void> {
   await app.evaluate(({ dialog }, queue) => {
     const g = globalThis as typeof globalThis & { __messageBoxes?: string[] };
@@ -110,7 +104,6 @@ export async function closeWindow(app: ElectronApplication): Promise<void> {
 
 export async function openCapture(page: Page): Promise<Locator> {
   await page.evaluate(() => { location.hash = '#/capture'; });
-  // Capture has exactly one writing surface and no title or folder field (spec §4.7).
   const editor = page.locator('textarea').first();
   await editor.waitFor();
   return editor;
@@ -118,7 +111,6 @@ export async function openCapture(page: Page): Promise<Locator> {
 
 export type LocalDraft = { raw: string; files: { name: string; bytes: number[] }[] } | null;
 
-/** Reads kv['draft'] from the page's real IndexedDB (desktop/qa/scenario.js:6-14). The app must have opened it first. */
 export function readDraft(page: Page): Promise<LocalDraft> {
   return page.evaluate(() => new Promise<LocalDraft>((resolve, reject) => {
     const open = indexedDB.open('dhara-local-v1', 1);

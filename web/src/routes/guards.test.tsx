@@ -16,7 +16,7 @@ const noteEdit: NavigationGuard = {
   check: () => ({ kind: 'confirm', message: 'Leave without saving this note edit? The last saved revision remains safe.' }),
 };
 const cleanups: (() => void)[] = [];
-beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); }); // jsdom does not implement scrollTo
+beforeEach(() => { vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); });
 afterEach(() => { cleanups.splice(0).forEach(fn => fn()); cleanup(); vi.restoreAllMocks(); vi.mocked(toast).mockClear(); });
 
 describe('guard registry', () => {
@@ -70,7 +70,6 @@ describe('RouteGuards', () => {
     render(<RouterProvider router={router} />);
     await screen.findByText('Overview page');
     cleanups.push(registerGuard(recording));
-    // a blocked navigate() never settles, so fire it and flush instead of awaiting
     void router.navigate({ to: '/plan' });
     await act(async () => {});
     expect(router.state.location.pathname).toBe('/overview');

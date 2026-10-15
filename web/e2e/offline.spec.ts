@@ -1,4 +1,3 @@
-// web/e2e/offline.spec.ts
 import { expect, test } from './fixtures';
 import { openKind, ready } from './nowSeed';
 

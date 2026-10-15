@@ -1,4 +1,3 @@
-// Local startup/crash page (spec §6.4.6). Talks only to its own preload; text is never parsed as HTML.
 const status = document.getElementById('status');
 const retry = document.getElementById('retry');
 const cancel = document.getElementById('cancel');

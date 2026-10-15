@@ -1,5 +1,4 @@
 import { readableTaskTitle } from '../domain/tasks';
-// web/src/components/TaskRow.tsx
 import type { JSX } from 'react';
 import type { SnapshotTask } from '../api/schemas';
 import { needsReview, reviewLink, taskMeta } from '../domain/tasks';

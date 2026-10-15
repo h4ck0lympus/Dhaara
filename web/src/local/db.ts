@@ -1,15 +1,13 @@
-// IndexedDB layer (spec §4.4, contract §4.1): version 1 and the kv/outbox stores and record shapes that public/app.js defined;
-// local/migrate.ts moves the pre-rename database here, so queued captures stay valid.
 import type { TaskEditable } from '../api/schemas';
 import { S } from '../strings';
 
 export const DB_NAME = 'dhara-local-v1';
 export const DB_VERSION = 1;
 export type StoredFile = { name: string; blob: Blob };
-export type Draft = { id: string; raw: string; task_id: string; files: StoredFile[] }; // kv['draft']
-export type OutboxItem = Draft & { error?: string }; // outbox, keyPath 'id'
+export type Draft = { id: string; raw: string; task_id: string; files: StoredFile[] };
+export type OutboxItem = Draft & { error?: string };
 export type TaskDraftPending = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };
-export type TaskDraft = { id: string; raw: string; fields: Partial<TaskEditable>; pending: TaskDraftPending | null }; // kv['task-draft']
+export type TaskDraft = { id: string; raw: string; fields: Partial<TaskEditable>; pending: TaskDraftPending | null };
 export type KvValues = { draft: Draft; 'task-draft': TaskDraft; snapshot: unknown };
 export type LocalErrorCode = 'blocked' | 'open-failed' | 'aborted' | 'migrate';
 type StoreName = 'kv' | 'outbox';
@@ -30,7 +28,6 @@ export function openDb(): Promise<IDBDatabase> {
   dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
-      // public/app.js:33, unchanged.
       request.result.createObjectStore('kv');
       request.result.createObjectStore('outbox', { keyPath: 'id' });
     };
@@ -45,7 +42,7 @@ export function openDb(): Promise<IDBDatabase> {
     request.onerror = () => reject(new LocalStoreError('open-failed', request.error?.message || 'Local storage is unavailable'));
     request.onblocked = () => reject(new LocalStoreError('blocked', S.closeOtherTabs));
   }).catch((error: unknown) => {
-    dbPromise = undefined; // a failed open can be retried in the same page (native_storage_check.py:291)
+    dbPromise = undefined;
     throw error;
   });
   return dbPromise;
@@ -53,7 +50,6 @@ export function openDb(): Promise<IDBDatabase> {
 
 const outboxWriteListeners = new Set<() => void>();
 
-// Called after every committed readwrite transaction that includes the outbox store (save, flush, retry, discard).
 export function onOutboxWrite(listener: () => void): () => void {
   outboxWriteListeners.add(listener);
   return () => {
@@ -61,7 +57,6 @@ export function onOutboxWrite(listener: () => void): () => void {
   };
 }
 
-// Resolves on oncomplete with the request's result; any error, abort or exception thrown by run() rejects (app.js:51-60).
 export async function transaction<T>(
   stores: StoreName | StoreName[],
   mode: IDBTransactionMode,
@@ -79,11 +74,10 @@ export async function transaction<T>(
           try {
             listener();
           } catch (error) {
-            console.error('outbox listener failed', error); // one bad listener must not skip the rest
+            console.error('outbox listener failed', error);
           }
         }
     };
-    // A request error reaches tx.onerror before tx.error is set, so prefer the failing request's own error.
     tx.onerror = (event) => fail((event.target as IDBRequest | null)?.error ?? tx.error);
     tx.onabort = () => fail(tx.error);
     try {
@@ -97,7 +91,6 @@ export async function transaction<T>(
       try {
         tx.abort();
       } catch {
-        // already finished
       }
       reject(error);
     }
@@ -149,12 +142,10 @@ function isPending(v: unknown): v is TaskDraftPending {
   return isRecord(v) && typeof v.capture_id === 'string' && typeof v.raw === 'string' && typeof v.local_day === 'string' && isRecord(v.details);
 }
 
-// A missing pending is accepted (read as null by taskDraftStore.load) so an older draft is recovered, not overwritten.
 export function isTaskDraft(v: unknown): v is TaskDraft {
   return isRecord(v) && typeof v.id === 'string' && typeof v.raw === 'string' && isRecord(v.fields) && (v.pending == null || isPending(v.pending));
 }
 
-// app.js:5: randomUUID needs a secure context; a plain-HTTP LAN origin falls back to 32 random hex characters.
 export function uid(): string {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('');

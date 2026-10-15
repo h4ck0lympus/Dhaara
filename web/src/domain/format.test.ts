@@ -6,7 +6,7 @@ describe('format', () => {
   it('age counts minutes and hours, then falls back to a date', () => {
     const now = Date.parse('2026-10-10T12:00:00Z');
     expect(age('2026-10-10T11:59:30Z', now)).toBe('just now');
-    expect(age('2026-10-10T12:00:30Z', now)).toBe('just now'); // clock skew never goes negative
+    expect(age('2026-10-10T12:00:30Z', now)).toBe('just now');
     expect(age('2026-10-10T11:15:00Z', now)).toBe('45m ago');
     expect(age('2026-10-10T07:00:00Z', now)).toBe('5h ago');
     expect(age('2026-10-01T12:00:00Z', now)).toBe(new Date('2026-10-01T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));

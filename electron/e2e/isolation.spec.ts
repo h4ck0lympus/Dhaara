@@ -13,7 +13,6 @@ let offOrigin = '';
 let offHits = 0;
 
 test.beforeAll(async () => {
-  // A reachable foreign origin: if a guard failed, the navigation would really load and count a hit.
   offServer = http.createServer((_request, response) => {
     offHits += 1;
     response.setHeader('Content-Type', 'text/html');
@@ -68,7 +67,6 @@ test('a same-origin redirect to another origin is blocked', async () => {
 
 test('subframe navigation off-origin and <webview> attach are blocked', async () => {
   const before = await app.evaluate(({ webContents }) => webContents.getAllWebContents().length);
-  // A same-origin page without the server CSP, so only the Electron guards stand in the way.
   await app.context().route(`${dhara.origin}/frame-probe`, (route) => route.fulfill({
     status: 200,
     contentType: 'text/html',

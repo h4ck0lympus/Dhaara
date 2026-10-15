@@ -6,8 +6,8 @@ import { S } from '../strings';
 import { messageOf, toast } from '../ui/Toast';
 import { toastRejections } from './Attachments';
 
-export const SKETCH_UNDO_LIMIT = 12;   // app.js:449
-export const SKETCH_INK = '#d6e1be';   // app.js:446
+export const SKETCH_UNDO_LIMIT = 12;
+export const SKETCH_INK = '#d6e1be';
 export type SketchTool = 'pen' | 'eraser' | 'text';
 
 const TOOLS: { id: SketchTool; label: string; icon: 'pen' | 'eraser' | 'text' }[] = [
@@ -27,19 +27,18 @@ export function SketchDialog({ onClose }: { onClose: () => void }) {
   const drawing = useRef(false);
   const [tool, setTool] = useState<SketchTool>('pen');
   const [text, setText] = useState('');
-  const [inked, setInked] = useState<boolean | null>(null);   // null: untouched; false: drawn then undone/cleared to empty
+  const [inked, setInked] = useState<boolean | null>(null);
   const [notice, setNotice] = useState('');
   const [undoCount, setUndoCount] = useState(0);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    // Size on the next frame, once the child Dialog's showModal() has laid the canvas out.
     const frame = requestAnimationFrame(() => {
       const element = canvas.current;
       const context = element?.getContext('2d');
       if (!element || !context) return;
       const rect = element.getBoundingClientRect();
-      const scale = Math.min(window.devicePixelRatio || 1, 2);   // app.js:445
+      const scale = Math.min(window.devicePixelRatio || 1, 2);
       element.width = Math.round(rect.width * scale);
       element.height = Math.round(rect.height * scale);
       context.scale(scale, scale);
@@ -131,11 +130,11 @@ export function SketchDialog({ onClose }: { onClose: () => void }) {
     const element = canvas.current;
     if (!element) return;
     if (!inked) {
-      toast('Draw something first.');   // app.js:452
+      toast('Draw something first.');
       return;
     }
     if (captureDraftStore.getSnapshot().saving) {
-      setNotice(S.finishingLocalSave);   // addFiles accepts nothing while a save is in flight
+      setNotice(S.finishingLocalSave);
       return;
     }
     setNotice('');
@@ -146,7 +145,7 @@ export function SketchDialog({ onClose }: { onClose: () => void }) {
         toast('The sketch could not be exported. Try again.', { tone: 'error' });
         return;
       }
-      if (captureDraftStore.getSnapshot().saving) {   // a save began after the click
+      if (captureDraftStore.getSnapshot().saving) {
         setAdding(false);
         setNotice(S.finishingLocalSave);
         return;

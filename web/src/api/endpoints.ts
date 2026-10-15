@@ -1,4 +1,3 @@
-// Replay-policy table (spec §4.3, contract §3.2). Every UI request goes through one of these keys.
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type Replay = 'read' | 'idempotent-by-key' | 'once-per-action';
 export type EndpointSpec = { readonly method: Method; readonly path: `/${string}`; readonly replay: Replay };
