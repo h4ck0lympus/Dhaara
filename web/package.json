@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "^22.22.2" },
+  "engines": {
+    "node": "^22.22.2"
+  },
   "scripts": {
     "build": "tsc --noEmit && vite build && node scripts/sw-precache.mjs && node scripts/check-hashes.mjs",
     "watch": "vite build --watch --mode development",
@@ -13,8 +15,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "3.2.2",
     "@tanstack/react-query": "5.104.1",
     "@tanstack/react-router": "1.170.42",
+    "highlight.js": "11.12.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.1.12"
