@@ -1,5 +1,6 @@
 import { Link, useNavigate, useSearch as useRouteSearch } from '@tanstack/react-router';
 import { Suspense, lazy, useEffect, useRef, useState, type JSX, type KeyboardEvent, type PointerEvent } from 'react';
+import { MergeSuggestions } from '../components/MergeSuggestions';
 import { useConnected } from '../domain/connection';
 import { age } from '../domain/format';
 import { isDialogOpen } from '../shell/dialogs';
@@ -43,7 +44,8 @@ function Collapsed({ pane, title, onShow }: { pane: PaneId; title: string; onSho
 }
 
 export function NotesScreen(): JSX.Element {
-  const notes = useSnapshot().data?.notes ?? [];
+  const snapshot = useSnapshot().data;
+  const notes = snapshot?.notes ?? [];
   const connected = useConnected();
   const navigate = useNavigate();
   const { q: rawQ = '', folder = '', note: noteId } = useRouteSearch({ strict: false }) as NotesSearch;
@@ -103,6 +105,7 @@ export function NotesScreen(): JSX.Element {
                 {folders.map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             </div>
+            <MergeSuggestions suggestions={snapshot?.merge_suggestions ?? []} visibleIds={new Set(rows.map(n => n.id))} />
             {fallback && <p className="notice" role="status">Server search is unavailable. Showing title and folder matches on this device.</p>}
             {pending && <p className="subtle-line" role="status">Searching…</p>}
             {rows.map(n => (

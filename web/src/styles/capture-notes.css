@@ -136,3 +136,9 @@
 .hljs-meta, .hljs-doctag, .hljs-tag { color: var(--syn-meta); }
 .hljs-deletion { font-style: normal; }
 
+.merge-suggestions { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; }
+.merge-suggestion { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid rgb(var(--acc) / .28); border-radius: var(--radius); background: rgb(var(--acc) / .06); font-size: 13px; }
+.merge-suggestion p { margin: 0; overflow-wrap: anywhere; }
+.merge-reason { color: var(--muted); }
+.merge-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.small-button { min-height: 32px; padding: 0 12px; font-size: 13px; }

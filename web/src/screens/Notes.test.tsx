@@ -10,7 +10,7 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => h.navigate,
   Link: ({ to, children, ...rest }: { to: string; children: ReactNode }) => <a href={to} {...rest}>{children}</a>,
 }));
-vi.mock('../state/queries', () => ({ useSnapshot: vi.fn(), useSearch: vi.fn(() => h.results) }));
+vi.mock('../state/queries', () => ({ useSnapshot: vi.fn(), useSearch: vi.fn(() => h.results), useMergeAction: () => ({ mutateAsync: vi.fn(), isPending: false }) }));
 vi.mock('../domain/connection', () => ({ useConnected: () => h.connected }));
 vi.mock('../shell/OfflineNotice', () => ({ OfflineNotice: () => null }));
 vi.mock('./NoteView', () => ({ EmbeddedNote: ({ id, onBack }: { id: string; onBack: () => void }) => <div><p>Reading {id}</p><button type="button" onClick={onBack}>← All notes</button></div> }));
