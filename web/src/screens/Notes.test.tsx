@@ -43,6 +43,7 @@ describe('Notes folders and list', () => {
     const folders = screen.getByRole('complementary', { name: 'Folders' });
     expect(within(folders).getAllByRole('button', { pressed: false }).map(b => b.textContent)).toEqual(['Algorithms 1', 'CTF 2']);
     expect(within(folders).getByRole('button', { name: 'All notes 3' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(folders).getByText('3 notes · 2 folders')).toBeTruthy();
     fireEvent.click(within(folders).getByRole('button', { name: 'CTF 2' }));
     expect(lastSearch()).toEqual({ folder: 'CTF' });
   });

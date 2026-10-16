@@ -88,6 +88,7 @@ export function NotesScreen(): JSX.Element {
             <div className="pane-rule" />
             <div className="eyebrow pane-label">Folders</div>
             {folders.map(name => <button type="button" key={name} className="folder-row" aria-pressed={folder === name} onClick={() => go({ folder: name })}>{name}{' '}<span>{count(name)}</span></button>)}
+            <p className="folders-footer">{notes.length} note{notes.length === 1 ? '' : 's'} · {folders.length} folder{folders.length === 1 ? '' : 's'}</p>
           </aside>
           <Resizer label="folders" width={panes.foldersWidth} onWidth={w => setPanes({ foldersWidth: clampWidth('foldersWidth', w) })} />
         </> : <Collapsed pane="folders" title="Folders" onShow={() => toggle('folders')} />}

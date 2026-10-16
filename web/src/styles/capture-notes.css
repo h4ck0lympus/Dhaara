@@ -50,7 +50,8 @@
 .pane-toggle:hover { color: var(--fg); background: var(--panel); }
 .pane-label { padding: 8px 10px 4px; }
 .pane-rule { height: 1px; margin: 8px 10px; background: var(--line); }
-.folders-pane { flex: none; padding: 8px 10px 24px 16px; }
+.folders-pane { display: flex; flex: none; flex-direction: column; padding: 8px 10px 0 16px; }
+.folders-footer { position: sticky; bottom: 0; margin: auto 0 0; padding: 12px 10px 20px 44px; background: var(--bg); color: var(--muted); font-size: 12px; }
 .folder-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border-radius: var(--radius-small); color: var(--fg2); font-size: 14px; text-align: left; }
 .folder-row span { margin-left: auto; color: var(--muted); font-size: 12px; }
 .folder-row:hover { background: var(--surface-hover); }
