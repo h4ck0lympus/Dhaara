@@ -33,6 +33,7 @@ beforeEach(() => {
   tokenList = [];
   stateStatus = 200;
   calls = stubFetch(call => {
+    if (call.url === '/api/ai') return jsonResponse(200, { configured: false, key_hint: '', from_env: false, enabled: false, model: 'openrouter/free', audio_model: 'thinkingmachines/inkling-small:free' });
     if (call.url === '/api/agent-connections') return jsonResponse(200, { connections: [{ provider: 'codex', name: 'Codex', installed: true, last_seen: null }, { provider: 'claude', name: 'Claude Code', installed: false, last_seen: null }] });
     if (call.url.startsWith('/api/state')) return stateStatus === 200 ? jsonResponse(200, snapshot) : jsonResponse(stateStatus, { detail: 'Service unavailable' });
     if (call.url === '/api/settings' && call.method === 'PATCH') {

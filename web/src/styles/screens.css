@@ -219,3 +219,8 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color
   .status-row { grid-template-columns: 8px minmax(0, 1fr); }
   .status-row > span:last-child { grid-column: 2; margin-top: -10px; padding-bottom: 8px; }
 }
+.settings-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+.ai-key-form { margin-top: 0; }
+.ai-key-form input { width: 220px; }
+.setting-row select { max-width: 280px; }
+

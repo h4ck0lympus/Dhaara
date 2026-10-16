@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCanGoBack, useRouter } from '@tanstack/react-router';
-import { useEffect, useId, useRef, useState, type FormEvent, type JSX, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type JSX, type ReactNode } from 'react';
 import type { Settings, SettingsPatch, TokenCreated } from '../api/schemas';
 import { AgentConnections, useAgentConnections } from '../components/AgentConnections';
 import { useConnected } from '../domain/connection';
@@ -10,6 +10,8 @@ import { NOTIFICATIONS_KEY, notificationsOptedIn } from '../shell/notifications'
 import { useCreateRule, useCreateToken, useDeleteRule, useRevokeToken, useSnapshot, useTokens, useUpdateSettings } from '../state/queries';
 import { S } from '../strings';
 import { Icon } from '../ui/Icon';
+import { Row, Segmented, Switch } from '../ui/SettingRows';
+import { AISettings } from '../components/AISettings';
 import { messageOf, toast } from '../ui/Toast';
 import '../styles/capture-notes.css';
 
@@ -29,36 +31,6 @@ const COMPANIONS: [Settings['companion'], string][] = [['cat', 'Cat'], ['dot', '
 
 function pick(source: Settings, changes: SettingsPatch): SettingsPatch {
   return Object.fromEntries(Object.keys(changes).map(key => [key, source[key as keyof SettingsPatch]])) as SettingsPatch;
-}
-
-function Row({ label, hint, id, htmlFor, children }: { label: string; hint?: ReactNode; id: string; htmlFor?: string; children: ReactNode }): JSX.Element {
-  const Label = htmlFor ? 'label' : 'span';
-  return (
-    <div className="setting-row">
-      <div className="setting-label"><Label id={`${id}-label`} htmlFor={htmlFor}>{label}</Label>{hint && <span id={`${id}-hint`}>{hint}</span>}</div>
-      {children}
-    </div>
-  );
-}
-
-function Switch({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (next: boolean) => void }): JSX.Element {
-  const id = useId();
-  return (
-    <Row label={label} hint={hint} id={id}>
-      <button type="button" className="switch" role="switch" aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} aria-checked={checked} onClick={() => onChange(!checked)}><span /></button>
-    </Row>
-  );
-}
-
-function Segmented<T extends string>({ label, hint, value, options, onChange }: { label: string; hint?: string; value: T; options: [T, string][]; onChange: (next: T) => void }): JSX.Element {
-  const id = useId();
-  return (
-    <Row label={label} hint={hint} id={id}>
-      <div className="segmented" role="group" aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined}>
-        {options.map(([option, text]) => <button type="button" key={option} aria-pressed={value === option} onClick={() => { if (value !== option) onChange(option); }}>{text}</button>)}
-      </div>
-    </Row>
-  );
 }
 
 function Status({ tone, label, detail }: { tone: 'ok' | 'warn' | 'off'; label: string; detail: string }): JSX.Element {
@@ -317,6 +289,12 @@ export function SettingsScreen(): JSX.Element {
           <p className="subtle-line">Use the generated task-scoped token with tools/agent.py. The wrapper tracks only the command you explicitly start; it does not attach to arbitrary browser sessions. See the README for the exact command and token environment setup.</p>
         </details>
       </Section>
+
+      {form && (
+        <Section id="settings-ai" title="AI · OpenRouter">
+          <AISettings settings={form} onPatch={patch} />
+        </Section>
+      )}
 
       {form && (
         <Section id="settings-context" title="Window context">
