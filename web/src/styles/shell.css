@@ -1,13 +1,10 @@
 .app { min-height: 100dvh; position: relative; isolation: isolate; display: flex; flex-direction: column; overflow-x: clip; }
 .topbar { position: relative; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; width: 100%; max-width: var(--reading); min-height: 44px; margin: 0 auto; padding: 20px 16px 0; }
-.main-nav { display: flex; gap: 4px; font-size: 14px; }
+.main-nav { display: flex; gap: 4px; margin-right: auto; font-size: 14px; }
 .nav-item { display: flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: var(--radius-small); color: var(--muted); text-decoration: none; }
 .nav-item:hover { color: var(--fg); }
 .nav-item.active { background: rgb(var(--panel-rgb) / .9); color: var(--fg); }
-.status-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-left: auto; color: var(--muted); font-size: 13px; }
-.local-label { display: inline-flex; align-items: center; gap: 8px; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
-.status-dot.paused { background: transparent; border: 1px solid var(--muted); }
+.status-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; color: var(--muted); font-size: 13px; }
 .site-search { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 .site-search input { width: 170px; padding: 6px 0; border: 0; background: none; color: var(--fg); font-size: 14px; outline: none; }
 .site-search input::-webkit-search-cancel-button { display: none; }
@@ -24,11 +21,8 @@
   .topbar { flex-wrap: nowrap; gap: 4px; padding-top: 8px; }
   .main-nav { gap: 0; }
   .nav-item { padding: 0 10px; }
-  .status-line { order: 3; margin-left: 0; }
-  /* phone: "connected" shrinks to its dot; offline and queued captures still get their own row */
-  .status-line:not(:has(.paused)) #connection-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .topbar:has(.status-line .paused, .status-line button) { flex-wrap: wrap; }
-  .status-line:has(.paused, button) { width: 100%; }
+  .topbar:has(.status-line) { flex-wrap: wrap; }
+  .status-line { order: 3; width: 100%; margin-left: 0; }
   .site-search { flex: 1; min-width: 0; margin-left: auto; }
   .site-search input { width: 100%; min-width: 0; }
   .content { padding-top: 16px; padding-bottom: 88px; }

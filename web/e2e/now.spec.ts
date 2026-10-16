@@ -259,10 +259,10 @@ test('Disconnected cache has no currently actionable alternatives', async ({ pag
 
 test('Disconnected cache does not claim available/completed/connected integrations', async ({ page, context, dhara }) => {
   await openKind(page, context, dhara, 'disconnected');
-  await expect(page.locator('#connection-label')).toHaveText('Offline · local drafts');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'offline');
   await expect(agentStrip(page)).toHaveCount(0);
-  await toTasks(page);
   await expect(needsYou(page)).toHaveCount(0);
+  await toTasks(page);
   await expect(page.getByText(/^Last known · /)).toBeVisible();
   await expect(page.getByText('All tracked work is complete')).toHaveCount(0);
 });

@@ -66,10 +66,10 @@ test('the theme follows the workspace setting, including System', async ({ page,
 test('the status line reports offline in words and recovers', async ({ page, dhara, context }) => {
   await gotoApp(page, dhara);
   await context.setOffline(true);
-  await expect(page.locator('#connection-label')).toHaveText('Offline · local drafts');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'offline');
   await expect(page.locator('.offline-banner')).toContainText('Server disconnected.');
   await context.setOffline(false);
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
   await expect(page.locator('.offline-banner')).toHaveCount(0);
 });
 

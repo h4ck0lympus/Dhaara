@@ -181,7 +181,7 @@ test('Accidental dismissal and reload recover task draft and details', async ({ 
   await rawInput(page).press('Escape');
   await expect(addTaskDialog(page)).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
   const again = await openAddTask(page);
   await expect(rawInput(page)).toHaveValue('Maybe review Atlas next Friday; not confirmed');
   await detailsSummary(page).click();
@@ -199,7 +199,7 @@ test('Task draft survives close and reload; initially focused; Enter inserts new
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(addTaskDialog(page)).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
   await openAddTask(page);
   await expect(rawInput(page)).toBeFocused();
   await expect(rawInput(page)).toHaveValue('leetcode by tonight\n');
@@ -378,7 +378,7 @@ test('Disconnected draft retry after reload uses durable capture identity', asyn
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(addTaskDialog(page)).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
   const again = await openAddTask(page);
   await expect(rawInput(page)).toHaveValue('Disconnected task draft, not a queued task');
   await expect(again.locator('#task-draft-status')).toHaveText('Previous save is unconfirmed. Retry the same attempt; this draft is not an offline task queue.');

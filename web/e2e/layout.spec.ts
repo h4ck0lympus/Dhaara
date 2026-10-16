@@ -82,7 +82,7 @@ test('Readable text meets a 4.5 contrast ratio in dark and light', async ({ page
       return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
     };
     const background = lum(getComputedStyle(document.body).backgroundColor);
-    return ['.home-greeting p', '.focus-next', '.eyebrow', '#connection-label', '.task-title', '.nav-item:not(.active)'].map(selector => {
+    return ['.home-greeting p', '.focus-next', '.eyebrow', '.home-row', '.nav-item:not(.active)'].map(selector => {
       const el = document.querySelector(selector);
       const fg = el ? lum(getComputedStyle(el).color) : background;
       return [selector, (Math.max(fg, background) + 0.05) / (Math.min(fg, background) + 0.05)] as const;

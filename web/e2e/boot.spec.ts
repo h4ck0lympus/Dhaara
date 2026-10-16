@@ -6,7 +6,7 @@ import { E2E_TOKEN, startDhara } from './server';
 test('the bare origin opens Overview', async ({ page, dhara }) => {
   await page.goto(dhara.origin + '/');
   await expect(page).toHaveURL(/#\/overview$/);
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
 });
 
 test('loopback boot logs in automatically and never shows Unlock', async ({ page, dhara }) => {
@@ -50,16 +50,16 @@ test('a non-loopback host shows Unlock; a wrong token stays inline; the cookie a
     await page.goto(origin + '/#/overview');
     const unlock = page.getByRole('dialog', { name: 'Unlock Dhara' });
     await expect(unlock).toBeVisible();
-    await expect(page.locator('#connection-label')).toHaveText('Offline · local drafts');
+    await expect(page.locator('.app')).toHaveAttribute('data-connection', 'offline');
     await unlock.getByLabel('Access token').fill('not-the-token-0123456789');
     await unlock.getByRole('button', { name: 'Unlock' }).click();
     await expect(unlock.getByRole('alert')).toHaveText('Invalid access token');
     await unlock.getByLabel('Access token').fill(E2E_TOKEN);
     await unlock.getByRole('button', { name: 'Unlock' }).click();
     await expect(unlock).toHaveCount(0);
-    await expect(page.locator('#connection-label')).toHaveText('Server connected');
+    await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
     await page.reload();
-    await expect(page.locator('#connection-label')).toHaveText('Server connected');
+    await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
     await expect(page.getByRole('dialog', { name: 'Unlock Dhara' })).toHaveCount(0);
   } finally {
     await browser.close();
@@ -77,7 +77,7 @@ test('a lazily loaded route opens offline from the service-worker cache', async 
   await gotoApp(page, dhara);
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
   await context.setOffline(true);
   await page.evaluate(() => { location.hash = '#/note/x'; });
   await expect(page.getByRole('heading', { level: 1, name: 'Note unavailable' })).toBeVisible();

@@ -30,16 +30,14 @@ function given({ connected, snapshot = null, outbox = 0, saveState = 'saved' }: 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe('StatusLine', () => {
-  it('labels the connection in words, not colour alone', () => {
-    given({ connected: true, snapshot: makeSnapshot() });
-    render(<StatusLine />);
-    expect(document.querySelector('#connection-label')!.textContent).toBe(S.connected);
-    cleanup();
-    given({ connected: false, snapshot: makeSnapshot() });
-    render(<StatusLine />);
-    expect(document.querySelector('#connection-label')!.textContent).toBe(S.offline);
+  it('never shows the connection state; that lives in Settings and the offline banner', () => {
+    for (const connected of [true, false]) {
+      given({ connected, snapshot: makeSnapshot() });
+      const { container } = render(<StatusLine />);
+      expect(container.textContent).toBe('');
+      cleanup();
+    }
   });
-
 
   it('shows the queued-capture indicator only when the outbox has items and opens Outbox', () => {
     given({ connected: true, snapshot: makeSnapshot(), outbox: 0 });

@@ -169,7 +169,7 @@ test.describe('Settings', () => {
     await expect(page.getByText('Local coding agent · agent')).toBeVisible();
     expect(await page.evaluate(() => JSON.stringify({ ...localStorage }))).not.toContain(token);
     await page.reload();
-    await expect(page.locator('#connection-label')).toHaveText(S.connected);
+    await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
     await page.getByText('Advanced: agent & observer tokens').click();
     await expect(page.getByText('Local coding agent · agent')).toBeVisible();
     await expect(page.locator('.token-value')).toHaveCount(0);

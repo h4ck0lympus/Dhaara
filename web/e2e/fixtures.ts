@@ -47,7 +47,7 @@ export const test = base.extend<{ dhara: DharaServer; guards: void }>({
 
 export async function gotoApp(page: Page, dhara: DharaServer, hash = '#/overview'): Promise<void> {
   await page.goto(`${dhara.origin}/${hash}`);
-  await expect(page.locator('#connection-label')).toHaveText(S.connected, { timeout: 30_000 });
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online', { timeout: 30_000 });
 }
 
 export function openLocalDb(name = 'dhara-local-v1'): Promise<IDBDatabase> {

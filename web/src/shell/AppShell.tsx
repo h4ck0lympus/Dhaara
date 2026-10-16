@@ -47,7 +47,7 @@ export function AppShell(): JSX.Element {
   useEffect(() => installKeyboard(to => router.history.push(to)), [router]);
   useEffect(() => { if (connected && snapshot) { notifyDueReminders(snapshot); notifyAgentUpdates(snapshot); } }, [connected, snapshot]);
   return (
-    <div className="app">
+    <div className="app" data-connection={connected ? 'online' : 'offline'}>
       <header className="topbar">
         <Nav />
         <StatusLine />
