@@ -8,7 +8,8 @@ import { SEARCH_MAX_LENGTH } from '../screens/notesList';
 import { NowScreen } from '../screens/Now';
 import { PlanScreen } from '../screens/Plan';
 import { SettingsScreen } from '../screens/Settings';
-import { AppShell } from '../shell/AppShell';
+import { RootLayout } from '../shell/AppShell';
+import { CompanionScreen } from '../screens/Companion';
 import { openDialog, type DialogRequest } from '../shell/dialogs';
 import { useSnapshot } from '../state/queries';
 import { S } from '../strings';
@@ -39,7 +40,7 @@ function TaskLinkScreen(): JSX.Element {
 const text = (value: unknown, max: number): string | undefined => (typeof value === 'string' && value ? value.slice(0, max) : undefined);
 export const notesSearch = (search: Record<string, unknown>): NotesSearch => ({ q: text(search.q, SEARCH_MAX_LENGTH), folder: text(search.folder, 200), note: text(search.note, 200) });
 
-const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({ component: AppShell });
+const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({ component: RootLayout });
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', beforeLoad: () => { throw redirect({ to: '/overview', replace: true }); } });
 const overviewRoute = createRoute({ getParentRoute: () => rootRoute, path: '/overview', component: NowScreen });
 const captureRoute = createRoute({ getParentRoute: () => rootRoute, path: '/capture', component: CaptureScreen });
@@ -49,7 +50,9 @@ const planRoute = createRoute({ getParentRoute: () => rootRoute, path: '/plan', 
 const taskRoute = createRoute({ getParentRoute: () => rootRoute, path: '/task/$id', component: TaskLinkScreen });
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsScreen });
 
-const routeTree = rootRoute.addChildren([indexRoute, overviewRoute, captureRoute, notesRoute, noteRoute, planRoute, taskRoute, settingsRoute]);
+const companionRoute = createRoute({ getParentRoute: () => rootRoute, path: '/companion', component: CompanionScreen });
+
+const routeTree = rootRoute.addChildren([companionRoute, indexRoute, overviewRoute, captureRoute, notesRoute, noteRoute, planRoute, taskRoute, settingsRoute]);
 
 export function createAppRouter(queryClient: QueryClient) {
   return createRouter({ routeTree, history: createHashHistory(), context: { queryClient } });

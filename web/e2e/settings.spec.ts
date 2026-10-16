@@ -109,9 +109,9 @@ test.describe('Settings', () => {
     await gotoApp(page, dhara, '#/settings');
     await companion(page).getByRole('button', { name: 'Dot' }).click();
     await expect.poll(async () => (await serverSettings(dhara)).companion).toBe('dot');
-    await expect(page.getByText('The desktop kitten runs separately from this window')).toBeVisible();
+    await expect(page.getByText('In the desktop app the kitty sits in a screen corner: hover to pet it, click for the mini panel')).toBeVisible();
     await page.reload();
-    await expect(page.locator('#connection-label')).toHaveText(S.connected);
+    await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
     await expect(companion(page).getByRole('button', { name: 'Dot' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('img[src*="cat"], #companion-launch, .companion')).toHaveCount(0);
   });

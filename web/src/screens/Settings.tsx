@@ -235,7 +235,7 @@ export function SettingsScreen(): JSX.Element {
         </Section>
 
         <Section id="settings-companion" title="Desktop companion">
-          <Segmented label="Companion" hint="The desktop kitten runs separately from this window" value={form.companion} options={COMPANIONS} onChange={companion => void patch({ companion })} />
+          <Segmented label="Companion" hint="In the desktop app the kitty sits in a screen corner: hover to pet it, click for the mini panel" value={form.companion} options={COMPANIONS} onChange={companion => void patch({ companion })} />
           <Row label="Companion size" hint={`${form.companion_size} px`} id="settings-companion-size-row" htmlFor="settings-companion-size">
             <input id="settings-companion-size" aria-describedby="settings-companion-size-row-hint" type="range" min={COMPANION_SIZE_MIN} max={COMPANION_SIZE_MAX} value={form.companion_size}
               ref={sizeInput} onChange={event => { const value = Number(event.target.value); setForm(current => current && { ...current, companion_size: value }); }} />

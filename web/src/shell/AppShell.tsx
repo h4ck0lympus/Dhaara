@@ -34,6 +34,22 @@ function SiteSearch(): JSX.Element {
   );
 }
 
+/** The companion window gets the bare kitty: no top bar, notifications or dialogs of its own. */
+function CompanionShell(): JSX.Element {
+  const connected = useConnected();
+  useAppliedTheme(useSnapshot().data?.settings.theme ?? 'dark');
+  useEffect(() => {
+    document.documentElement.dataset.companion = 'true';
+    return () => { delete document.documentElement.dataset.companion; };
+  }, []);
+  return <div className="app" data-connection={connected ? 'online' : 'offline'}><Outlet /><UnlockHost /></div>;
+}
+
+export function RootLayout(): JSX.Element {
+  const companion = useRouterState({ select: state => state.location.pathname === '/companion' });
+  return companion ? <CompanionShell /> : <AppShell />;
+}
+
 export function AppShell(): JSX.Element {
   const router = useRouter();
   const connected = useConnected();
