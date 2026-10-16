@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { helpText, parseArgs, userArgv, type CliOptions } from './cli.js';
 import { installCloseHandler } from './close.js';
+import { createCompanion, showInMainWindow } from './companion.js';
 import { ManagedService, managedPort, prepareWorkspace, type LifecycleError } from './lifecycle.js';
 import { installNavigationGuards } from './navigation.js';
 import { installPermissions, PERMISSION_PROMPTS } from './permissions.js';
@@ -22,6 +23,13 @@ const OVERLAY_STRIP_HEIGHT = 96;
 type ShellState = 'starting' | 'loaded' | 'crashed' | 'stopping';
 
 let mainWindow: BrowserWindow | null = null;
+let companionWindow: BrowserWindow | null = null;
+
+function startCompanion(options: CliOptions): void {
+  if (!options.companion || (companionWindow !== null && !companionWindow.isDestroyed())) return;
+  companionWindow = createCompanion(options.server, { preload: path.join(DIST, 'companion-preload.cjs'), webviewTag: false, ...SANDBOXED },
+    (route) => showInMainWindow(mainWindow, route));
+}
 
 function exitWith(code: 0 | 2, message: string): never {
   (code === 0 ? process.stdout : process.stderr).write(`${message}\n`);
@@ -91,6 +99,7 @@ function runExternal(options: CliOptions): void {
     });
     mainWindow = win;
     void win.loadURL(options.server).catch(() => undefined);
+    win.webContents.once('did-finish-load', () => startCompanion(options));
   });
 }
 
@@ -148,6 +157,7 @@ function runManaged(options: CliOptions, dataDir: string): void {
         if (state === 'starting') void win.loadURL(origin).catch(() => undefined);
         else dispatchPageEvent(win, SERVICE_UP);
         state = 'loaded';
+        startCompanion(options);
       } catch (error) {
         if (state !== 'stopping') show({ text: error instanceof Error ? error.message : String(error), busy: false, mode: mode() });
       }

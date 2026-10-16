@@ -73,6 +73,7 @@ describe('parseArgs (main.rs:12-108)', () => {
       python: '/repo/.venv/bin/python',
       entryPoint: '/repo/run.py',
       startupTimeoutMs: 15_000,
+      companion: true,
     });
   });
 
@@ -158,6 +159,7 @@ describe('parseArgs (main.rs:12-108)', () => {
       python: '/home/user/launch/py',
       entryPoint: '/home/user/launch/tools/run.py',
       startupTimeoutMs: 15_000,
+      companion: true,
     });
   });
 
@@ -180,6 +182,7 @@ describe('parseArgs in a packaged build (packaging spec §4)', () => {
       python: SERVICE,
       entryPoint: '',
       startupTimeoutMs: 15_000,
+      companion: true,
     });
   });
 

@@ -11,6 +11,7 @@ export type CliOptions = {
   python: string;
   entryPoint: string;
   startupTimeoutMs: number;
+  companion: boolean;
 };
 
 export class CliError extends Error {}
@@ -33,7 +34,7 @@ export const HELP_TEXT = [
   'Default: external service; start Python separately.',
   '--server http://127.0.0.1:8765 --profile /path/to/private/profile',
   'Opt-in Linux development mode: --manage-service --data-dir /path/to/workspace',
-  'Optional: --python /path/to/python --entry-point /path/to/run.py --startup-timeout 15',
+  'Optional: --python /path/to/python --entry-point /path/to/run.py --startup-timeout 15 --no-companion',
   'Relative paths resolve against the launch directory (electron/ under npm --prefix).',
   'Close checkpoints your drafts, then quits and stops an owned service. Retry is explicit.',
   'Browser and old webview drafts are NOT migrated into this separate Electron profile.',
@@ -72,9 +73,14 @@ export type PackagedFacts = { resourcesPath: string; dataHome: string };
 export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string, env: NodeJS.ProcessEnv, packaged: PackagedFacts | null = null): CliOptions | 'help' {
   const values = new Map<string, string>();
   let manageService = false;
+  let companion = true;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--help') return 'help';
+    if (arg === '--no-companion') {
+      companion = false;
+      continue;
+    }
     if (arg === '--manage-service') {
       manageService = true;
       continue;
@@ -108,5 +114,6 @@ export function parseArgs(argv: readonly string[], cwd: string, repoRoot: string
     python: absolutePath(values.get('--python') ?? (packaged === null ? path.join(repoRoot, '.venv/bin/python') : path.join(packaged.resourcesPath, 'service/dhara-service/dhara-service')), cwd),
     entryPoint: absolutePath(values.get('--entry-point') ?? (packaged === null ? path.join(repoRoot, 'run.py') : ''), cwd),
     startupTimeoutMs: Math.round(seconds * 1000),
+    companion,
   };
 }
