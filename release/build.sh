@@ -86,7 +86,7 @@ check=$(mktemp -d "${TMPDIR:-/tmp}/dhara-appimage-check-XXXXXX")
 trap 'rm -rf "$check"' EXIT
 (cd "$check" && "$APPIMAGE_ABS" --appimage-extract >/dev/null)
 for p in AppRun dhara.desktop dhara.svg .DirIcon usr/lib/dhara/dhara usr/lib/dhara/resources/chrome-sandbox usr/lib/dhara/resources/launch.cjs \
-         usr/lib/dhara/resources/app/package.json usr/lib/dhara/resources/app/dist/main.js usr/lib/dhara/resources/app/dist/preload.cjs \
+         usr/lib/dhara/resources/app/package.json usr/lib/dhara/resources/app/dist/main.js usr/lib/dhara/resources/app/dist/preload.cjs usr/lib/dhara/resources/app/dist/companion-preload.cjs \
          usr/lib/dhara/resources/app/static/startup.html usr/lib/dhara/resources/service/dhara-service/dhara-service \
          usr/lib/dhara/resources/service/dhara-service/_internal/web/dist/index.html; do
   [ -e "$check/squashfs-root/$p" ] || fail "missing from the AppImage: $p"
