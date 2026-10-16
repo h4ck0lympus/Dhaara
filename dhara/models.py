@@ -45,6 +45,15 @@ class TaskCreate(Input):
             raise ValueError('Use an http or https link')
         return value
 
+class TaskOrder(Input):
+    ids: list[str] = Field(max_length=2000)
+
+    @field_validator('ids')
+    @classmethod
+    def unique(cls, value):
+        if len(set(value)) != len(value): raise ValueError('Each task may appear once')
+        return value
+
 class TaskUpdate(TaskCreate):
     expected_version: int = Field(ge=1)
 

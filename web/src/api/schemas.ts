@@ -49,6 +49,7 @@ export const TaskSchema = z.object({
   updated_at: z.string(),
   version: int(),
   planned_on: z.string().nullable(),
+  position: z.number().nullable().default(null),
   original_input: z.string().nullable(),
   interpretation: InterpretationSchema,
 });

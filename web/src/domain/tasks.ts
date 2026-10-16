@@ -1,5 +1,5 @@
 import type { Snapshot, SnapshotRun, SnapshotTask, Task, TaskEditable, TaskStatus } from '../api/schemas';
-import { dateLabel, localDateInput } from './format';
+import { dateLabel, localDateInput, localDay } from './format';
 
 export const TASK_EDIT_FIELDS = ['title', 'project', 'detail', 'next_action', 'status', 'priority', 'due_at', 'not_before', 'planned_on', 'estimate_minutes', 'dependencies', 'session_url'] as const;
 
@@ -21,10 +21,52 @@ export function priorityLabel(source: string): PriorityLabel {
   return 'Auto';
 }
 
-const RANK = { high: 0, medium: 1, low: 2 } as const;
+export const PRIORITY_GROUPS = ['high', 'medium', 'low'] as const;
+export type PriorityGroup = (typeof PRIORITY_GROUPS)[number];
+const RANK: Record<PriorityGroup, number> = { high: 0, medium: 1, low: 2 };
+const last = (value: number | null) => value ?? Infinity;
+
+/** Within a priority: your manual order first, then the soonest deadline, then the newest task. */
+export function compareTasks(a: SnapshotTask, b: SnapshotTask): number {
+  return RANK[a.effective_priority] - RANK[b.effective_priority]
+    || last(a.position) - last(b.position)
+    || last(a.due_at ? Date.parse(a.due_at) : null) - last(b.due_at ? Date.parse(b.due_at) : null)
+    || Date.parse(b.created_at) - Date.parse(a.created_at);
+}
+
+/** Due today or overdue, or planned for today or an earlier day (by the device's calendar). */
+export function isForToday(task: SnapshotTask, now: Date = new Date()): boolean {
+  const today = localDay(now);
+  return (task.due_at !== null && localDay(new Date(task.due_at)) <= today) || (task.planned_on !== null && task.planned_on <= today);
+}
 
 export function openTasks(snapshot: Snapshot): SnapshotTask[] {
-  return snapshot.tasks.filter(t => t.status !== 'done' && t.status !== 'parked').sort((a, b) => RANK[a.effective_priority] - RANK[b.effective_priority]);
+  return snapshot.tasks.filter(t => t.status !== 'done' && t.status !== 'parked').sort(compareTasks);
+}
+
+export function priorityGroups(tasks: SnapshotTask[]): Record<PriorityGroup, SnapshotTask[]> {
+  const groups: Record<PriorityGroup, SnapshotTask[]> = { high: [], medium: [], low: [] };
+  for (const task of [...tasks].sort(compareTasks)) groups[task.effective_priority].push(task);
+  return groups;
+}
+
+export type TaskMove = { order: string[]; priority: { id: string; value: PriorityGroup } | null };
+
+/** Where a dragged task lands: `over` is another task's id or a group's id. Null when nothing changes. */
+export function moveTask(groups: Record<PriorityGroup, SnapshotTask[]>, activeId: string, over: string): TaskMove | null {
+  const ids = Object.fromEntries(PRIORITY_GROUPS.map(g => [g, groups[g].map(t => t.id)])) as Record<PriorityGroup, string[]>;
+  const from = PRIORITY_GROUPS.find(g => ids[g].includes(activeId));
+  const to = (PRIORITY_GROUPS as readonly string[]).includes(over) ? over as PriorityGroup : PRIORITY_GROUPS.find(g => ids[g].includes(over));
+  if (!from || !to || over === activeId) return null;
+  const source = ids[from].indexOf(activeId);
+  ids[from].splice(source, 1);
+  const target = over === to ? ids[to].length : ids[to].indexOf(over);
+  // Dropping on a later row in the same group lands after it, as the drag preview shows.
+  ids[to].splice(from === to && target >= source ? target + 1 : target, 0, activeId);
+  const order = PRIORITY_GROUPS.flatMap(g => ids[g]);
+  const before = PRIORITY_GROUPS.flatMap(g => groups[g].map(t => t.id));
+  if (from === to && order.every((id, i) => id === before[i])) return null;
+  return { order, priority: from === to ? null : { id: activeId, value: to } };
 }
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {

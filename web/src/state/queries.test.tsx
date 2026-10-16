@@ -9,7 +9,7 @@ import { kvGet, kvPut } from '../local/db';
 import { flushOutbox } from '../local/outbox';
 import { makeSnapshot, makeTask } from '../test/fixtures';
 import { createQueryClient } from './queryClient';
-import { installRefetchTriggers, readCachedSnapshot, runFlush, useCreateToken, usePatchTask, useSetFocus, useSnapshot, useTimeBudget } from './queries';
+import { installRefetchTriggers, queryKeys, readCachedSnapshot, runFlush, useCreateToken, usePatchTask, useReorderTasks, useSetFocus, useSnapshot, useTimeBudget } from './queries';
 
 vi.mock('../local/db', () => ({ kvGet: vi.fn(), kvPut: vi.fn(async () => {}) }));
 vi.mock('../local/outbox', () => ({ flushOutbox: vi.fn(async () => ({ sent: 0, stop: 'done' })) }));
@@ -201,5 +201,44 @@ describe('runFlush and the cached snapshot', () => {
     expect(await readCachedSnapshot()).toBeNull();
     vi.mocked(kvGet).mockRejectedValueOnce(new Error('blocked'));
     expect(await readCachedSnapshot()).toBeNull();
+  });
+});
+
+describe('useReorderTasks', () => {
+  const tasks = () => [makeTask('a', { effective_priority: 'high', position: 0 }), makeTask('b', { effective_priority: 'medium', position: 1 })];
+  const seeded = () => { qc.setQueryData(queryKeys.snapshot(null), makeSnapshot({ tasks: tasks() })); };
+  const cached = () => qc.getQueryData<ReturnType<typeof makeSnapshot>>(queryKeys.snapshot(null))!.tasks;
+  const bodies = (path: string) => fetchMock.mock.calls.filter(([url]) => String(url).startsWith('/api' + path)).map(([, init]) => init?.body && JSON.parse(String(init.body)));
+
+  it('shows the move at once, saves the new priority with a fresh version, then the order', async () => {
+    seeded();
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    fetchMock.mockImplementation(async (url, init) => {
+      const path = String(url);
+      if (path.startsWith('/api/tasks/b') && (init?.method ?? 'GET') === 'GET') { await gate; return json({ ...makeTask('b'), version: 7 }); }
+      if (path.startsWith('/api/tasks/b')) return json({ ...makeTask('b'), priority: 'high', version: 8 });
+      if (path.startsWith('/api/state')) return json(makeSnapshot({ tasks: tasks() }));
+      return json({ ok: true });
+    });
+    const { result } = renderHook(() => useReorderTasks(), { wrapper });
+    act(() => result.current.mutate({ order: ['b', 'a'], priority: { id: 'b', value: 'high' } }));
+    await vi.waitFor(() => expect(cached().find(x => x.id === 'b')).toMatchObject({ position: 0, effective_priority: 'high', priority: 'high', priority_source: 'you' }));
+    expect(cached().find(x => x.id === 'a')!.position).toBe(1);
+    release();
+    await vi.waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(bodies('/tasks/b').at(-1)).toMatchObject({ priority: 'high', expected_version: 7 });
+    expect(bodies('/task-order')).toEqual([{ ids: ['b', 'a'] }]);
+  });
+
+  it('rolls the snapshot back when saving fails', async () => {
+    seeded();
+    fetchMock.mockImplementation(async (url) => (String(url).startsWith('/api/task-order') ? json({ detail: 'Task not found: a' }, 404)
+      : String(url).startsWith('/api/state') ? new Promise<Response>(() => {}) : json({ ok: true })));
+    const { result } = renderHook(() => useReorderTasks(), { wrapper });
+    act(() => result.current.mutate({ order: ['b', 'a'], priority: null }));
+    await vi.waitFor(() => expect(result.current.isError).toBe(true));
+    expect(cached().map(x => [x.id, x.position])).toEqual([['a', 0], ['b', 1]]);
+    expect(calls('PUT', '/tasks/')).toBe(0);
   });
 });

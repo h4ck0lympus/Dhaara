@@ -119,7 +119,7 @@ test('Task rows are compact single lines at desktop width', async ({ page, dhara
   await page.setViewportSize({ width: 1440, height: 960 });
   for (const title of ['Read the chapter', 'Review the fix', 'Trace ownership', 'Check duplicates', 'Write the summary']) await task(dhara, title, { project: 'Learning' });
   await gotoApp(page, dhara, '#/plan');
-  const rows = page.getByRole('region', { name: 'To do' }).locator('.task-row');
+  const rows = page.locator('.task-board .task-row');
   await expect(rows).toHaveCount(5);
   for (const row of await rows.all()) {
     expect((await row.boundingBox())!.height).toBeLessThanOrEqual(48);

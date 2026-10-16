@@ -445,7 +445,7 @@ async function fullyPopulated(dhara: DharaServer) {
   return { saved, changed };
 }
 async function openEditor(page: Page, title: string) {
-  await page.getByRole('region', { name: 'To do' }).getByRole('button', { name: title, exact: true }).click();
+  await page.locator('.task-board').getByRole('button', { name: title, exact: true }).click();
   await page.getByRole('dialog', { name: title }).getByRole('button', { name: 'Edit', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Edit task' });
   await expect(editor).toBeVisible();

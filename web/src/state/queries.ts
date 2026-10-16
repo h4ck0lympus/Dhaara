@@ -32,7 +32,7 @@ import {
 } from '../api/schemas';
 import { fetchSnapshot } from '../api/session';
 import { connection } from '../domain/connection';
-import { editableFields } from '../domain/tasks';
+import { editableFields, type TaskMove } from '../domain/tasks';
 import { SERVICE_UP } from '../events';
 import { kvGet, kvPut } from '../local/db';
 import { flushOutbox, type FlushResult } from '../local/outbox';
@@ -151,6 +151,39 @@ export function usePatchTask(): UseMutationResult<Task, ApiError, { id: string; 
   return useApiMutation(async (v: { id: string; changes: Partial<TaskEditable> }) => {
     const fresh = await call('task', TaskSchema, { params: { id: v.id } });
     return call('taskUpdate', TaskSchema, { params: { id: v.id }, body: { ...editableFields(fresh), ...v.changes, expected_version: fresh.version } });
+  });
+}
+
+function applyMove(snapshot: Snapshot, move: TaskMove): Snapshot {
+  const position = new Map(move.order.map((id, index) => [id, index]));
+  const tasks = snapshot.tasks.map(task => {
+    const moved = position.has(task.id) ? { ...task, position: position.get(task.id)! } : task;
+    return move.priority?.id === task.id
+      ? { ...moved, priority: move.priority.value, effective_priority: move.priority.value, priority_source: 'you' }
+      : moved;
+  });
+  return { ...snapshot, tasks };
+}
+
+/** Saves a drag: the dragged task's new priority (if it changed group), then the order. Shows it at once, and rolls back on failure. */
+export function useReorderTasks(): UseMutationResult<void, ApiError, TaskMove> {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, TaskMove, [QueryKey, Snapshot | undefined][]>({
+    mutationFn: async move => {
+      if (move.priority) {
+        const fresh = await call('task', TaskSchema, { params: { id: move.priority.id } });
+        await call('taskUpdate', TaskSchema, { params: { id: fresh.id }, body: { ...editableFields(fresh), priority: move.priority.value, expected_version: fresh.version } });
+      }
+      await call('taskOrder', OkSchema, { body: { ids: move.order } });
+    },
+    onMutate: async move => {
+      await qc.cancelQueries({ queryKey: ['snapshot'] });
+      const previous = qc.getQueriesData<Snapshot>({ queryKey: ['snapshot'] });
+      qc.setQueriesData<Snapshot>({ queryKey: ['snapshot'] }, snapshot => (snapshot ? applyMove(snapshot, move) : snapshot));
+      return previous;
+    },
+    onError: (_error, _move, previous) => { for (const [key, data] of previous ?? []) qc.setQueryData(key, data); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['snapshot'] }),
   });
 }
 

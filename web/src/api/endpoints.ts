@@ -13,6 +13,7 @@ export const ENDPOINTS = {
   taskCapture: { method: 'POST', path: '/task-captures', replay: 'idempotent-by-key' },
   focus: { method: 'POST', path: '/focus', replay: 'once-per-action' },
   taskUpdate: { method: 'PUT', path: '/tasks/:id', replay: 'once-per-action' },
+  taskOrder: { method: 'PUT', path: '/task-order', replay: 'once-per-action' },
   noteUpdate: { method: 'PUT', path: '/notes/:id', replay: 'once-per-action' },
   noteRestore: { method: 'POST', path: '/notes/:id/restore/:version', replay: 'once-per-action' },
   noteApplySuggestion: { method: 'POST', path: '/notes/:id/suggestions/:sid/apply', replay: 'once-per-action' },

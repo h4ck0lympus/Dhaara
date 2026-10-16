@@ -8,7 +8,9 @@ import { S } from '../strings';
 import { Icon } from '../ui/Icon';
 import { toast, toastError } from '../ui/Toast';
 
-export function TaskRow({ task, lead, meta }: { task: SnapshotTask; lead?: ReactNode; meta?: ReactNode }): JSX.Element {
+const PRIORITY_NAME = { high: 'High', medium: 'Medium', low: 'Low' } as const;
+
+export function TaskRow({ task, lead, meta, showPriority = false }: { task: SnapshotTask; lead?: ReactNode; meta?: ReactNode; showPriority?: boolean }): JSX.Element {
   const patch = usePatchTask();
   const done = task.status === 'done';
   const review = needsReview(task);
@@ -34,10 +36,12 @@ export function TaskRow({ task, lead, meta }: { task: SnapshotTask; lead?: React
   );
 
   return (
-    <div className="task-row" data-task={task.id}>
+    <div className="task-row" data-task={task.id} title={`${PRIORITY_NAME[task.effective_priority]} priority · ${task.priority_source === 'you' ? 'set by you' : task.priority_reason}`}>
       {lead}
+      {showPriority && <i className={`priority-dot ${task.effective_priority}`} aria-label={`${PRIORITY_NAME[task.effective_priority]} priority`} role="img" />}
       {check}
       <button type="button" className="task-title" onClick={open}>{readableTaskTitle(task)}</button>
+      {task.priority_source === 'you' && !done && <span className="priority-source">set by you</span>}
       {meta ?? (due && <span className={due.soon ? 'task-due soon' : 'task-due'}>{due.text}</span>)}
     </div>
   );

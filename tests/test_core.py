@@ -111,6 +111,33 @@ def test_display_name_setting(env):
     assert old['display_name']==''
     assert old['observation_enabled'] is False and old['motion'] is False
 
+def test_task_order_sets_positions_without_touching_versions(env):
+    c,s,w=env
+    a,b,d=(c.post('/api/tasks',json={'title':t}).json() for t in ('A','B','D'))
+    assert all(t['position'] is None for t in c.get('/api/state').json()['tasks'])
+    r=c.put('/api/task-order',json={'ids':[d['id'],a['id']]})
+    assert r.status_code==200,r.text
+    tasks={t['id']:t for t in c.get('/api/state').json()['tasks']}
+    assert (tasks[d['id']]['position'],tasks[a['id']]['position'],tasks[b['id']]['position'])==(0,1,None)
+    assert tasks[a['id']]['version']==a['version'] and tasks[a['id']]['updated_at']==a['updated_at']
+    assert c.put('/api/task-order',json={'ids':[a['id'],a['id']]}).status_code==422
+    missing=c.put('/api/task-order',json={'ids':[b['id'],'nope']})
+    assert missing.status_code==404
+    assert {t['id']:t['position'] for t in c.get('/api/state').json()['tasks']}[b['id']] is None
+    assert c.put('/api/task-order',json={'ids':[]}).status_code==200
+    assert c.put('/api/task-order',json={'ids':['x']*1+[str(i) for i in range(2001)]}).status_code==422
+    assert c.put('/api/task-order',json={'ids':[a['id']],'extra':1}).status_code==422
+
+def test_position_column_is_added_to_an_older_notebook(tmp_path):
+    import sqlite3
+    from dhara.store import Store
+    s=Store(tmp_path)
+    with sqlite3.connect(s.path) as db:
+        db.execute('ALTER TABLE tasks DROP COLUMN position')
+    Store(tmp_path)
+    with sqlite3.connect(s.path) as db:
+        assert 'position' in {r[1] for r in db.execute('PRAGMA table_info(tasks)')}
+
 def test_theme_setting(env):
     c,s,w=env
     assert c.get('/api/state').json()['settings']['theme']=='dark'

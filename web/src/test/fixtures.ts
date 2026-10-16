@@ -37,6 +37,7 @@ export function makeTask(id: string, changes: Partial<SnapshotTask> = {}): Snaps
     updated_at: STAMP,
     version: 1,
     planned_on: null,
+    position: null,
     original_input: null,
     interpretation: {},
     runs: [],

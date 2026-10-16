@@ -2,7 +2,7 @@ import type { JSX, ReactNode } from 'react';
 
 export type IconName = 'home' | 'pen' | 'notes' | 'task-check' | 'arrow' | 'waveform' | 'plus' | 'plan' | 'search' | 'chevron'
   | 'close' | 'clock' | 'settings' | 'play' | 'spark' | 'image' | 'mic' | 'folder' | 'check' | 'pause' | 'stop' | 'eraser'
-  | 'undo' | 'text' | 'sidebar' | 'bell';
+  | 'undo' | 'text' | 'sidebar' | 'bell' | 'grip';
 
 const PATHS: Record<IconName, ReactNode> = {
   bell: <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />,
@@ -31,6 +31,7 @@ const PATHS: Record<IconName, ReactNode> = {
   undo: <path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3" />,
   text: <path d="M5 5h14M12 5v14M9 19h6" />,
   sidebar: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>,
+  grip: <>{[5, 12, 19].flatMap(y => [9, 15].map(x => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" fill="currentColor" strokeWidth="0" />))}</>,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }): JSX.Element {

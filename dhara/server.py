@@ -208,6 +208,9 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     @app.post('/api/task-captures',status_code=201)
     def task_capture(data:TaskCapture): return store.capture_task(data)
 
+    @app.put('/api/task-order')
+    def order_tasks(data:TaskOrder): return store.order_tasks(data.ids)
+
     @app.put('/api/tasks/{task_id}')
     def edit_task(task_id,data:TaskUpdate):
         fields=data.model_dump(mode='json'); version=fields.pop('expected_version')

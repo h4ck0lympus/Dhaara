@@ -128,6 +128,25 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color
 .later-row:hover { color: var(--fg); }
 .later-row > i { flex: none; width: 18px; height: 18px; border: 1.5px dashed var(--line); border-radius: 50%; }
 .done-toggle { align-self: flex-start; }
+.task-board { display: flex; flex-direction: column; gap: 28px; }
+.priority-group h2 { display: flex; align-items: center; gap: 10px; }
+.priority-group.high h2 { color: var(--danger); }
+.priority-group.medium h2 { color: var(--warn); }
+.group-count { color: var(--muted); letter-spacing: 0; }
+.priority-group[data-over='true'] { border-radius: var(--radius); background: rgb(var(--acc) / .05); }
+.priority-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.priority-dot.high { background: var(--danger); }
+.priority-dot.medium { background: var(--warn); }
+.priority-dot.low { border: 1px solid var(--muted); box-sizing: border-box; }
+.priority-source { flex: none; color: var(--muted); font-size: 12px; }
+.drop-hint { margin: 0; padding: 10px 12px 10px 44px; border: 1px dashed var(--line); border-radius: var(--radius-small); color: var(--muted); font-size: 13px; }
+.sortable { position: relative; touch-action: manipulation; }
+.sortable.dragging { z-index: 2; border-radius: var(--radius-small); background: var(--panel); box-shadow: 0 0 0 1px rgb(var(--acc) / .45), 0 14px 36px rgb(var(--shadow-rgb)); }
+.drag-handle { display: grid; place-items: center; flex: none; width: 24px; height: 32px; margin-left: -8px; padding: 0; border-radius: 6px; color: var(--muted); opacity: 0; cursor: grab; touch-action: none; }
+.task-row:hover .drag-handle, .drag-handle:focus-visible, .sortable.dragging .drag-handle { opacity: 1; }
+.sortable.dragging .drag-handle { cursor: grabbing; color: var(--fg); }
+.agent-activity { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 4px; }
+@media (hover: none) { .drag-handle { opacity: 1; } }
 @media (max-width: 649.98px) {
   .attention-row { flex-wrap: wrap; }
   .attention-project { width: auto; }

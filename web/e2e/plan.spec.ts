@@ -6,7 +6,9 @@ import type { DharaServer } from './server';
 
 type Task = { id: string; title: string; status: string; priority: string; version: number };
 const getTask = (dhara: DharaServer, id: string) => dhara.api<Task>('GET', `/api/tasks/${id}`);
-const todo = (page: Page) => page.getByRole('region', { name: 'To do' });
+const todo = (page: Page) => page.locator('.task-board');
+const group = (page: Page, name: 'High' | 'Medium' | 'Low') => page.getByRole('region', { name: `${name} priority` });
+const groupTitles = (page: Page, name: 'High' | 'Medium' | 'Low') => group(page, name).locator('.task-title');
 const rows = (page: Page) => todo(page).locator('.task-row');
 const priority = (page: Page, title: string) => page.getByRole('combobox', { name: `Priority for ${title}` });
 async function openTask(page: Page, title: string) {
@@ -20,22 +22,75 @@ async function setPriority(page: Page, title: string, value: 'auto' | 'high' | '
 
 test.use({ viewport: { width: 1440, height: 960 } });
 
-test('Tasks groups Needs you, agents working, To do, Later and Done today', async ({ page, dhara }) => {
+test('Tasks groups open work by priority, then Later and Done today, with no Needs you section', async ({ page, dhara }) => {
   await task(dhara, 'Available todo');
+  await task(dhara, 'Urgent todo', { due_at: new Date(Date.now() + 3_600_000).toISOString() });
+  await task(dhara, 'Optional cleanup');
   await task(dhara, 'Parked idea', { status: 'parked' });
   await task(dhara, 'Finished', { status: 'done' });
   await task(dhara, 'Review the fix', { status: 'review' });
-  await agentRun(dhara, await task(dhara, 'Agent task'));
   await gotoApp(page, dhara, '#/plan');
-  await expect(page.getByRole('region', { name: 'Needs you' }).locator('.attention-title > span')).toHaveText(['Review the fix']);
-  await expect(rows(page)).toHaveCount(2);
-  for (const title of ['Available todo', 'Agent task']) await expect(todo(page)).toContainText(title);
+  await expect(page.getByRole('region', { name: 'Needs you' })).toHaveCount(0);
+  await expect(groupTitles(page, 'High')).toHaveText(['Urgent todo']);
+  await expect(groupTitles(page, 'Medium')).toContainText(['Review the fix', 'Available todo']);
+  await expect(groupTitles(page, 'Low')).toHaveText(['Optional cleanup']);
   await expect(page.getByRole('region', { name: 'Later' })).toHaveText(/Parked idea/);
   await expect(todo(page)).not.toContainText('Parked idea');
-  await page.getByRole('button', { name: '1 agent working' }).click();
-  await expect(page.getByRole('list', { name: 'Agents working' })).toContainText('Agent task');
   await page.getByRole('button', { name: 'Done today · 1' }).click();
   await expect(page.getByRole('region', { name: 'Done today' })).toContainText('Finished');
+});
+
+async function drag(page: Page, from: string, to: { title?: string; group?: 'High' | 'Medium' | 'Low' }) {
+  const handle = page.getByRole('button', { name: `Move ${from}` });
+  const target = to.title ? page.locator('.task-row').filter({ hasText: to.title }) : group(page, to.group!).locator('h2');
+  const a = (await handle.boundingBox())!, b = (await target.boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2 + 8, { steps: 4 });
+  await page.mouse.move(b.x + 40, b.y + b.height / 2, { steps: 12 });
+  await page.mouse.move(b.x + 40, b.y + b.height / 2 + 2, { steps: 2 });
+  await page.mouse.up();
+}
+
+test('Dragging reorders tasks within a priority and the order survives a reload', async ({ page, dhara }) => {
+  for (const title of ['First', 'Second', 'Third']) await task(dhara, title);
+  await gotoApp(page, dhara, '#/plan');
+  await expect(groupTitles(page, 'Medium')).toHaveText(['Third', 'Second', 'First']);
+  await drag(page, 'First', { title: 'Third' });
+  await expect(groupTitles(page, 'Medium')).toHaveText(['First', 'Third', 'Second']);
+  await expect.poll(async () => (await serverState(dhara)).tasks.filter(t => t.title !== '').length).toBe(3);
+  await page.reload();
+  await expect(groupTitles(page, 'Medium')).toHaveText(['First', 'Third', 'Second']);
+  const state = await dhara.api<{ tasks: { title: string; version: number }[] }>('GET', '/api/state');
+  expect(state.tasks.every(t => t.version === 1)).toBe(true);
+});
+
+test('Dragging into another priority sets that priority, marked as yours', async ({ page, dhara }) => {
+  const t = await task(dhara, 'Cleanup later');
+  await task(dhara, 'Keep medium');
+  await gotoApp(page, dhara, '#/plan');
+  await expect(group(page, 'Low')).toContainText('Drag a task here to make it low priority.');
+  await drag(page, 'Cleanup later', { group: 'Low' });
+  await expect(groupTitles(page, 'Low')).toHaveText(['Cleanup later']);
+  await expect(group(page, 'Low')).toContainText('set by you');
+  await expect.poll(async () => (await getTask(dhara, t.id)).priority).toBe('low');
+  await page.reload();
+  await expect(groupTitles(page, 'Low')).toHaveText(['Cleanup later']);
+});
+
+test('Keyboard users can reorder with the drag handle', async ({ page, dhara }) => {
+  for (const title of ['First', 'Second']) await task(dhara, title);
+  await gotoApp(page, dhara, '#/plan');
+  await expect(groupTitles(page, 'Medium')).toHaveText(['Second', 'First']);
+  await page.getByRole('button', { name: 'Move Second' }).focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.sortable.dragging')).toHaveCount(1);
+  await page.keyboard.press('ArrowDown');
+  await page.waitForTimeout(250);
+  await page.keyboard.press('Space');
+  await expect(groupTitles(page, 'Medium')).toHaveText(['First', 'Second']);
+  await page.reload();
+  await expect(groupTitles(page, 'Medium')).toHaveText(['First', 'Second']);
 });
 
 test('Task rows show the title, and a due label only when known', async ({ page, dhara }) => {
@@ -98,7 +153,7 @@ test('Review result opens the result or session link', async ({ page, dhara }) =
   const t = await task(dhara, 'Review the cleanup result');
   await agentRun(dhara, t, 'completed', 'https://agent.example/result');
   await gotoApp(page, dhara, '#/plan');
-  const link = page.getByRole('region', { name: 'Needs you' }).getByRole('link', { name: 'Review ↗' });
+  const link = todo(page).getByRole('link', { name: 'Review result ↗' });
   await expect(link).toHaveAttribute('href', 'https://agent.example/result');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');

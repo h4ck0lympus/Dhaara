@@ -21,6 +21,6 @@ test('Add task input survives a snapshot refetch', async ({ page, dhara }) => {
   await add.getByLabel('What do you need to do?').fill('Half-typed task');
   await task(dhara, 'Created elsewhere');
   await refetch(page);
-  await expect(page.getByRole('region', { name: 'To do' })).toContainText('Created elsewhere');
+  await expect(page.locator('.task-board')).toContainText('Created elsewhere');
   await expect(add.getByLabel('What do you need to do?')).toHaveValue('Half-typed task');
 });

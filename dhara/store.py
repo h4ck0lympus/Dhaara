@@ -137,8 +137,11 @@ class Store:
         self.path = self._notebook_path()
         with self.db() as c:
             c.executescript(SCHEMA)
-            if 'planned_on' not in {r['name'] for r in c.execute('PRAGMA table_info(tasks)')}:
+            columns = {r['name'] for r in c.execute('PRAGMA table_info(tasks)')}
+            if 'planned_on' not in columns:
                 c.execute('ALTER TABLE tasks ADD COLUMN planned_on TEXT')
+            if 'position' not in columns:
+                c.execute('ALTER TABLE tasks ADD COLUMN position REAL')
             for key, value in {'settings': DEFAULT_SETTINGS, 'focus': None, 'context': None}.items():
                 c.execute('INSERT OR IGNORE INTO meta VALUES(?,?)', (key, jd(value)))
         self.path.chmod(0o600)
@@ -231,6 +234,15 @@ class Store:
                     c.execute('INSERT INTO task_captures VALUES(?,?,?,?,?)',
                               (capture['id'], task_id, capture['raw'], capture['fingerprint'], jd(capture['interpretation'])))
         return self.task(task_id)
+
+    def order_tasks(self, ids):
+        """Store a manual order; ordering is layout, so it changes neither version nor updated_at."""
+        with self.db() as c:
+            known = {r['id'] for r in c.execute(f"SELECT id FROM tasks WHERE id IN ({','.join('?' * len(ids))})", ids)} if ids else set()
+            missing = [task_id for task_id in ids if task_id not in known]
+            if missing: raise Problem(404, f'Task not found: {missing[0]}')
+            c.executemany('UPDATE tasks SET position=? WHERE id=?', [(index, task_id) for index, task_id in enumerate(ids)])
+        return {'ok': True}
 
     def capture_task(self, capture):
         from .task_capture import interpret
