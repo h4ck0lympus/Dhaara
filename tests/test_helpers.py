@@ -55,7 +55,7 @@ def test_helper_rejects_plaintext_remote_token():
 def test_real_agent_wrapper_success_failure_and_token_isolation(tmp_path):
  sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
  secret=secrets.token_urlsafe(32);env=strip(os.environ.copy(),('MODEL','SPEECH_MODEL'));env['DHARA_ACCESS_TOKEN']=secret
- proc=subprocess.Popen([sys.executable,str(ROOT/'run.py'),'--port',str(port),'--data-dir',str(tmp_path/'server')],cwd=ROOT,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([sys.executable,str(ROOT/'run.py'),'--no-build','--port',str(port),'--data-dir',str(tmp_path/'server')],cwd=ROOT,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   url=f'http://127.0.0.1:{port}';c=httpx.Client(base_url=url,headers={'Authorization':'Bearer '+secret},timeout=5)
   for _ in range(60):

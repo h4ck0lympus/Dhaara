@@ -18,6 +18,7 @@ if __name__=='__main__':
     parser.add_argument('--data-dir')
     parser.add_argument('--open',action='store_true',help='Open the local interface')
     parser.add_argument('--desktop',action='store_true',help='Also open the Electron shell against this service; closing it or Ctrl+C stops both')
+    parser.add_argument('--no-build',action='store_true',help='Serve web/dist as is, even when web/src is newer')
     parser.add_argument('--shell',help=argparse.SUPPRESS)
     parser.add_argument('--desktop-managed',action='store_true',help=argparse.SUPPRESS)
     parser.add_argument('--owner-pid',type=int,help=argparse.SUPPRESS)
@@ -32,6 +33,12 @@ if __name__=='__main__':
     shell=Path(args.shell or here/'electron/node_modules/electron/dist/electron')
     if args.desktop and not os.access(shell,os.X_OK):
         parser.error(f'Electron shell not found at {shell}. Run `npm --prefix electron ci && npm --prefix electron run build` first.')
+    if not args.no_build:
+        from dhara.frontend import ensure_built
+        try: built=ensure_built(here/'web')
+        except subprocess.CalledProcessError: parser.error('Interface build failed. Run `npm --prefix web ci`, then try again (or pass --no-build).')
+        if built=='built': print('Dhara: rebuilt the interface from web/src.')
+        if built=='no-npm': print('Dhara: web/dist is older than web/src and npm is not installed; serving the old interface.',file=sys.stderr)
     from dhara.desktop_service import workspace_lock
     from dhara.server import create_app
     import uvicorn

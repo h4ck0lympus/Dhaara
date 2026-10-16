@@ -55,7 +55,7 @@ uv run run.py --open
 
 The interface is at `http://127.0.0.1:8765`. Stop the server with Ctrl-C. Starting it again opens the same saved workspace.
 
-`web/dist` is not committed. If you skip the build, the API still works and the page at `/` says "Frontend not built: run `npm --prefix web run build`". Only one service can use a data directory at a time; a second start on the same workspace is refused.
+`web/dist` is not committed. `run.py` rebuilds it with `npm --prefix web run build` whenever it is missing or older than `web/src`, so you never get a stale interface; pass `--no-build` to serve it as is. Without npm, the API still works and a missing build shows "Frontend not built: run `npm --prefix web run build`" at `/`. Only one service can use a data directory at a time; a second start on the same workspace is refused.
 
 To use the desktop shell instead of a browser (Node 22; Linux), install it once, link the Chromium sandbox helper, and start it against the running service (`npm --prefix electron start` builds the TypeScript first):
 

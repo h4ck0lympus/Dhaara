@@ -27,7 +27,7 @@ def fake_shell(tmp_path, body):
 
 
 def run_py(*args):
-    return [sys.executable, str(ROOT / 'run.py'), *args]
+    return [sys.executable, str(ROOT / 'run.py'), '--no-build', *args]
 
 
 def test_desktop_opens_the_shell_against_the_service_and_stops_when_it_exits(tmp_path):
