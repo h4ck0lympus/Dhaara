@@ -6,11 +6,12 @@ import re
 import subprocess
 import sys
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
 from .env import env
-from .store import ident, now, Problem
+from .store import JOT_MAX, ident, now, Problem
 
 FOLDERS = ['Inbox','Security / CTFs','Security / Reverse Engineering','Programming / Algorithms','Learning / Neural Networks','Work / Learning','Applications / Learning','Personal']
 
@@ -50,6 +51,7 @@ def validate_organized(payload):
 class Worker:
     def __init__(self, store, model='', ollama_url='http://127.0.0.1:11434', speech_model=''):
         self.store,self.model,self.ollama_url,self.speech_model = store,model,ollama_url.rstrip('/'),speech_model
+        self.transport=None  # tests swap in an httpx mock transport
         self.stop_event=threading.Event(); self.thread=None
         if model and urlsplit(ollama_url).hostname not in ('localhost','127.0.0.1','::1') and env('ALLOW_REMOTE_MODEL')!='1':
             raise ValueError('Remote model host requires DHARA_ALLOW_REMOTE_MODEL=1. Notes would leave this machine.')
@@ -70,13 +72,27 @@ class Worker:
                 from .agent_connections import drain
                 drain(self.store)
                 self.store.tick()
-                self.process_one()
+                self.process_one() or self.process_ai_one()
             except Exception:
                 pass
             self.stop_event.wait(3)
 
+    def ai_client(self):
+        """The OpenRouter client when the user turned AI on and a key is stored; otherwise None."""
+        from .ai import OpenRouter, read_key
+        if not self.store.ai_on(): return None
+        settings=self.store.settings()
+        return OpenRouter(read_key(self.store.root),settings['ai_model'],settings['ai_audio_model'],self.transport)
+
+    def organizer_ready(self):
+        return bool(self.model) or self.store.ai_on()
+
     def organize(self,text):
-        if not self.model: raise ValueError('Set DHARA_MODEL to an installed local Ollama model to enable cleanup.')
+        client=self.ai_client()
+        if client:
+            if len(text)>60000: raise ValueError('The original is saved. AI cleanup is limited to 60,000 characters; split this note before retrying.')
+            return validate_organized(client.json(PROMPT,{'note':text},SCHEMA,'organized_note'))
+        if not self.model: raise ValueError('Turn on AI in Settings, or set DHARA_MODEL to an installed local Ollama model, to enable cleanup.')
         if len(text)>14000:
             raise ValueError('The original is saved. This CPU profile limits AI cleanup to 14,000 characters; split this note before retrying.')
         with httpx.Client(timeout=httpx.Timeout(180,connect=5),trust_env=False) as client:
@@ -87,20 +103,31 @@ class Worker:
             return validate_organized(json.loads(response.json()['response']))
 
     def transcribe(self,note_id):
+        client=self.ai_client()
+        if client:
+            with self.store.db() as c:
+                audio=[dict(r) for r in c.execute("SELECT * FROM attachments WHERE note_id=? AND mime IN ('audio/wav','audio/mpeg') ORDER BY rowid",(note_id,))]
+            if audio:
+                return '\n\n'.join(client.transcribe((self.store.blobs/f['path']).read_bytes(),'wav' if f['mime']=='audio/wav' else 'mp3') for f in audio)
         if not self.speech_model: raise ValueError('Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path. Your recording is saved.')
         with self.store.db() as c:
             audio=[dict(r) for r in c.execute("SELECT * FROM attachments WHERE note_id=? AND mime LIKE 'audio/%' ORDER BY rowid",(note_id,))]
         if not audio: raise ValueError('This capture has no audio recording')
-        fragments=[]
-        for f in audio:
-            script=Path(__file__).resolve().parents[1]/'tools'/'transcribe.py'
-            result=subprocess.run([sys.executable,str(script),'--model',self.speech_model,'--audio',str(self.store.blobs/f['path'])],
-                                  capture_output=True,text=True,timeout=1200,check=False)
-            if result.returncode:
-                raise ValueError('Local transcription failed. Install the speech extra and download the selected model; audio remains saved. See tools/transcribe.py.')
-            data=json.loads(result.stdout)
-            fragments.append(data['text'])
-        return '\n\n'.join(fragments)
+        return '\n\n'.join(self.transcribe_file(self.store.blobs/f['path']) for f in audio)
+
+    def transcribe_file(self,path):
+        script=Path(__file__).resolve().parents[1]/'tools'/'transcribe.py'
+        result=subprocess.run([sys.executable,str(script),'--model',self.speech_model,'--audio',str(path)],
+                              capture_output=True,text=True,timeout=1200,check=False)
+        if result.returncode:
+            raise ValueError('Local transcription failed. Install the speech extra and download the selected model; audio remains saved. See tools/transcribe.py.')
+        return json.loads(result.stdout)['text']
+
+    def transcribe_bytes(self,data):
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.wav',dir=self.store.root) as handle:
+            handle.write(data); handle.flush()
+            return self.transcribe_file(handle.name)
 
     def process_one(self):
         with self.store.db() as c:
@@ -113,6 +140,7 @@ class Worker:
             note=self.store.note(job['note_id'])
             if job['kind']=='transcribe':
                 transcript=self.transcribe(note['id'])
+                organizer=self.organizer_ready()
                 with self.store.db() as c:
                     row=c.execute('SELECT * FROM notes WHERE id=?',(note['id'],)).fetchone()
                     if not row['transcript']:
@@ -126,10 +154,11 @@ class Worker:
                     else: version=row['version']
                     c.execute("UPDATE notes SET processing='',error='' WHERE id=?",(note['id'],))
                     c.execute("UPDATE jobs SET status='done',updated_at=? WHERE id=?",(now(),job['id']))
-                    if self.model and row['mode']=='original': self.store.enqueue_in(c,note['id'],'organize',version)
+                    if organizer and row['mode']=='original': self.store.enqueue_in(c,note['id'],'organize',version)
             else:
                 source=note['raw']+ ('\n\nVoice transcript:\n'+note['transcript'] if note['transcript'] else '')
                 result=self.organize(source)
+                ai_on=self.store.ai_on()  # read before the write transaction: settings use their own connection
                 with self.store.db() as c:
                     row=c.execute('SELECT * FROM notes WHERE id=?',(note['id'],)).fetchone()
                     if row['version']==job['expected_version']:
@@ -138,6 +167,7 @@ class Worker:
                             (result['title'],result['body'],result['folder'],version,'AI-organized',now(),note['id']))
                         c.execute('INSERT INTO revisions(note_id,version,title,body,folder,source,created_at) VALUES(?,?,?,?,?,?,?)',
                             (note['id'],version,result['title'],result['body'],result['folder'],'AI-organized',now()))
+                        if ai_on and len(row['raw'])<=JOT_MAX: self.store.enqueue_ai(c,'note_merge',note['id'],version)
                     else:
                         c.execute('INSERT INTO suggestions VALUES(?,?,?,?,?,?)',(ident(),note['id'],result['title'],result['body'],result['folder'],now()))
                     c.execute("UPDATE notes SET processing='',error='' WHERE id=?",(note['id'],))
@@ -147,4 +177,30 @@ class Worker:
             with self.store.db() as c:
                 c.execute("UPDATE jobs SET status='error',error=?,updated_at=? WHERE id=?",(message,now(),job['id']))
                 c.execute("UPDATE notes SET processing='error',error=? WHERE id=?",(message,job['note_id']))
+        return True
+
+    def process_ai_one(self):
+        """One queued AI job. A rate limit re-queues it for later; other failures leave the rules in charge."""
+        from .ai import AIError
+        from .ai_jobs import HANDLERS, RATE_LIMIT_RETRY
+        client=self.ai_client()
+        if client is None: return False
+        with self.store.db() as c:
+            row=c.execute("SELECT * FROM ai_jobs WHERE status='queued' AND run_after<=? ORDER BY created_at LIMIT 1",(now(),)).fetchone()
+            if not row: return False
+            job=dict(row)
+            c.execute("UPDATE ai_jobs SET status='running',updated_at=? WHERE id=?",(now(),job['id']))
+        try:
+            note=HANDLERS[job['kind']](self.store,client,job)
+            status,error,after='done',note,now()
+        except AIError as failure:
+            limited='limit' in str(failure)
+            status,error='queued' if limited else 'error',str(failure)
+            after=(datetime.now(timezone.utc)+RATE_LIMIT_RETRY).isoformat(timespec='seconds') if limited else now()
+        except (ValueError,Problem) as failure:
+            status,error,after='error',str(failure),now()
+        except Exception:
+            status,error,after='error','Unexpected AI failure; nothing was changed.',now()
+        with self.store.db() as c:
+            c.execute('UPDATE ai_jobs SET status=?,error=?,run_after=?,updated_at=? WHERE id=?',(status,error,after,now(),job['id']))
         return True

@@ -197,7 +197,7 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     def state(minutes:int|None=None):
         if minutes is not None and not 1<=minutes<=1440: raise Problem(400,'Minutes must be between 1 and 1440')
         value=store.snapshot(minutes)
-        value['capabilities']={'organizer':bool(worker.model),'speech':bool(worker.speech_model),'screen_pixels':False,'sync':'single-server','model':worker.model,'speech_model':worker.speech_model}
+        value['capabilities']={'organizer':worker.organizer_ready(),'ai':store.ai_on(),'dictation':store.ai_on() or bool(worker.speech_model),'speech':bool(worker.speech_model),'screen_pixels':False,'sync':'single-server','model':(store.settings()['ai_model'] if store.ai_on() else worker.model),'speech_model':worker.speech_model}
         return value
 
     @app.get('/api/tasks/{task_id}')
@@ -243,11 +243,11 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
                 staged.append({'id':file_id,'path':file_id,'name':(upload.filename or 'attachment').replace('\\','/').rsplit('/',1)[-1][:160],'size':size,'mime':''})
                 staged[-1]['mime']=detect_mime(header,upload.content_type or '')
                 digest.update(jd({k:staged[-1][k] for k in ('name','mime','size')}).encode()); digest.update(filehash.digest())
-            result,created=store.create_capture(cap,staged,digest.hexdigest(),bool(worker.model))
+            result,created=store.create_capture(cap,staged,digest.hexdigest(),worker.organizer_ready())
             committed=created
             if not created:
                 for f in staged: (store.blobs/f['path']).unlink(missing_ok=True)
-            elif worker.speech_model and any(f['mime'].startswith('audio/') for f in staged):
+            elif (worker.speech_model or store.ai_on()) and any(f['mime'].startswith('audio/') for f in staged):
                 store.enqueue(cap.capture_id,'transcribe')
             return store.note(cap.capture_id)
         except Exception:
@@ -290,12 +290,12 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
 
     @app.post('/api/notes/{note_id}/organize')
     def organize(note_id):
-        if not worker.model: raise Problem(409,'AI cleanup is off. Set DHARA_MODEL to a downloaded local model and restart; originals remain usable without it.')
+        if not worker.organizer_ready(): raise Problem(409,'AI cleanup is off. Turn on AI in Settings, or set DHARA_MODEL to a local model; originals remain usable without it.')
         return store.enqueue(note_id,'organize')
 
     @app.post('/api/notes/{note_id}/transcribe')
     def transcribe(note_id):
-        if not worker.speech_model: raise Problem(409,'Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path (the packaged build does not include speech). Your recording is saved.')
+        if not worker.speech_model and not store.ai_on(): raise Problem(409,'Transcription is off. It runs locally on the CPU: run pip install -e ".[speech]" and python tools/download_speech_model.py base.en once, then start the service with DHARA_SPEECH_MODEL set to the printed path (the packaged build does not include speech). Your recording is saved.')
         return store.enqueue(note_id,'transcribe')
 
     @app.get('/api/attachments/{file_id}')
@@ -376,6 +376,30 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
     def ai_models():
         try: return ai.free_models()
         except ai.AIError as error: raise Problem(502,str(error))
+
+    @app.post('/api/dictate')
+    async def dictate(audio:UploadFile=File(...)):
+        data=await audio.read(10*1024*1024+1)
+        await audio.close()
+        if len(data)>10*1024*1024: raise Problem(413,'Keep dictation under about five minutes.')
+        if data[:4]!=b'RIFF' or data[8:12]!=b'WAVE': raise Problem(400,'Dictation expects WAV audio.')
+        try:
+            client=worker.ai_client()
+            if client:
+                return {'text':client.transcribe(data,'wav'),'source':'openrouter'}
+            if worker.speech_model:
+                return {'text':worker.transcribe_bytes(data),'source':'local'}
+        except (ai.AIError,ValueError) as error: raise Problem(502,str(error))
+        raise Problem(409,'Dictation needs AI turned on in Settings, or a local speech model.')
+
+    @app.post('/api/merges/{sid}/accept')
+    def accept_merge(sid): return store.accept_merge(sid)
+
+    @app.post('/api/merges/{sid}/undo')
+    def undo_merge(sid): return store.undo_merge(sid)
+
+    @app.post('/api/merges/{sid}/dismiss')
+    def dismiss_merge(sid): return store.dismiss_merge(sid)
 
     @app.post('/api/context')
     def context(data:ContextInput): return store.observe(data)

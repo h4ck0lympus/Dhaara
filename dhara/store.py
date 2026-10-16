@@ -92,6 +92,18 @@ CREATE TABLE IF NOT EXISTS jobs(
 );
 CREATE UNIQUE INDEX IF NOT EXISTS one_pending_job ON jobs(note_id, kind)
  WHERE status IN ('queued','running');
+CREATE TABLE IF NOT EXISTS ai_jobs(
+ id TEXT PRIMARY KEY, kind TEXT NOT NULL, target_id TEXT NOT NULL, status TEXT NOT NULL,
+ expected_version INTEGER NOT NULL, error TEXT NOT NULL DEFAULT '', run_after TEXT NOT NULL,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS one_pending_ai_job ON ai_jobs(target_id, kind)
+ WHERE status IN ('queued','running');
+CREATE TABLE IF NOT EXISTS merge_suggestions(
+ id TEXT PRIMARY KEY, note_id TEXT NOT NULL REFERENCES notes(id), target_id TEXT NOT NULL REFERENCES notes(id),
+ reason TEXT NOT NULL, state TEXT NOT NULL, target_version INTEGER,
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tokens(
  id TEXT PRIMARY KEY, hash TEXT NOT NULL UNIQUE, name TEXT NOT NULL, scope TEXT NOT NULL,
  task_ids TEXT NOT NULL, created_at TEXT NOT NULL
@@ -145,6 +157,11 @@ class Store:
                 c.execute('ALTER TABLE tasks ADD COLUMN planned_on TEXT')
             if 'position' not in columns:
                 c.execute('ALTER TABLE tasks ADD COLUMN position REAL')
+            for column, kind in (('ai_priority', 'TEXT'), ('ai_reason', 'TEXT'), ('ai_version', 'INTEGER')):
+                if column not in columns:
+                    c.execute(f'ALTER TABLE tasks ADD COLUMN {column} {kind}')
+            if 'merged_into' not in {r['name'] for r in c.execute('PRAGMA table_info(notes)')}:
+                c.execute('ALTER TABLE notes ADD COLUMN merged_into TEXT')
             for key, value in {'settings': DEFAULT_SETTINGS, 'focus': None, 'context': None}.items():
                 c.execute('INSERT OR IGNORE INTO meta VALUES(?,?)', (key, jd(value)))
         self.path.chmod(0o600)
@@ -194,6 +211,7 @@ class Store:
         stamp = now()
         deps = list(dict.fromkeys(data['dependencies']))
         if task_id in deps: raise Problem(400, 'A task cannot depend on itself')
+        ai_on = self.ai_on()
         with self.db() as c:
             if capture:
                 previous = c.execute('SELECT * FROM task_captures WHERE id=?', (capture['id'],)).fetchone()
@@ -227,6 +245,9 @@ class Store:
                         c.execute("UPDATE meta SET value='null' WHERE key='focus'")
                 if data['status'] == 'done':
                     c.execute("UPDATE reminders SET state='dismissed' WHERE task_id=?", (task_id,))
+                changed = any((jd(deps) if k == 'dependencies' else data[k]) != old[k] for k in TASK_AI_FIELDS)
+                if ai_on and changed and data['priority'] == 'auto':
+                    self.enqueue_ai(c, 'task_priority', task_id, old['version'] + 1)
             else:
                 values = [data[k] for k in ('title','project','detail','next_action','status','priority','due_at','not_before','estimate_minutes')]
                 c.execute('''INSERT INTO tasks(id,title,project,detail,next_action,status,priority,due_at,
@@ -236,11 +257,62 @@ class Store:
                 if capture:
                     c.execute('INSERT INTO task_captures VALUES(?,?,?,?,?)',
                               (capture['id'], task_id, capture['raw'], capture['fingerprint'], jd(capture['interpretation'])))
+                if ai_on:
+                    self.enqueue_ai(c, 'task_interpret' if capture else 'task_priority', task_id, 1)
         return self.task(task_id)
 
     def ai_on(self):
         from .ai import read_key
         return bool(self.settings()['ai_enabled'] and read_key(self.root))
+
+    @staticmethod
+    def enqueue_ai(c, kind, target_id, version, delay=0):
+        stamp = now()
+        after = (datetime.now(timezone.utc) + timedelta(seconds=delay)).isoformat(timespec='seconds') if delay else stamp
+        try:
+            c.execute('INSERT INTO ai_jobs VALUES(?,?,?,?,?,?,?,?,?)', (ident(), kind, target_id, 'queued', version, '', after, stamp, stamp))
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def merge_suggestion(self, sid):
+        with self.db() as c:
+            row = c.execute('SELECT * FROM merge_suggestions WHERE id=?', (sid,)).fetchone()
+            if not row: raise Problem(404, 'Merge suggestion not found')
+            return dict(row)
+
+    def accept_merge(self, sid):
+        """Append the jot to its target as a new revision and hide the jot. Undo restores both."""
+        suggestion = self.merge_suggestion(sid)
+        if suggestion['state'] != 'open': raise Problem(409, 'This suggestion was already handled.')
+        jot, target = self.note(suggestion['note_id']), self.note(suggestion['target_id'])
+        if jot.get('merged_into') or target.get('merged_into'): raise Problem(409, 'One of these notes was already merged.')
+        body = target['body'].rstrip() + '\n\n' + jot['body'].strip()
+        self.edit_note(target['id'], {'title': target['title'], 'folder': target['folder'], 'body': body, 'expected_version': target['version']}, 'merged jot')
+        with self.db() as c:
+            c.execute('UPDATE notes SET merged_into=? WHERE id=?', (target['id'], jot['id']))
+            c.execute("UPDATE merge_suggestions SET state='merged',target_version=?,updated_at=? WHERE id=?", (target['version'], now(), sid))
+        return self.merge_suggestion(sid)
+
+    def undo_merge(self, sid):
+        suggestion = self.merge_suggestion(sid)
+        if suggestion['state'] != 'merged': raise Problem(409, 'Only a merged suggestion can be undone.')
+        target = self.note(suggestion['target_id'])
+        if target['version'] != suggestion['target_version'] + 1:
+            raise Problem(409, 'The note changed after the merge. Restore an earlier version from its history instead.')
+        before = next(r for r in self.history(target['id']) if r['version'] == suggestion['target_version'])
+        self.edit_note(target['id'], {k: before[k] for k in ('title', 'folder', 'body')} | {'expected_version': target['version']}, 'merge undone')
+        with self.db() as c:
+            c.execute('UPDATE notes SET merged_into=NULL WHERE id=?', (suggestion['note_id'],))
+            c.execute("UPDATE merge_suggestions SET state='undone',updated_at=? WHERE id=?", (now(), sid))
+        return self.merge_suggestion(sid)
+
+    def dismiss_merge(self, sid):
+        suggestion = self.merge_suggestion(sid)
+        if suggestion['state'] != 'open': raise Problem(409, 'This suggestion was already handled.')
+        with self.db() as c:
+            c.execute("UPDATE merge_suggestions SET state='dismissed',updated_at=? WHERE id=?", (now(), sid))
+        return self.merge_suggestion(sid)
 
     def order_tasks(self, ids):
         """Store a manual order; ordering is layout, so it changes neither version nor updated_at."""
@@ -254,6 +326,7 @@ class Store:
     def capture_task(self, capture):
         from .task_capture import interpret
         fields, explanation = interpret(capture.raw, capture.local_day)
+        explanation['local_day'] = capture.local_day.isoformat()
         if capture.details:
             fields.update(capture.details.model_dump(mode='json', exclude_unset=True))
             explanation['manual_fields'] = sorted(capture.details.model_fields_set)
@@ -276,6 +349,7 @@ class Store:
         title, folder = basic_filing(raw, capture.project)
         if not raw.strip(): title = 'Voice note' if any(f['mime'].startswith('audio/') for f in files) else 'Visual note'
         stamp = now()
+        ai_on = self.ai_on()
         with self.db() as c:
             previous = c.execute('SELECT * FROM notes WHERE id=?', (capture.capture_id,)).fetchone()
             if previous:
@@ -296,6 +370,8 @@ class Store:
                 c.execute("UPDATE notes SET processing='transcription available' WHERE id=?", (capture.capture_id,))
             elif ai_enabled and capture.organize and raw.strip():
                 self.enqueue_in(c, capture.capture_id, 'organize', 1)
+            elif ai_on and raw.strip() and len(raw) <= JOT_MAX:
+                self.enqueue_ai(c, 'note_merge', capture.capture_id, 1)
         return self.note(capture.capture_id), True
 
     def note(self, note_id):
@@ -476,7 +552,12 @@ class Store:
                 ORDER BY tasks.created_at DESC''')]
             runs = [dict(r) for r in c.execute('SELECT * FROM runs ORDER BY updated_at DESC')]
             reminders = [dict(r) for r in c.execute("SELECT * FROM reminders WHERE state!='dismissed' ORDER BY at")]
-            notes = [dict(r) for r in c.execute('SELECT id,title,folder,project,task_id,mode,processing,error,version,created_at,updated_at FROM notes ORDER BY updated_at DESC')]
+            notes = [dict(r) for r in c.execute('SELECT id,title,folder,project,task_id,mode,processing,error,version,created_at,updated_at FROM notes WHERE merged_into IS NULL ORDER BY updated_at DESC')]
+            merges = [dict(r) for r in c.execute('''SELECT m.id, m.note_id, m.target_id, m.reason, m.state, m.updated_at,
+                jot.title AS note_title, target.title AS target_title FROM merge_suggestions m
+                JOIN notes jot ON jot.id=m.note_id JOIN notes target ON target.id=m.target_id
+                WHERE m.state='open' OR (m.state='merged' AND m.updated_at>=?) ORDER BY m.created_at DESC''',
+                ((datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec='seconds'),))]
             rules = [dict(r) for r in c.execute('SELECT * FROM context_rules')]
         by_id = {t['id']:t for t in tasks}
         by_task = {}
@@ -495,8 +576,7 @@ class Store:
             task['runs'] = by_task.get(task['id'], [])
             task['blocked_by'] = [d for d in task['dependencies'] if by_id[d]['status']!='done']
             task['reminders'] = [r for r in reminders if r['task_id']==task['id']]
-            task['effective_priority'],task['priority_reason'] = priority(task, tasks, stamp)
-            task['priority_source'] = 'automatic' if task['priority']=='auto' else 'you'
+            task['effective_priority'],task['priority_reason'],task['priority_source'] = priority(task, tasks, stamp)
             unfinished = task['status'] not in ('done','parked')
             task['attention_reason'] = ''
             if unfinished:
@@ -520,7 +600,7 @@ class Store:
         available.sort(key=rank); attention.sort(key=rank)
         future = sorted([t for t in tasks if t['status']!='done'],key=rank)
         return {'tasks':tasks,'notes':notes,'runs':runs,'reminders':reminders,'focus':focus,
-                'context':context,'context_rules':rules,'settings':self.settings(),
+                'context':context,'context_rules':rules,'settings':self.settings(),'merge_suggestions':merges,
                 'available':available,'attention':attention,'up_next':future,'server_time':stamp}
 
     def export_data(self):
@@ -531,12 +611,17 @@ class Store:
 
 
 def priority(task, all_tasks, stamp):
-    if task['priority']!='auto': return task['priority'],'Priority set by you.'
+    """(level, reason, source). Hard rules (deadlines, blocking) beat the AI; the AI beats the neutral defaults."""
+    if task['priority']!='auto': return task['priority'],'Priority set by you.','you'
     if task['due_at']:
         hours = (datetime.fromisoformat(task['due_at'])-datetime.fromisoformat(stamp)).total_seconds()/3600
-        if hours<=48: return 'high','Your explicit deadline is within 48 hours or overdue.'
+        if hours<=48: return 'high','Your explicit deadline is within 48 hours or overdue.','automatic'
     if any(task['id'] in t['dependencies'] and t['status'] not in ('done','parked') for t in all_tasks):
-        return 'high','This task is blocking another commitment.'
-    if task['status']=='parked' or re.search(r'\b(optional|someday|nice to have)\b',task['title'],re.I):
-        return 'low','Optional or intentionally parked work.'
-    return 'medium','No explicit urgency; neutral default.'
+        return 'high','This task is blocking another commitment.','automatic'
+    if task['status']=='parked':
+        return 'low','Optional or intentionally parked work.','automatic'
+    if task.get('ai_priority') in ('high','medium','low') and task.get('ai_version')==task['version']:
+        return task['ai_priority'],task.get('ai_reason') or 'Suggested by the AI model.','ai'
+    if re.search(r'\b(optional|someday|nice to have)\b',task['title'],re.I):
+        return 'low','Optional or intentionally parked work.','automatic'
+    return 'medium','No explicit urgency; neutral default.','automatic'
