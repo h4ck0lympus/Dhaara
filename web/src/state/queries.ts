@@ -2,6 +2,10 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClie
 import { useSyncExternalStore } from 'react';
 import { ApiError, call } from '../api/client';
 import {
+  AIStatusSchema,
+  DictationSchema,
+  FreeModelListSchema,
+  MergeResultSchema,
   ContextRuleSchema,
   FocusSchema,
   NoteSchema,
@@ -15,7 +19,9 @@ import {
   TaskSchema,
   TokenCreatedSchema,
   TokenSummarySchema,
+  type AIStatus,
   type Focus,
+  type FreeModel,
   type Note,
   type NoteSummary,
   type NoteUpdateBody,
@@ -185,6 +191,33 @@ export function useReorderTasks(): UseMutationResult<void, ApiError, TaskMove> {
     onError: (_error, _move, previous) => { for (const [key, data] of previous ?? []) qc.setQueryData(key, data); },
     onSettled: () => qc.invalidateQueries({ queryKey: ['snapshot'] }),
   });
+}
+
+export function useAIStatus(): UseQueryResult<AIStatus, ApiError> {
+  return useQuery<AIStatus, ApiError>({ queryKey: ['ai'], queryFn: () => call('ai', AIStatusSchema) });
+}
+
+export function useFreeModels(enabled: boolean): UseQueryResult<FreeModel[], ApiError> {
+  return useQuery<FreeModel[], ApiError>({ queryKey: ['ai-models'], queryFn: () => call('aiModels', FreeModelListSchema), enabled, staleTime: 60 * 60_000 });
+}
+
+export function useSetAIKey(): UseMutationResult<AIStatus, ApiError, { key: string }> {
+  return useApiMutation((v: { key: string }) => call('aiKeySet', AIStatusSchema, { body: v }), () => [['ai']]);
+}
+
+export function useDeleteAIKey(): UseMutationResult<AIStatus, ApiError, void> {
+  return useApiMutation(() => call('aiKeyDelete', AIStatusSchema), () => [['ai']]);
+}
+
+export function useMergeAction(): UseMutationResult<{ id: string; state: string }, ApiError, { id: string; action: 'accept' | 'undo' | 'dismiss' }> {
+  const key = { accept: 'mergeAccept', undo: 'mergeUndo', dismiss: 'mergeDismiss' } as const;
+  return useApiMutation((v: { id: string; action: 'accept' | 'undo' | 'dismiss' }) => call(key[v.action], MergeResultSchema, { params: { id: v.id } }));
+}
+
+export function dictate(audio: Blob): Promise<{ text: string; source: 'openrouter' | 'local' }> {
+  const form = new FormData();
+  form.append('audio', audio, 'dictation.wav');
+  return call('dictate', DictationSchema, { body: form });
 }
 
 export function useSaveTask(): UseMutationResult<Task, ApiError, { id: string; body: TaskUpdateBody }> {

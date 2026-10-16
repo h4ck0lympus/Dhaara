@@ -82,12 +82,13 @@ export function makeSnapshot(changes: Partial<Snapshot> = {}): Snapshot {
     focus: null,
     context: null,
     context_rules: [],
-    settings: { observation_enabled: false, motion: false, companion: 'cat', companion_size: 40, display_name: '', theme: 'dark' },
+    settings: { observation_enabled: false, motion: false, companion: 'cat', companion_size: 40, display_name: '', theme: 'dark', ai_enabled: false, ai_model: 'openrouter/free', ai_audio_model: 'thinkingmachines/inkling-small:free' },
     available: [],
     attention: [],
     up_next: [],
     server_time: STAMP,
-    capabilities: { organizer: false, speech: false, screen_pixels: false, sync: 'single-server', model: '', speech_model: '' },
+    capabilities: { organizer: false, ai: false, dictation: false, speech: false, screen_pixels: false, sync: 'single-server', model: '', speech_model: '' },
+    merge_suggestions: [],
     ...changes,
   };
 }

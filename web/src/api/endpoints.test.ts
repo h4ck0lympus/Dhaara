@@ -7,7 +7,8 @@ import { ENDPOINTS, endpointPath, type Replay } from './endpoints';
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
 const SPEC_ONCE_PER_ACTION = [
-  'POST /api/focus', 'PUT /api/tasks/{id}', 'PUT /api/task-order', 'PUT /api/notes/{id}', 'POST /api/notes/{id}/restore/{v}',
+  'POST /api/focus', 'PUT /api/tasks/{id}', 'PUT /api/task-order', 'PUT /api/ai/key', 'DELETE /api/ai/key', 'POST /api/dictate',
+  'POST /api/merges/{id}/accept', 'POST /api/merges/{id}/undo', 'POST /api/merges/{id}/dismiss', 'PUT /api/notes/{id}', 'POST /api/notes/{id}/restore/{v}',
   'POST /api/notes/{id}/suggestions/{sid}/apply', 'POST /api/notes/{id}/organize', 'POST /api/notes/{id}/transcribe',
   'POST /api/reminders', 'POST /api/reminders/{id}/snooze', 'DELETE /api/reminders/{id}', 'POST /api/runs/{id}/end-tracking',
   'PATCH /api/settings', 'POST /api/context/rules', 'DELETE /api/context/rules/{id}',

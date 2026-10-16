@@ -120,15 +120,35 @@ export const SettingsSchema = z.object({
   companion_size: int().min(24).max(72),
   display_name: z.string().max(60).default(''),
   theme: z.enum(['dark', 'light', 'system']).default('dark'),
+  ai_enabled: z.boolean().default(false),
+  ai_model: z.string().default('openrouter/free'),
+  ai_audio_model: z.string().default('thinkingmachines/inkling-small:free'),
 });
 export const CapabilitiesSchema = z.object({
   organizer: z.boolean(),
+  ai: z.boolean().default(false),
+  dictation: z.boolean().default(false),
   speech: z.boolean(),
   screen_pixels: z.boolean(),
   sync: z.string(),
   model: z.string(),
   speech_model: z.string(),
 });
+export const MergeSuggestionSchema = z.object({
+  id: z.string(), note_id: z.string(), target_id: z.string(), reason: z.string(),
+  state: z.enum(['open', 'merged']), updated_at: z.string(), note_title: z.string(), target_title: z.string(),
+});
+export const MergeResultSchema = z.object({ id: z.string(), state: z.enum(['open', 'merged', 'undone', 'dismissed']) });
+export const AIStatusSchema = z.object({
+  configured: z.boolean(), key_hint: z.string(), from_env: z.boolean(), enabled: z.boolean(), model: z.string(), audio_model: z.string(),
+});
+export const FreeModelSchema = z.object({ id: z.string(), name: z.string(), context: z.number(), structured: z.boolean(), audio: z.boolean() });
+export const FreeModelListSchema = z.array(FreeModelSchema);
+export const DictationSchema = z.object({ text: z.string(), source: z.enum(['openrouter', 'local']) });
+export type MergeSuggestion = z.infer<typeof MergeSuggestionSchema>;
+export type AIStatus = z.infer<typeof AIStatusSchema>;
+export type FreeModel = z.infer<typeof FreeModelSchema>;
+
 export const SnapshotSchema = z.object({
   tasks: z.array(SnapshotTaskSchema),
   notes: z.array(NoteSummarySchema),
@@ -143,6 +163,7 @@ export const SnapshotSchema = z.object({
   up_next: z.array(SnapshotTaskSchema),
   server_time: z.string(),
   capabilities: CapabilitiesSchema,
+  merge_suggestions: z.array(MergeSuggestionSchema).default([]),
 });
 export const TokenSummarySchema = z.object({ id: z.string(), name: z.string(), scope: z.enum(['agent', 'observer']), created_at: z.string() });
 export const TokenCreatedSchema = z.object({ id: z.string(), token: z.string(), scope: z.enum(['agent', 'observer']), task_ids: z.array(z.string()) });
@@ -169,4 +190,4 @@ export type TaskUpdateBody = TaskEditable & { expected_version: number };
 export type TaskCaptureBody = { capture_id: string; raw: string; local_day: string; details: Partial<TaskEditable> };
 export type CapturePayload = { capture_id: string; raw: string; project: ''; task_id: string | null; organize: true };
 export type NoteUpdateBody = { title: string; folder: string; body: string; expected_version: number };
-export type SettingsPatch = Partial<Pick<Settings, 'observation_enabled' | 'motion' | 'companion' | 'companion_size' | 'display_name' | 'theme'>>;
+export type SettingsPatch = Partial<Pick<Settings, 'observation_enabled' | 'motion' | 'companion' | 'companion_size' | 'display_name' | 'theme' | 'ai_enabled' | 'ai_model' | 'ai_audio_model'>>;
