@@ -105,7 +105,10 @@ CREATE INDEX IF NOT EXISTS events_by_run ON events(run_id, seq);
 CREATE INDEX IF NOT EXISTS reminders_due ON reminders(state, at);
 '''
 
-DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': True, 'companion': 'cat', 'companion_size': 40, 'display_name': '', 'theme': 'dark'}
+DEFAULT_SETTINGS = {'observation_enabled': False, 'motion': True, 'companion': 'cat', 'companion_size': 40, 'display_name': '', 'theme': 'dark',
+                    'ai_enabled': False, 'ai_model': 'openrouter/free', 'ai_audio_model': 'thinkingmachines/inkling-small:free'}
+TASK_AI_FIELDS = ('title', 'detail', 'next_action', 'due_at', 'dependencies', 'project')
+JOT_MAX = 800
 
 class Store:
     NOTEBOOK = 'dhara.sqlite3'
@@ -234,6 +237,10 @@ class Store:
                     c.execute('INSERT INTO task_captures VALUES(?,?,?,?,?)',
                               (capture['id'], task_id, capture['raw'], capture['fingerprint'], jd(capture['interpretation'])))
         return self.task(task_id)
+
+    def ai_on(self):
+        from .ai import read_key
+        return bool(self.settings()['ai_enabled'] and read_key(self.root))
 
     def order_tasks(self, ids):
         """Store a manual order; ordering is layout, so it changes neither version nor updated_at."""

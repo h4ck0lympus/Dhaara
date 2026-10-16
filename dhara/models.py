@@ -85,6 +85,9 @@ class NoteUpdate(Input):
     body: str = Field(max_length=150000)
     expected_version: int = Field(ge=1)
 
+class AIKeyInput(Input):
+    key: str = Field(min_length=1, max_length=300)
+
 class VersionInput(Input):
     expected_version: int = Field(ge=1)
 
@@ -142,6 +145,9 @@ class SettingsInput(Input):
     companion_size: int | None = Field(default=None, ge=24, le=72)
     display_name: str | None = Field(default=None, max_length=60)
     theme: Literal['dark', 'light', 'system'] | None = None
+    ai_enabled: bool | None = None
+    ai_model: str | None = Field(default=None, pattern=r'^[A-Za-z0-9_.\-/:]{1,120}$')
+    ai_audio_model: str | None = Field(default=None, pattern=r'^[A-Za-z0-9_.\-/:]{1,120}$')
 
     @field_validator('display_name', mode='before')
     @classmethod

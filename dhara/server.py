@@ -20,6 +20,7 @@ from .models import *
 from .env import env
 from .store import Store, Problem, ident, jd, now
 from .worker import Worker
+from . import ai
 
 ROOT=Path(__file__).resolve().parents[1]
 MAX_UPLOAD=32*1024*1024
@@ -346,7 +347,35 @@ def create_app(data_dir=None, start_worker=True, admin_token=None, desktop_ident
         return {'ok':True}
 
     @app.patch('/api/settings')
-    def settings(data:SettingsInput): return store.settings(data.model_dump(exclude_unset=True))
+    def settings(data:SettingsInput):
+        if data.ai_enabled and not ai.read_key(store.root):
+            raise Problem(409,'Add an OpenRouter key before turning AI on.')
+        return store.settings(data.model_dump(exclude_unset=True))
+
+    def ai_status():
+        key=ai.read_key(store.root); current=store.settings()
+        return {'configured':bool(key),'key_hint':ai.key_hint(key),'from_env':bool(env('OPENROUTER_API_KEY')),
+                'enabled':bool(current['ai_enabled'] and key),'model':current['ai_model'],'audio_model':current['ai_audio_model']}
+
+    @app.get('/api/ai')
+    def get_ai(): return ai_status()
+
+    @app.put('/api/ai/key')
+    def put_ai_key(data:AIKeyInput):
+        try: ai.write_key(store.root,data.key)
+        except ai.AIError as error: raise Problem(400,str(error))
+        return ai_status()
+
+    @app.delete('/api/ai/key')
+    def delete_ai_key():
+        ai.delete_key(store.root)
+        store.settings({'ai_enabled':False})
+        return ai_status()
+
+    @app.get('/api/ai/models')
+    def ai_models():
+        try: return ai.free_models()
+        except ai.AIError as error: raise Problem(502,str(error))
 
     @app.post('/api/context')
     def context(data:ContextInput): return store.observe(data)
