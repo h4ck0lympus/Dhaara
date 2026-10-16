@@ -97,7 +97,7 @@ This is the AppImage's workspace, so both share one notebook; pick another path 
 ## First five minutes
 
 1. Press **N** anywhere (or open **Tasks** and click **New task**). Type a sentence and save. Details and next actions are optional; priority remains Automatic unless you choose an override in the task's detail. A planned day is separate from a deadline, reminder or availability constraint.
-2. Open **Home** to see your current focus, agents that need you, **If you have a few minutes** (available work) and your next tasks by due date. **Tasks** groups everything into Needs you, agents working, To do (by priority), Later (parked) and Done today. Tasks are excluded from available work if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called.
+2. Open **Home** to see your current focus, agents that need you, **If you have a few minutes** (available work) and your next tasks by due date. **Tasks** groups everything into Needs you, agents working, To do (by priority), Later (parked) and Done today. Tasks are excluded from available work if they have unfinished dependencies or a future start date, are parked, waiting or blocked, have an agent working, waiting for input or failed, or are already your focus. Ranking is rule-based and explains itself; no model is called unless you turn on AI (below).
 3. On **Home**, click **Capture a thought…** (or press **Ctrl K**) and dump a thought. Paste an image, drop a screenshot, or use Sketch. **Save note** sends the bundle to the server. Before that, the draft stays in this browser's local storage.
 4. Open **Notes** (or press **/** to search). Folders, the note list and the open note sit side by side; resize them by dragging or with the arrow keys, and hide each with **Ctrl 1/2/3**. The original is separate from the editable note. Edits create revisions; restoring an older version creates another revision instead of destroying history.
 5. To track a command or agent, create a task-scoped token in **Settings** (the gear, bottom left) and use the wrapper described below.
@@ -114,12 +114,13 @@ You do not have to create tasks from learning notes. Linking a note to a task is
 | Organizing notes | Conservative keyword folder assignment by default. **It does not rewrite grammar without a model.** Optional local Ollama adapter produces an editable organized note while preserving the original. |
 | Voice | Records and saves audio. Optional faster-whisper CPU worker transcribes after saving. **No live transcript in this release.** |
 | Recovery | Local browser draft/outbox, retry on reconnect, explicit failed-upload queue, original capture, note revisions, optimistic edit-conflict detection. |
-| Tasks | Dependencies, future start, planned day, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus; Needs you, Running, Parked, Completed and All views. AI-assigned automatic priority ("Auto · AI") is the next milestone, not built yet. |
+| Tasks | Dependencies, future start, planned day, due dates, estimates, notes/session links, transparent automatic priorities labelled "Auto · rules", persistent manual overrides labelled "Set by you", manual or inferred focus; drag to reorder within a priority group; Needs you, Running, Parked, Completed and All views. With AI on, automatic priority can come from the model ("Auto · AI"); deadline and blocking rules still win. |
 | Next action | Deterministic “What can I do now?” selection from existing actionable tasks; unknown estimates are not fabricated. |
 | Agent lifecycle | One-click Claude Code / Codex hook connection (or a local plugin package); scoped event API and real subprocess wrapper; ordered/deduplicated events, stale-run status, durable wrapper outbox. An exited agent produces a review item, not a completed task. |
 | Reminders | Persisted schedule, in-app due queue, snooze/dismiss, due processing after server restart. Optional browser notification while the app is running. |
 | Window context | Experimental opt-in Sway metadata observer with application/title-to-task rules. Pinned focus wins. **No screenshot capture or vision inference.** |
-| Companion | Separate experimental native GTK/Sway cat/dot helper (`tools/sway_companion.py`, sprite `tools/assets/kitten-illustrated.png`), output/workspace placement code and click-to-expand task list. The in-app browser preview was removed. |
+| Companion | Pixel kitty in its own always-on-top Electron window (`--no-companion` turns it off): six states, hover to pet, click for a mini panel with Needs you, reminders, Today, quick capture and a mic. The older native GTK/Sway helper (`tools/sway_companion.py`) still exists. |
+| AI (opt-in) | OpenRouter free models for note cleanup and filing, task understanding, AI priority, merging related jots, and dictation. Off by default. |
 | Portability | Markdown/JSON/attachment export. One local SQLite server, no managed cloud account or automatic synchronization of independent installations. |
 
 ## Optional local note cleanup
@@ -258,6 +259,34 @@ python tools/agent.py --outbox .data/coding-events.sqlite3 --flush
 ```
 
 The initial run registration requires a reachable server. For interactive agents with native lifecycle/approval hooks, use the event API rather than treating terminal-process liveness as semantic progress.
+
+## Optional AI with OpenRouter (free models)
+
+Off by default. When on, the text of notes and tasks, and dictated or voice-note audio, is sent to [OpenRouter](https://openrouter.ai). Nothing is sent until you add a key **and** switch it on.
+
+1. Create a free key at openrouter.ai.
+2. In **Settings → AI · OpenRouter**, paste the key and **Save key**. It is stored write-only in the data directory (`openrouter.key`, mode 0600) and never shown again; only the last four characters are displayed. Alternatively set `DHARA_OPENROUTER_API_KEY`, which wins over the saved key.
+3. Switch on **Send to OpenRouter**. Pick a text model and a dictation model; the list is the free OpenRouter models from the [models.dev](https://models.dev) catalog (cached for a day). The defaults are `openrouter/free` and `thinkingmachines/inkling-small:free`.
+
+What it does:
+
+- **Note cleanup and filing** replaces the local Ollama cleanup while AI is on. The original is kept, as before.
+- **Task understanding** reads a captured task and fills due date, planned day, estimate and project, never overwriting a field you set.
+- **AI priority** sets automatic priority with a reason ("Auto · AI"). Deadlines and blocking rules still win; your manual priority always wins.
+- **Merge related jots** suggests folding a short note into a related one. Merging is undoable for 24 hours, until the target note is edited.
+- **Dictation**: the mic in the kitty panel sends a WAV recording for transcription. Without AI, the local faster-whisper model is used if configured.
+
+Free models have daily request limits. When a request is rate-limited the job is retried after ten minutes, and the rules stay in charge meanwhile. Model output can be wrong; every AI change is labelled and editable.
+
+## Desktop kitty
+
+The Electron app opens a small transparent window in the bottom-right corner of the screen. The kitty's state shows, in order of priority: offline, something needs you, a reminder is due, agents are working, focus, or asleep. Hover to pet it. Click it for the mini panel. **Quiet 30 min** calms it. Typing `todo:` in its capture box creates a task instead of a note. Settings → Companion switches between Cat, Dot and Hidden. To start the shell without it, pass `--no-companion` (e.g. `npm --prefix electron start -- --server http://127.0.0.1:8765 --no-companion`); `run.py --desktop` does not forward it.
+
+Wayland compositors ignore window positioning. On Sway, add:
+
+```
+for_window [title="^Dhara companion$"] floating enable, sticky enable, border none
+```
 
 ## Tiny Sway companion (experimental)
 
