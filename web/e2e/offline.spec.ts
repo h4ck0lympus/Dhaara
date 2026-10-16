@@ -7,8 +7,8 @@ test('Reconnect returns to real available work', async ({ page, context, dhara }
   await openKind(page, context, dhara, 'disconnected');
   await expect(page.locator('.offline-banner')).toContainText('Server disconnected.');
   await expect(page.getByRole('region', { name: 'If you have a few minutes' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: /^Agents:/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Agents:/ })).toHaveCount(0);
   await context.setOffline(false);
   await ready(page, 'available');
-  await expect(page.locator('#connection-label')).toHaveText('Server connected');
+  await expect(page.locator('.app')).toHaveAttribute('data-connection', 'online');
 });

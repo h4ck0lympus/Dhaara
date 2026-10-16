@@ -89,7 +89,7 @@ test('the greeting uses the display name and omits an empty one', async ({ page,
 });
 
 test('Every control is keyboard reachable with a visible focus ring', async ({ page, dhara }) => {
-  await dhara.api('POST', '/api/tasks', { title: 'Read the ownership chapter' });
+  await dhara.api('POST', '/api/tasks', { title: 'Read the ownership chapter', due_at: new Date(Date.now() - 60_000).toISOString() });
   await gotoApp(page, dhara);
   const seen = new Set<string>();
   const readFocused = () => page.evaluate(() => {
@@ -105,7 +105,7 @@ test('Every control is keyboard reachable with a visible focus ring', async ({ p
     await expect.poll(async () => (await readFocused())?.ring ?? false, { message: `visible focus ring on ${focused.name}` }).toBe(true);
     seen.add(focused.name);
   }
-  for (const name of ['Home', 'Notes', 'Tasks', 'Search notes…  /', 'Notifications', 'Complete Read the ownership chapter', 'Read the ownership chapter', 'See all →', 'Settings']) expect(seen.has(name), name).toBe(true);
+  for (const name of ['Home', 'Notes', 'Tasks', 'Search notes…  /', 'Notifications', 'Complete Read the ownership chapter', 'Read the ownership chapter', 'All tasks →', 'Settings']) expect(seen.has(name), name).toBe(true);
   expect([...seen].some(name => name.startsWith('Capture a thought…')), 'Capture a thought…').toBe(true);
 });
 

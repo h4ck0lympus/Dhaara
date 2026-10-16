@@ -101,8 +101,10 @@ test('Phone touch targets are at least 44×44 px', async ({ page, context, dhara
   expect(await smallTargets(page)).toEqual([]);
   await seedEverything(dhara);
   await task(dhara, 'Finished today', { status: 'done' });
+  await gotoApp(page, dhara);
+  await page.getByRole('button', { name: /^Agents:/ }).click();
+  expect(await smallTargets(page)).toEqual([]);
   await gotoApp(page, dhara, '#/plan');
-  await page.getByRole('button', { name: /agents? working/ }).click();
   await page.getByRole('button', { name: /Done today/ }).click();
   expect(await smallTargets(page)).toEqual([]);
   await gotoApp(page, dhara, '#/notes');

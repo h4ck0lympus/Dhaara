@@ -274,7 +274,7 @@ test('Add a task opens an implemented form and persists explicit intent', async 
   await page.getByLabel('What do you need to do?').fill('Explicitly chosen task');
   await page.getByLabel('What do you need to do?').press('Control+Enter');
   await expect(page.getByRole('dialog', { name: 'Add task' })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Tasks' })).toContainText('Explicitly chosen task');
+  await expect(page.getByRole('region', { name: 'If you have a few minutes' })).toContainText('Explicitly chosen task');
   expect((await state(dhara)).tasks.map(t => t.title)).toEqual(['Explicitly chosen task']);
 });
 

@@ -31,22 +31,30 @@ describe('Home', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Good (morning|afternoon|evening), Vishal\.$/);
   });
 
-  it('summarises agents that need you and are working, linking to Tasks', () => {
+  it('summarises agents and expands to show what needs you and who is working', () => {
     const waiting = makeTask('a', { title: 'Answer agent' });
-    const runs = [makeRun({ id: 'r1', effective_status: 'working' }), makeRun({ id: 'r2', effective_status: 'working' }), makeRun({ id: 'r3', effective_status: 'review' })];
-    given(makeSnapshot({ tasks: [waiting], attention: [waiting], runs }));
-    const strip = screen.getByRole('link', { name: 'Agents: 1 need you, 2 working' });
-    expect(strip.getAttribute('href')).toBe('/plan');
+    const busy = makeTask('b', { title: 'Busy task' });
+    const runs = [makeRun({ id: 'r1', task_id: 'b', effective_status: 'working' }), makeRun({ id: 'r2', task_id: 'b', effective_status: 'working' }), makeRun({ id: 'r3', effective_status: 'review' })];
+    given(makeSnapshot({ tasks: [waiting, busy], attention: [waiting], runs }));
+    const strip = screen.getByRole('button', { name: 'Agents: 1 need you, 2 working' });
+    expect(strip.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('region', { name: 'Needs you' })).toBeNull();
+    fireEvent.click(strip);
+    expect(strip.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('region', { name: 'Needs you' }).textContent).toContain('Answer agent');
+    expect(screen.getByRole('list', { name: 'Agents working' }).textContent).toContain('Busy task');
+    fireEvent.click(strip);
+    expect(screen.queryByRole('region', { name: 'Needs you' })).toBeNull();
   });
 
   it('hides the agent strip when nothing is happening, and while offline', () => {
     given();
-    expect(screen.queryByRole('link', { name: /^Agents:/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Agents:/ })).toBeNull();
     cleanup();
     h.connected = false;
     const t = makeTask('a');
     given(makeSnapshot({ tasks: [t], attention: [t], runs: [makeRun({ effective_status: 'working' })] }));
-    expect(screen.queryByRole('link', { name: /^Agents:/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Agents:/ })).toBeNull();
   });
 
   it('shows the focus with its source, opens it and clears a pinned focus after confirming', () => {
@@ -74,32 +82,44 @@ describe('Home', () => {
     expect(screen.queryByRole('button', { name: /clear/i })).toBeNull();
   });
 
-  it('caps "a few minutes" at three, skipping attention, focus and tasks already listed, and hides it offline', () => {
-    const tasks = Array.from({ length: 12 }, (_, i) => makeTask(`t${i}`, { title: `Task ${i}` }));
+  it('caps "a few minutes" at three, skipping attention, focus and tasks already listed for today, and hides it offline', () => {
+    const tasks = Array.from({ length: 12 }, (_, i) => makeTask(`t${i}`, { title: `Task ${i}`, created_at: new Date(2026, 0, 12 - i).toISOString() }));
     given(makeSnapshot({ tasks, available: tasks, attention: [tasks[0]], focus: focusAt('t1') }));
     const few = screen.getByRole('region', { name: 'If you have a few minutes' });
-    expect(within(few).getAllByRole('button').map(b => b.textContent)).toEqual(['Task 5', 'Task 6', 'Task 7']);
+    expect(within(few).getAllByRole('button').map(b => b.textContent)).toEqual(['Task 2', 'Task 3', 'Task 4']);
     cleanup();
     h.connected = false;
     given(makeSnapshot({ tasks, available: tasks }));
     expect(screen.queryByRole('region', { name: 'If you have a few minutes' })).toBeNull();
   });
 
-  it('lists four open tasks, soonest due first, without the focus, done or parked work', () => {
-    const due = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+  it('lists every open task due or planned today, by priority, without future, undated, focus, done or parked work', () => {
+    const today = (h: number) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d.toISOString(); };
+    const later = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString();
     const tasks = [
-      makeTask('late', { title: 'Late', due_at: due(9) }), makeTask('soon', { title: 'Soon', due_at: due(1) }),
-      makeTask('none', { title: 'Undated' }), makeTask('mid', { title: 'Mid', due_at: due(3) }), makeTask('extra', { title: 'Extra' }),
-      makeTask('done', { title: 'Done', status: 'done' }), makeTask('park', { title: 'Parked', status: 'parked' }), makeTask('f', { title: 'Focus' }),
+      makeTask('a', { title: 'Due today', due_at: today(23) }), makeTask('b', { title: 'Overdue', due_at: yesterday }),
+      makeTask('c', { title: 'Hot today', due_at: today(23), effective_priority: 'high' }), makeTask('d', { title: 'Planned', planned_on: new Date().toLocaleDateString('sv') }),
+      makeTask('e', { title: 'Later', due_at: later }), makeTask('f', { title: 'Undated' }),
+      makeTask('g', { title: 'Done', status: 'done', due_at: today(23) }), makeTask('h', { title: 'Parked', status: 'parked', due_at: today(23) }),
+      makeTask('i', { title: 'Focus', due_at: today(23) }), makeTask('j', { title: 'Five', due_at: today(23) }), makeTask('k', { title: 'Six', due_at: today(23) }),
     ];
-    given(makeSnapshot({ tasks, focus: focusAt('f') }));
-    const list = screen.getByRole('region', { name: 'Tasks' });
-    expect([...list.querySelectorAll('.task-title')].map(b => b.textContent)).toEqual(['Soon', 'Mid', 'Late', 'Undated']);
-    expect(within(list).getByRole('link', { name: 'See all →' }).getAttribute('href')).toBe('/plan');
+    given(makeSnapshot({ tasks, focus: focusAt('i') }));
+    const list = screen.getByRole('region', { name: 'Today' });
+    const titles = [...list.querySelectorAll('.task-title')].map(b => b.textContent);
+    expect(titles[0]).toBe('Hot today');
+    expect([...titles].sort()).toEqual(['Due today', 'Five', 'Hot today', 'Overdue', 'Planned', 'Six']);
+    expect(within(list).getAllByRole('img')[0].getAttribute('aria-label')).toBe('High priority');
+    expect(within(list).getByRole('link', { name: 'All tasks →' }).getAttribute('href')).toBe('/plan');
+  });
+
+  it('says when nothing is due today', () => {
+    given(makeSnapshot({ tasks: [makeTask('f', { title: 'Undated' })] }));
+    expect(screen.getByRole('region', { name: 'Today' }).textContent).toContain('Nothing due today.');
   });
 
   it('readable titles hide session hashes', () => {
-    const task = makeTask('t', { title: 'Codex · g-p-6ac822bb03588191b51d07108e212526 · 7fab3c' });
+    const task = makeTask('t', { title: 'Codex · g-p-6ac822bb03588191b51d07108e212526 · 7fab3c', planned_on: '2000-01-01' });
     given(makeSnapshot({ tasks: [task] }));
     expect(screen.getByRole('button', { name: 'Codex session' })).toBeTruthy();
   });

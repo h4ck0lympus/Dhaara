@@ -1,12 +1,13 @@
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState, type JSX } from 'react';
+import { AgentActivity } from '../components/AgentActivity';
 import { confirmFocusChange } from '../components/focus';
 import { TaskRow } from '../components/TaskRow';
 import { COPY, greeting } from '../copy';
 import { useConnected } from '../domain/connection';
 import { age } from '../domain/format';
 import { focusKind, nowState } from '../domain/nowState';
-import { openTasks, readableTaskTitle } from '../domain/tasks';
+import { isForToday, openTasks, readableTaskTitle } from '../domain/tasks';
 import { allowNavigation } from '../routes/guards';
 import { isDialogOpen, openDialog } from '../shell/dialogs';
 import { CAPTURE_EVENT } from '../shell/keyboard';
@@ -17,7 +18,6 @@ import { Icon } from '../ui/Icon';
 import { toastError } from '../ui/Toast';
 import { CaptureScreen } from './Capture';
 
-const HOME_TASKS = 4;
 const FEW_MINUTES = 3;
 
 function CaptureBar(): JSX.Element {
@@ -57,11 +57,10 @@ export function NowScreen(): JSX.Element {
   const focusInfo = snapshot?.focus ?? null;
   const focus = tasks.find(t => t.id === focusInfo?.task_id);
   const attention = connected ? snapshot?.attention ?? [] : [];
-  const working = connected ? (snapshot?.runs ?? []).filter(r => r.effective_status === 'working').length : 0;
+  const working = connected ? (snapshot?.runs ?? []).filter(r => r.effective_status === 'working') : [];
+  const [agentsOpen, setAgentsOpen] = useState(false);
   const attentionIds = new Set(attention.map(t => t.id));
-  const open = snapshot ? openTasks(snapshot).filter(t => t.id !== focus?.id) : [];
-  open.sort((a, b) => (a.due_at ? Date.parse(a.due_at) : Infinity) - (b.due_at ? Date.parse(b.due_at) : Infinity));
-  const homeTasks = open.slice(0, HOME_TASKS);
+  const homeTasks = snapshot ? openTasks(snapshot).filter(t => t.id !== focus?.id && isForToday(t)) : [];
   const shown = new Set([focus?.id, ...attentionIds, ...homeTasks.map(t => t.id)]);
   const fewMinutes = (connected ? snapshot?.available ?? [] : []).filter(t => !shown.has(t.id)).slice(0, FEW_MINUTES);
   const motion = snapshot?.settings.motion ?? true;
@@ -79,13 +78,6 @@ export function NowScreen(): JSX.Element {
         <p>{COPY.tagline}</p>
       </div>
 
-      {(attention.length > 0 || working > 0) && (
-        <Link to="/plan" className="agent-strip" aria-label={`Agents: ${attention.length} need you, ${working} working`}>
-          <span className="agent-need"><i className="dot warn" aria-hidden="true" />{attention.length} need you</span>
-          <span className="agent-working"><i className="dots" aria-hidden="true"><i /><i /><i /></i>{working} working</span>
-          <span className="agent-more">Agents →</span>
-        </Link>
-      )}
 
       <section className="focus-card" aria-label="Current focus">
         <i className="focus-dot" aria-hidden="true" />
@@ -102,6 +94,15 @@ export function NowScreen(): JSX.Element {
         </div>}
       </section>
 
+      {(attention.length > 0 || working.length > 0) && <>
+        <button type="button" className="agent-strip" aria-expanded={agentsOpen} aria-controls="home-agents" aria-label={`Agents: ${attention.length} need you, ${working.length} working`} onClick={() => setAgentsOpen(v => !v)}>
+          <span className="agent-need"><i className="dot warn" aria-hidden="true" />{attention.length} need you</span>
+          <span className="agent-working"><i className="dots" aria-hidden="true"><i /><i /><i /></i>{working.length} working</span>
+          <span className="agent-more">{agentsOpen ? 'Hide ▾' : 'Details ▸'}</span>
+        </button>
+        {agentsOpen && <AgentActivity id="home-agents" attention={attention} working={working} tasks={tasks} />}
+      </>}
+
       {fewMinutes.length > 0 && (
         <section className="home-list" aria-labelledby="few-minutes">
           <h2 id="few-minutes" className="eyebrow"><Icon name="spark" size={12} />If you have a few minutes</h2>
@@ -114,9 +115,9 @@ export function NowScreen(): JSX.Element {
       )}
 
       <section className="home-list" aria-labelledby="home-tasks">
-        <div className="home-list-head"><h2 id="home-tasks" className="eyebrow">Tasks</h2><Link to="/plan">See all →</Link></div>
-        {homeTasks.map(t => <TaskRow key={t.id} task={t} />)}
-        {!open.length && <p className="muted small">Nothing open. Press N to add a task.</p>}
+        <div className="home-list-head"><h2 id="home-tasks" className="eyebrow">Today</h2><Link to="/plan">All tasks →</Link></div>
+        {homeTasks.map(t => <TaskRow key={t.id} task={t} showPriority />)}
+        {!homeTasks.length && <p className="muted small">Nothing due today. Press N to add a task.</p>}
       </section>
 
       <CaptureBar />

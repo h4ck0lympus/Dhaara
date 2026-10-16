@@ -55,7 +55,7 @@ kbd { padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; color
 .home-greeting { padding: 16px 6px 34px; }
 .home-greeting h1 { margin: 0; font-size: 38px; font-weight: 400; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .home-greeting p { margin: 6px 0 0; color: var(--muted); font-size: 16px; }
-.agent-strip { display: flex; align-items: center; gap: 14px; min-height: 40px; padding: 0 18px; border: 1px solid var(--line); border-radius: var(--radius); background: rgb(var(--panel-rgb) / .7); color: var(--fg); font-size: 14px; text-decoration: none; }
+.agent-strip { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; min-height: 40px; padding: 0 18px; border: 1px solid var(--line); border-radius: var(--radius); background: rgb(var(--panel-rgb) / .7); color: var(--fg); font-size: 14px; text-decoration: none; }
 .agent-strip > span { display: flex; align-items: center; gap: 8px; }
 .agent-working { color: var(--muted); padding-left: 14px; border-left: 1px solid var(--line); }
 .agent-more { margin-left: auto; color: var(--muted); font-size: 13px; }
