@@ -28,6 +28,8 @@ This is a **runnable local development release**, not just a UI mockup. The serv
 
 Requirements: Python 3.11 or newer, Node 22 with npm (pinned in `.nvmrc`) to build the interface, a current Chromium- or Firefox-based browser, and internet access to install the dependencies once. `uv sync` uses Python 3.12 (pinned in `.python-version`); 3.11 is the minimum. Other operating systems and the optional speech wheels have not been tested.
 
+On Linux or macOS, `make help` lists shortcuts for everything below: `make setup`, `make run`, `make desktop`, `make test`, `make e2e` and `make appimage`.
+
 ### Install (Linux x86_64 AppImage)
 
 Users: download or build `Dhara-<version>-x86_64.AppImage` (`release/build.sh`), make it executable and
