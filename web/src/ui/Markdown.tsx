@@ -1,4 +1,5 @@
 import type { JSX, ReactNode } from 'react';
+import { highlight } from './highlight';
 
 const HEADINGS = ['h1', 'h2', 'h3'] as const;
 
@@ -15,9 +16,19 @@ function inline(text: string): ReactNode[] {
   return parts;
 }
 
+function CodeBlock({ code, language }: { code: string; language: string }): JSX.Element {
+  const html = highlight(code, language);
+  return (
+    <pre className="code-block" data-language={language || undefined}>
+      {html === null ? <code>{code}</code> : <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} />}
+    </pre>
+  );
+}
+
 export function Markdown({ text }: { text: string }): JSX.Element {
   const blocks: ReactNode[] = [];
   let code: string[] | null = null;
+  let language = '';
   let items: ReactNode[] | null = null;
   const closeList = () => {
     if (items) blocks.push(<ul key={blocks.length}>{items}</ul>);
@@ -26,7 +37,8 @@ export function Markdown({ text }: { text: string }): JSX.Element {
   for (const line of text.split('\n')) {
     if (line.startsWith('```')) {
       closeList();
-      if (code) blocks.push(<pre key={blocks.length}><code>{code.join('\n')}</code></pre>);
+      if (code) blocks.push(<CodeBlock key={blocks.length} code={code.join('\n')} language={language} />);
+      else language = line.slice(3).trim().split(/\s/)[0];
       code = code ? null : [];
       continue;
     }
@@ -50,6 +62,6 @@ export function Markdown({ text }: { text: string }): JSX.Element {
     }
   }
   closeList();
-  if (code) blocks.push(<pre key={blocks.length}><code>{code.join('\n')}</code></pre>);
+  if (code) blocks.push(<CodeBlock key={blocks.length} code={code.join('\n')} language={language} />);
   return <>{blocks}</>;
 }

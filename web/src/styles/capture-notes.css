@@ -123,3 +123,15 @@
 .capture-bar .writing-canvas > textarea { border: 0; background: none; outline: none; min-height: 96px; padding: 4px 40px 4px 0; font-size: 15px; line-height: 1.6; }
 .capture-bar .canvas-tools { padding-top: 10px; margin-top: 8px; }
 .capture-bar .subtle-line, .capture-bar .tray-hint { display: none; }
+
+.code-block { margin: 12px 0; padding: 14px 16px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--code); font: 13px/1.6 var(--font-label); tab-size: 4; }
+.code-block code { font: inherit; white-space: pre; }
+.hljs-keyword, .hljs-built_in, .hljs-literal, .hljs-selector-tag { color: var(--syn-keyword); }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-symbol { color: var(--syn-string); }
+.hljs-number { color: var(--syn-number); }
+.hljs-comment, .hljs-quote, .hljs-deletion { color: var(--syn-comment); font-style: italic; }
+.hljs-title, .hljs-section, .hljs-name, .hljs-function .hljs-title { color: var(--syn-title); }
+.hljs-type, .hljs-class .hljs-title, .hljs-params, .hljs-attr, .hljs-attribute, .hljs-variable { color: var(--syn-type); }
+.hljs-meta, .hljs-doctag, .hljs-tag { color: var(--syn-meta); }
+.hljs-deletion { font-style: normal; }
+

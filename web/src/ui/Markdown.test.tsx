@@ -24,12 +24,44 @@ describe('Markdown', () => {
   });
 
   it('keeps fenced code verbatim, including markup-looking text', () => {
-    expect(html('```\n<b>x</b>\n**y**\n```')).toBe('<pre><code>&lt;b&gt;x&lt;/b&gt;\n**y**</code></pre>');
+    const { container } = render(<Markdown text={'```\n<b>x</b>\n**y**\n```'} />);
+    expect(container.querySelector('b, strong')).toBeNull();
+    expect(container.querySelector('pre.code-block')!.textContent).toBe('<b>x</b>\n**y**');
+  });
+
+  it('highlights a tagged fence and keeps its text exact', () => {
+    const source = 'def f(x):\n    return "hi"  # done';
+    const { container } = render(<Markdown text={'```python\n' + source + '\n```'} />);
+    const code = container.querySelector('pre.code-block code.hljs')!;
+    expect(code.textContent).toBe(source);
+    expect(code.querySelector('.hljs-keyword')!.textContent).toBe('def');
+    expect(code.querySelector('.hljs-string')!.textContent).toBe('"hi"');
+    expect(code.querySelector('.hljs-comment')!.textContent).toBe('# done');
+    expect(container.querySelector('pre')!.getAttribute('data-language')).toBe('python');
+  });
+
+  it('never turns hostile code into elements, highlighted or not', () => {
+    for (const fence of ['```html', '```python', '```', '```nosuchlang']) {
+      const { container } = render(<Markdown text={`${fence}\n<img src=x onerror="window.pwned=1"><script>window.pwned=2</script>\n\`\`\``} />);
+      expect(container.querySelector('img, script'), fence).toBeNull();
+      expect(container.querySelector('pre')!.textContent, fence).toContain('<img src=x onerror="window.pwned=1">');
+      cleanup();
+    }
+  });
+
+  it('leaves unknown languages and weak guesses as plain code', () => {
+    expect(html('```nosuchlang\nlet x = 1\n```')).toBe('<pre class="code-block" data-language="nosuchlang"><code>let x = 1</code></pre>');
+    expect(html('```\nremember to buy milk\n```')).toBe('<pre class="code-block"><code>remember to buy milk</code></pre>');
+  });
+
+  it('guesses an untagged fence when it is clearly code', () => {
+    const { container } = render(<Markdown text={'```\nfrom typing import List\nclass Solution:\n    def f(self, nums: List[int]) -> int:\n        return len(nums)\n```'} />);
+    expect(container.querySelector('code.hljs .hljs-keyword')).not.toBeNull();
   });
 
   it('closes an unterminated fence at the end, and a fence closes an open list', () => {
-    expect(html('```\nline')).toBe('<pre><code>line</code></pre>');
-    expect(html('- a\n```\nc\n```')).toBe('<ul><li>a</li></ul><pre><code>c</code></pre>');
+    expect(html('```\nline')).toBe('<pre class="code-block"><code>line</code></pre>');
+    expect(html('- a\n```\nc\n```')).toBe('<ul><li>a</li></ul><pre class="code-block"><code>c</code></pre>');
   });
 
   it('renders inline code and bold, leaving unmatched markers as text', () => {
